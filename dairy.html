@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGG Farm - Dairy Department</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Additional styles specific to dairy page */
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .hero-stat {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(5px);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 150px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .hero-stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--secondary);
+        }
+        
+        .hero-stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .process-steps {
+            counter-reset: step-counter;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .process-step {
+            position: relative;
+            padding-left: 100px;
+            margin-bottom: 50px;
+        }
+        
+        .process-step:before {
+            counter-increment: step-counter;
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 70px;
+            height: 70px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .process-step h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+        
+        .testimonial-card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .testimonial-card:before {
+            content: '"';
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 5rem;
+            color: rgba(74, 143, 41, 0.1);
+            font-family: serif;
+            line-height: 1;
+        }
+        
+        .testimonial-content {
+            position: relative;
+            z-index: 1;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+        
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .author-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .gallery-item {
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            aspect-ratio: 1/1;
+        }
+        
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        
+        .gallery-item:hover img {
+            transform: scale(1.1);
+        }
+        
+        .gallery-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 15px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .gallery-item:hover .gallery-caption {
+            transform: translateY(0);
+        }
+        
+        .cta-banner {
+            background: linear-gradient(135deg, var(--primary), #3a7bd5);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin: 80px auto;
+            max-width: 1200px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta-banner:before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+        
+        .cta-banner:after {
+            content: '';
+            position: absolute;
+            bottom: -80px;
+            left: -80px;
+            width: 300px;
+            height: 300px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+        
+        .cta-banner h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .cta-banner p {
+            max-width: 700px;
+            margin: 0 auto 30px;
+            font-size: 1.1rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .btn-ghost {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+        }
+        
+        .btn-ghost:hover {
+            background: white;
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="#" class="nav-brand">
+                <span class="nav-logo">AGG</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#gallery">Gallery</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="department-header" style="background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.65)), url('mp.webp');">
+        <div class="header-container">
+            <div class="header-logo-container animate__animated animate__fadeIn">
+                <img src="AGG  logo-03.png" alt="AGG Farm Logo" class="header-logo">
+            </div>
+            
+            <div class="header-content">
+                <p class="header-tagline animate__animated animate__fadeInUp animate__delay-1s">Fresh, wholesome dairy products from our pasture-raised cows and goats</p>
+                
+                <div class="hero-stats-container animate__animated animate__fadeInUp animate__delay-2s">
+                    <div class="hero-stats">
+                        <div class="hero-stat">
+                            <div class="hero-stat-number">200+</div>
+                            <div class="hero-stat-label">Happy Cows</div>
+                        </div>
+                        <div class="hero-stat">
+                            <div class="hero-stat-number">100%</div>
+                            <div class="hero-stat-label">Grass-Fed</div>
+                        </div>
+                        <div class="hero-stat">
+                            <div class="hero-stat-number">25+</div>
+                            <div class="hero-stat-label">Dairy Products</div>
+                        </div>
+                        <div class="hero-stat">
+                            <div class="hero-stat-number">15</div>
+                            <div class="hero-stat-label">Years Experience</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="dairy-about">
+        <h2 class="section-title">Our Dairy Operations</h2>
+        <div class="about-grid">
+            <div class="about-card animate__animated animate__fadeIn" data-animation-delay="0.1s">
+                <div class="about-img">
+                    <img src="dc.jpg" alt="Dairy Cows">
+                </div>
+                <div class="about-content">
+                    <h3>Happy Cows</h3>
+                    <p>Our dairy cows graze on lush pastures and receive the highest quality care to produce the best milk possible.</p>
+                    <ul class="feature-list" style="margin-top: 15px;">
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Rotational grazing</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Organic feed supplements</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> 24/7 veterinary care</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="about-card animate__animated animate__fadeIn" data-animation-delay="0.2s">
+                <div class="about-img">
+                    <img src="mp.jpg" alt="Milking Parlor">
+                </div>
+                <div class="about-content">
+                    <h3>Modern Facilities</h3>
+                    <p>Our state-of-the-art milking parlor ensures cleanliness and efficiency while maintaining animal comfort.</p>
+                    <ul class="feature-list" style="margin-top: 15px;">
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Automated milking systems</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Hygienic stainless steel</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Comfortable stalls</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="about-card animate__animated animate__fadeIn" data-animation-delay="0.3s">
+                <div class="about-img">
+                    <img src="dpm.jpg" alt="Dairy Processing">
+                </div>
+                <div class="about-content">
+                    <h3>Small-Batch Processing</h3>
+                    <p>We process our milk in small batches to preserve flavor and nutritional quality, with minimal processing.</p>
+                    <ul class="feature-list" style="margin-top: 15px;">
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Low-temperature pasteurization</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> No artificial additives</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Handcrafted products</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="dairy-process" style="background: #f9f9f9;">
+        <h2 class="section-title">Our Dairy Process</h2>
+        <div class="process-steps">
+            <div class="process-step">
+                <h3>Pasture Grazing</h3>
+                <p>Our cows enjoy fresh pasture daily through rotational grazing, which ensures optimal nutrition and animal welfare while maintaining healthy grasslands.</p>
+            </div>
+            
+            <div class="process-step">
+                <h3>Gentle Milking</h3>
+                <p>Twice daily milking in our modern parlor with strict hygiene protocols to ensure the highest quality milk from healthy, comfortable cows.</p>
+            </div>
+            
+            <div class="process-step">
+                <h3>Rapid Cooling</h3>
+                <p>Milk is immediately cooled to 38°F and transported to our processing facility within hours to preserve freshness and nutritional value.</p>
+            </div>
+            
+            <div class="process-step">
+                <h3>Minimal Processing</h3>
+                <p>We use low-temperature pasteurization and avoid homogenization to maintain the natural flavor and health benefits of our milk.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="dairy-products" class="products">
+        <h2 class="section-title">Our Dairy Products</h2>
+        <p class="department-overview" style="margin-bottom: 40px;">
+            From fresh milk to artisanal cheeses, we offer the highest quality dairy products available.
+        </p>
+        
+        <div class="products-grid">
+            <div class="product-card animate__animated animate__fadeIn" data-animation-delay="0.1s">
+                <div class="product-img">
+                    <img src="fm.jpg" alt="Fresh Milk">
+                    <div class="product-badge" style="position: absolute; top: 15px; right: 15px; background: var(--secondary); color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">BEST SELLER</div>
+                </div>
+                <div class="product-content">
+                    <h3>Fresh Whole Milk</h3>
+                    <p>Unhomogenized, pasteurized milk with all its natural creaminess and flavor intact. Rich in omega-3s and CLA.</p>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                        <span style="font-weight: bold; color: var(--primary);">$5.99/half gal</span>
+                        <a href="#" class="btn" style="padding: 5px 15px; font-size: 0.9rem;">Order Now</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="product-card animate__animated animate__fadeIn" data-animation-delay="0.2s">
+                <div class="product-img">
+                    <img src="ay.jpg" alt="Yogurt">
+                </div>
+                <div class="product-content">
+                    <h3>Artisanal Yogurt</h3>
+                    <p>Creamy, probiotic-rich yogurt made with our fresh milk and live cultures. Available in plain and fruit flavors.</p>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                        <span style="font-weight: bold; color: var(--primary);">$4.99/16oz</span>
+                        <a href="#" class="btn" style="padding: 5px 15px; font-size: 0.9rem;">Order Now</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="product-card animate__animated animate__fadeIn" data-animation-delay="0.3s">
+                <div class="product-img">
+                    <img src="fhc.jpg" alt="Cheese Variety">
+                </div>
+                <div class="product-content">
+                    <h3>Farmhouse Cheeses</h3>
+                    <p>A variety of cheeses from mild to sharp, aged to perfection in our cheese cave. Includes cheddar, gouda, and specialty flavors.</p>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                        <span style="font-weight: bold; color: var(--primary);">From $8.99/lb</span>
+                        <a href="#" class="btn" style="padding: 5px 15px; font-size: 0.9rem;">Order Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="dairy-testimonials">
+        <h2 class="section-title">What Our Customers Say</h2>
+        <div class="testimonials-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-top: 40px;">
+            <div class="testimonial-card">
+                <div class="testimonial-content">
+                    "The milk from AGG Farm is unlike anything from the supermarket. The flavor is rich and creamy, and I love seeing the cream rise to the top. My family won't drink anything else now!"
+                </div>
+                <div class="testimonial-author">
+                    <img src="customer1.jpg" alt="Sarah J." class="author-avatar">
+                    <div>
+                        <div style="font-weight: bold;">Sarah J.</div>
+                        <div style="font-size: 0.9rem; color: #666;">Regular Customer</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-content">
+                    "As a chef, I appreciate the quality and consistency of AGG's dairy products. Their cheeses have won awards at our restaurant, and customers can taste the difference pasture-raised milk makes."
+                </div>
+                <div class="testimonial-author">
+                    <img src="customer2.jpg" alt="Michael T." class="author-avatar">
+                    <div>
+                        <div style="font-weight: bold;">Michael T.</div>
+                        <div style="font-size: 0.9rem; color: #666;">Executive Chef</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-content">
+                    "After switching to AGG's dairy products, my digestive issues improved dramatically. Their minimally processed approach makes all the difference for sensitive systems like mine."
+                </div>
+                <div class="testimonial-author">
+                    <img src="customer3.jpg" alt="Lisa M." class="author-avatar">
+                    <div>
+                        <div style="font-weight: bold;">Lisa M.</div>
+                        <div style="font-size: 0.9rem; color: #666;">Health Coach</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="dairy-gallery" style="padding-bottom: 40px;">
+        <h2 class="section-title">Life on Our Dairy Farm</h2>
+        <div class="gallery" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div class="gallery-item">
+                <img src="prc.png" alt="Cows grazing in pasture">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Pasture Rotation</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">Our cows enjoy fresh grass daily</p>
+                </div>
+            </div>
+            
+            <div class="gallery-item">
+                <img src="mp.webp" alt="Milking process">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Milking Time</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">Hygienic milking twice daily</p>
+                </div>
+            </div>
+            
+            <div class="gallery-item">
+                <img src="bc.jpg" alt="Baby calves">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">New Arrivals</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">Calves born throughout the year</p>
+                </div>
+            </div>
+            
+            <div class="gallery-item">
+                <img src="cmp.webp" alt="Cheese making">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Cheese Making</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">Artisanal cheese production</p>
+                </div>
+            </div>
+            
+            <div class="gallery-item">
+                <img src="fs.jpg" alt="Farm store">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Farm Store</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">Fresh products direct from our farm</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="cta-banner animate__animated animate__pulse animate__infinite animate__slower">
+        <h2>Ready to Taste the Difference?</h2>
+        <p>Join our community of satisfied customers who appreciate quality, sustainability, and exceptional dairy products.</p>
+        <a href="#contact" class="btn" style="margin-right: 15px;">Contact Us</a>
+        <a href="#products" class="btn btn-ghost">View Products</a>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-column">
+                <h3>AGG Dairy Farm</h3>
+                <p>Specializing in sustainable dairy farming with premium pasture-raised cows for milk, cheese, and yogurt production. Family owned and operated since 1995.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Dairy Products</h3>
+                <ul class="footer-links">
+                    <li><a href="#">Fresh Milk</a></li>
+                    <li><a href="#">Yogurt</a></li>
+                    <li><a href="#">Cheese Varieties</a></li>
+                    <li><a href="#">Butter</a></li>
+                    <li><a href="#">Ice Cream</a></li>
+                    <li><a href="#">Seasonal Specials</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Farm Experiences</h3>
+                <ul class="footer-links">
+                    <li><a href="#">Farm Tours</a></li>
+                    <li><a href="#">Milking Demonstrations</a></li>
+                    <li><a href="#">Cheese Making Workshops</a></li>
+                    <li><a href="#">Kids' Day with Calves</a></li>
+                    <li><a href="#">Seasonal Events</a></li>
+                    <li><a href="#">Farm-to-Table Dinners</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Newsletter</h3>
+                <p>Subscribe for updates on new products, farm events, and seasonal offers.</p>
+                <form style="margin-top: 15px;">
+                    <input type="email" placeholder="Your Email" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ddd;">
+                    <button type="submit" class="btn" style="width: 100%; padding: 10px;">Subscribe</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="copyright">
+            <p>&copy; 2023 AGG Dairy Farm. All Rights Reserved. | <a href="#" style="color: #aaa;">Privacy Policy</a> | <a href="#" style="color: #aaa;">Terms of Service</a></p>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu toggle
+        const mobileMenuButton = document.querySelector('.mobile-menu-button');
+        const navLinks = document.querySelector('.nav-links');
+
+        mobileMenuButton.addEventListener('click', function() {
+            navLinks.classList.toggle('active');
+            this.classList.toggle('active');
+            
+            // Close dropdown menus when mobile menu is toggled
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                menu.style.display = 'none';
+            });
+        });
+
+        // Animation on scroll
+        function animateOnScroll() {
+            const elements = document.querySelectorAll('.animate__animated');
+            
+            elements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                const windowHeight = window.innerHeight;
+                
+                if (elementTop < windowHeight - 100) {
+                    const animation = element.getAttribute('data-animation') || 'fadeIn';
+                    const delay = element.getAttribute('data-animation-delay') || '0';
+                    
+                    element.style.animationDelay = delay + 's';
+                    element.classList.add(animation);
+                    
+                    // Remove the attribute to prevent re-animation
+                    element.removeAttribute('data-animate');
+                }
+            });
+        }
+
+        // Run on load and scroll
+        window.addEventListener('load', animateOnScroll);
+        window.addEventListener('scroll', animateOnScroll);
+    </script>
+</body>
+</html>

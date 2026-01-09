@@ -1,0 +1,2161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Green Valley Farm | Sustainable Goat & Cattle Farm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3a7d44;
+            --primary-light: #6baa75;
+            --primary-dark: #245c36;
+            --secondary: #f8a857;
+            --secondary-light: #ffc27d;
+            --secondary-dark: #e6953e;
+            --light: #f9f9f9;
+            --dark: #2a2a2a;
+            --text: #444;
+            --water: #e8f4f8;
+            --shadow: 0 10px 30px rgba(0,0,0,0.1);
+            --shadow-lg: 0 15px 40px rgba(0,0,0,0.15);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            --transition-slow: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+            --border-radius: 16px;
+            --border-radius-lg: 24px;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.7;
+            color: var(--text);
+            background-color: #fefefe;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Playfair Display', serif;
+            color: var(--dark);
+            font-weight: 600;
+        }
+        
+        /* Header with parallax effect */
+        header {
+            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url("catt.avif");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.5) 100%);
+            z-index: 0;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(to bottom, transparent, var(--light));
+            z-index: 1;
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 2;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .logo {
+            font-size: 4.5rem;
+            margin-bottom: 1.5rem;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+            letter-spacing: 2px;
+            animation: fadeInDown 1s ease-out;
+            position: relative;
+            display: inline-block;
+        }
+
+        .logo::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 4px;
+            background: var(--secondary);
+            border-radius: 2px;
+        }
+        
+        .tagline {
+            font-size: 1.8rem;
+            margin-bottom: 3rem;
+            font-weight: 300;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            animation: fadeIn 1.5s ease-out;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        }
+        
+        /* Floating particles animation */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            animation: floatParticle linear infinite;
+        }
+
+        @keyframes floatParticle {
+            0% {
+                transform: translateY(0) translateX(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) translateX(100px);
+                opacity: 0;
+            }
+        }
+        
+        /* Modern sticky navigation */
+        nav {
+            background-color: var(--primary-dark);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: var(--transition);
+        }
+
+        nav.scrolled {
+            background-color: rgba(36, 92, 54, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 5px 30px rgba(0,0,0,0.2);
+        }
+        
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            margin: 0 0.5rem;
+            border-radius: 4px;
+            transition: var(--transition);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: 5px;
+            left: 1.5rem;
+            width: calc(100% - 3rem);
+            height: 2px;
+            background: var(--secondary);
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.3s ease;
+        }
+        
+        .nav-links a:hover::after {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+
+        .nav-links a i {
+            font-size: 0.9rem;
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            z-index: 1001;
+            transition: var(--transition);
+        }
+
+        .mobile-menu-btn:hover {
+            color: var(--secondary);
+        }
+        
+        /* Main sections with modern styling */
+        .section {
+            padding: 8rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 3rem;
+            color: var(--primary);
+            position: relative;
+            font-size: 2.5rem;
+        }
+        
+        .section-title::after {
+            content: '';
+            display: block;
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            margin: 1.5rem auto;
+            border-radius: 2px;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 3rem;
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.8;
+        }
+
+        /* Decorative elements */
+        .decorative-shape {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="%233a7d44" opacity="0.05"><path d="M30,10 Q50,0 70,10 T90,30 Q100,50 90,70 T70,90 Q50,100 30,90 T10,70 Q0,50 10,30 T30,10"></path></svg>');
+            background-size: contain;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* About section with animated stats */
+        .about-highlights {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2.5rem;
+            margin-top: 3rem;
+        }
+
+        .highlight-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: var(--border-radius);
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .highlight-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+        }
+
+        .highlight-card:hover {
+            transform: translateY(-10px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .highlight-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(58, 125, 68, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+            color: var(--primary);
+            transition: var(--transition);
+        }
+
+        .highlight-card:hover .highlight-icon {
+            background: var(--primary);
+            color: white;
+            transform: rotateY(180deg);
+        }
+
+        .highlight-card h3 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+            font-size: 1.4rem;
+        }
+
+        /* Animal cards with 3D effect */
+        .animal-section {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+        
+        .animal-card {
+            flex: 1 1 350px;
+            max-width: 500px;
+            background-color: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition-slow);
+            position: relative;
+            perspective: 1000px;
+            transform-style: preserve-3d;
+        }
+        
+        .animal-card:hover {
+            transform: translateY(-15px) rotateX(5deg);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .animal-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.7));
+            z-index: 1;
+        }
+        
+        .animal-img {
+            width: 100%;
+            height: 350px;
+            object-fit: cover;
+            transition: transform 0.8s ease;
+        }
+
+        .animal-card:hover .animal-img {
+            transform: scale(1.1) rotate(1deg);
+        }
+        
+        .animal-content {
+            padding: 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .animal-content h3 {
+            color: white;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .animal-content p {
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Modern buttons with gradient */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            margin-top: 1rem;
+            transition: var(--transition);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(58, 125, 68, 0.3);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: all 0.6s ease;
+            z-index: -1;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(58, 125, 68, 0.4);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            box-shadow: none;
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--secondary), var(--secondary-dark));
+            box-shadow: 0 5px 15px rgba(248, 168, 87, 0.3);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 8px 25px rgba(248, 168, 87, 0.4);
+        }
+
+        .btn i {
+            font-size: 1rem;
+        }
+        
+        /* Water section with wave effect */
+        .water-section {
+            background-color: var(--water);
+            border-radius: var(--border-radius-lg);
+            margin: 4rem 0;
+            padding: 6rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .water-section::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="%233a7d44" opacity="0.05"><path d="M30,10 Q50,0 70,10 T90,30 Q100,50 90,70 T70,90 Q50,100 30,90 T10,70 Q0,50 10,30 T30,10"></path></svg>');
+            background-size: contain;
+            z-index: 0;
+        }
+
+        .water-section::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" opacity=".25" fill="%233a7d44"></path><path d="M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.79,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5,22.43-10.89,48-26.93,60.65-49.24V0Z" opacity=".5" fill="%233a7d44"></path><path d="M0,0V5.63C149.93,59,314.09,71.32,475.83,42.57c43-7.64,84.23-20.12,127.61-26.46,59-8.63,112.48,12.24,165.56,35.4C827.93,77.22,886,95.24,951.2,90c86.53-7,172.46-45.71,233.88-50.81V0Z" fill="%233a7d44"></path></svg>');
+            background-size: cover;
+            background-repeat: no-repeat;
+            z-index: 1;
+        }
+        
+        .dam-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 3rem;
+            margin-top: 3rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .dam-info {
+            flex: 1 1 500px;
+        }
+
+        .dam-info h3 {
+            color: var(--primary);
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            display: inline-block;
+        }
+
+        .dam-info h3::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: var(--secondary);
+        }
+
+        .dam-info ul {
+            margin: 1.5rem 0;
+            padding-left: 1.5rem;
+            list-style-type: none;
+        }
+
+        .dam-info li {
+            margin-bottom: 0.8rem;
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .dam-info li i {
+            color: var(--primary);
+            position: absolute;
+            left: 0;
+            top: 0.3rem;
+        }
+        
+        .dam-img {
+            flex: 1 1 500px;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .dam-img::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(58,125,68,0.1), rgba(58,125,68,0.3));
+            opacity: 0;
+            transition: var(--transition);
+            z-index: 1;
+        }
+
+        .dam-img:hover::before {
+            opacity: 1;
+        }
+
+        .dam-img:hover {
+            transform: scale(1.02);
+        }
+        
+        .dam-img img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: var(--transition);
+        }
+
+        .dam-img:hover img {
+            transform: scale(1.05);
+        }
+        
+        /* Gallery with hover captions */
+        .eucalyptus-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+        
+        .gallery-item {
+            position: relative;
+            overflow: hidden;
+            border-radius: var(--border-radius);
+            height: 300px;
+            box-shadow: var(--shadow);
+        }
+        
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: var(--transition-slow);
+        }
+        
+        .gallery-item:hover img {
+            transform: scale(1.1);
+        }
+
+        .gallery-item::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .gallery-caption {
+            position: absolute;
+            bottom: -100%;
+            left: 0;
+            width: 100%;
+            padding: 1.5rem;
+            color: white;
+            z-index: 2;
+            transition: var(--transition-slow);
+        }
+
+        .gallery-item:hover .gallery-caption {
+            bottom: 0;
+        }
+
+        .gallery-item:hover::after {
+            opacity: 1;
+        }
+        
+        /* Product cards with ribbon */
+        .products-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2.5rem;
+            margin-top: 3rem;
+        }
+        
+        .product-card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .product-badge {
+            position: absolute;
+            top: 10px;
+            right: -30px;
+            background: var(--secondary);
+            color: white;
+            padding: 0.3rem 2rem;
+            font-size: 0.8rem;
+            font-weight: bold;
+            transform: rotate(45deg);
+            z-index: 2;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .product-img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            transition: var(--transition-slow);
+        }
+
+        .product-card:hover .product-img {
+            transform: scale(1.05);
+        }
+        
+        .product-info {
+            padding: 1.8rem;
+            position: relative;
+        }
+
+        .product-info h3 {
+            margin-bottom: 0.8rem;
+            color: var(--primary);
+            font-size: 1.4rem;
+        }
+
+        .product-info .category {
+            display: inline-block;
+            background: rgba(58, 125, 68, 0.1);
+            color: var(--primary);
+            padding: 0.3rem 0.8rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            margin-bottom: 0.8rem;
+        }
+        
+        .price {
+            font-weight: bold;
+            color: var(--primary);
+            font-size: 1.4rem;
+            margin: 1rem 0;
+            display: block;
+        }
+
+        .old-price {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 1rem;
+            margin-left: 0.5rem;
+        }
+        
+        /* Testimonials with rating stars */
+        .testimonials {
+            background-color: var(--light);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .testimonials::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="%233a7d44" opacity="0.03"><path d="M30,10 Q50,0 70,10 T90,30 Q100,50 90,70 T70,90 Q50,100 30,90 T10,70 Q0,50 10,30 T30,10"></path></svg>');
+            background-size: 300px;
+            z-index: 0;
+        }
+        
+        .testimonial-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2.5rem;
+            justify-content: center;
+            margin-top: 3rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .testimonial-card {
+            background-color: white;
+            padding: 2.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            flex: 1 1 350px;
+            max-width: 450px;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .testimonial-card:hover {
+            transform: translateY(-10px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .testimonial-card::before {
+            content: '"';
+            font-size: 8rem;
+            color: var(--primary);
+            opacity: 0.1;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-family: 'Playfair Display', serif;
+            line-height: 1;
+        }
+
+        .testimonial-rating {
+            color: var(--secondary);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .testimonial-text {
+            margin-bottom: 1.5rem;
+            font-style: italic;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .testimonial-author {
+            font-weight: bold;
+            text-align: right;
+            color: var(--primary);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.8rem;
+        }
+
+        .testimonial-author img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary);
+        }
+        
+        /* Contact section with floating labels */
+        .contact-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+        
+        .contact-info {
+            flex: 1 1 400px;
+            background: white;
+            padding: 2.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .contact-info::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+        }
+        
+        .contact-info h3 {
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        .contact-info p {
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        .contact-icon {
+            color: var(--primary);
+            font-size: 1.2rem;
+            width: 30px;
+            height: 30px;
+            background: rgba(58, 125, 68, 0.1);
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .contact-hours {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .contact-hour-row {
+            display: flex;
+            justify-content: space-between;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px dashed #eee;
+        }
+        
+        .contact-form {
+            flex: 1 1 500px;
+            background-color: white;
+            padding: 2.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .contact-form::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(to right, var(--secondary), var(--primary));
+        }
+
+        .contact-form h3 {
+            color: var(--primary);
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+        
+        .form-group label {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            color: #777;
+            transition: var(--transition);
+            pointer-events: none;
+            background: white;
+            padding: 0 0.5rem;
+            transform-origin: left center;
+        }
+
+        .form-group input:focus + label,
+        .form-group textarea:focus + label,
+        .form-group input:not(:placeholder-shown) + label,
+        .form-group textarea:not(:placeholder-shown) + label {
+            transform: translateY(-1.5rem) scale(0.9);
+            color: var(--primary);
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+            transition: var(--transition);
+            background: transparent;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(58, 125, 68, 0.1);
+        }
+        
+        .form-group textarea {
+            min-height: 180px;
+            resize: vertical;
+        }
+
+        /* Newsletter section */
+        .newsletter {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin: 4rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .newsletter::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="white" opacity="0.05"><path d="M30,10 Q50,0 70,10 T90,30 Q100,50 90,70 T70,90 Q50,100 30,90 T10,70 Q0,50 10,30 T30,10"></path></svg>');
+            background-size: 200px;
+            z-index: 0;
+        }
+
+        .newsletter-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .newsletter h3 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .newsletter p {
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .newsletter-form {
+            display: flex;
+            max-width: 500px;
+            margin: 0 auto;
+            gap: 1rem;
+        }
+
+        .newsletter-form input {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 50px;
+            font-family: inherit;
+        }
+
+        .newsletter-form input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+        }
+
+        .newsletter-form button {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 0 2rem;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .newsletter-form button:hover {
+            background: var(--secondary-dark);
+        }
+        
+        /* Footer with wave effect */
+        footer {
+            background-color: var(--dark);
+            color: white;
+            text-align: center;
+            padding: 6rem 2rem 4rem;
+            position: relative;
+        }
+
+        footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+        }
+
+        footer::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" opacity=".25" fill="%232a2a2a"></path><path d="M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.79,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5,22.43-10.89,48-26.93,60.65-49.24V0Z" opacity=".5" fill="%232a2a2a"></path><path d="M0,0V5.63C149.93,59,314.09,71.32,475.83,42.57c43-7.64,84.23-20.12,127.61-26.46,59-8.63,112.48,12.24,165.56,35.4C827.93,77.22,886,95.24,951.2,90c86.53-7,172.46-45.71,233.88-50.81V0Z" fill="%232a2a2a"></path></svg>');
+            background-size: cover;
+            background-repeat: no-repeat;
+            transform: rotate(180deg);
+            z-index: 0;
+        }
+        
+        .footer-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .social-links {
+            margin: 2rem 0;
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+        
+        .social-links a {
+            color: white;
+            font-size: 1.8rem;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.1);
+            transition: var(--transition);
+        }
+
+        .social-links a:hover {
+            background: var(--primary);
+            transform: translateY(-5px);
+            color: white;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            list-style: none;
+            margin: 2rem 0;
+            gap: 1.5rem;
+        }
+        
+        .footer-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .footer-links a i {
+            font-size: 0.8rem;
+        }
+
+        .footer-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--secondary);
+            transition: width 0.3s ease;
+        }
+
+        .footer-links a:hover::after {
+            width: 100%;
+        }
+        
+        footer p {
+            margin-top: 2rem;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 50px;
+            height: 50px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+            z-index: 999;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:hover {
+            background: var(--primary-dark);
+            transform: translateY(-5px);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Floating elements */
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .pulse {
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 1200px) {
+            .logo {
+                font-size: 3.5rem;
+            }
+            
+            .tagline {
+                font-size: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .nav-container {
+                padding: 1rem;
+            }
+            
+            .nav-links {
+                display: none;
+                flex-direction: column;
+                width: 100%;
+                padding: 1rem 0;
+                position: absolute;
+                top: 70px;
+                left: 0;
+                background-color: var(--primary-dark);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+                z-index: 1000;
+            }
+            
+            .nav-links.active {
+                display: flex;
+            }
+            
+            .nav-links a {
+                margin: 0.5rem 1rem;
+                padding: 1rem;
+                text-align: center;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            header {
+                min-height: 80vh;
+            }
+
+            .section {
+                padding: 6rem 1.5rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .newsletter-form {
+                flex-direction: column;
+            }
+
+            .newsletter-form button {
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 2.8rem;
+            }
+            
+            .tagline {
+                font-size: 1.3rem;
+                margin-bottom: 2rem;
+            }
+
+            .dam-container,
+            .contact-container {
+                flex-direction: column;
+            }
+
+            .animal-card,
+            .testimonial-card {
+                flex: 1 1 100%;
+            }
+
+            .btn {
+                padding: 0.8rem 1.5rem;
+                font-size: 0.9rem;
+            }
+
+            .contact-form input,
+            .contact-form textarea {
+                padding: 0.8rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .logo {
+                font-size: 2.2rem;
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .footer-links {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .social-links a {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+
+            .back-to-top {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+                bottom: 1rem;
+                right: 1rem;
+            }
+        }
+
+        /* Team Section Styles */
+.team-section {
+    text-align: center;
+    margin-top: 4rem;
+}
+
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2.5rem;
+    margin-top: 3rem;
+}
+
+.team-member {
+    background: white;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+    position: relative;
+}
+
+.team-member:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--shadow-lg);
+}
+
+.team-photo {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    transition: var(--transition);
+}
+
+.team-member:hover .team-photo {
+    transform: scale(1.05);
+}
+
+.team-info {
+    padding: 1.5rem;
+    position: relative;
+}
+
+.team-info h3 {
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+    font-size: 1.4rem;
+}
+
+.team-position {
+    color: var(--secondary-dark);
+    font-weight: 500;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.team-bio {
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+}
+
+.team-social {
+    display: flex;
+    justify-content: center;
+    gap: 0.8rem;
+}
+
+.team-social a {
+    color: var(--primary);
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(58, 125, 68, 0.1);
+    transition: var(--transition);
+}
+
+.team-social a:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-3px);
+}
+
+.team-years {
+    position: absolute;
+    top: -20px;
+    right: 20px;
+    background: var(--secondary);
+    color: white;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    z-index: 2;
+}
+
+.team-specialty {
+    display: inline-block;
+    background: rgba(248, 168, 87, 0.2);
+    color: var(--secondary-dark);
+    padding: 0.3rem 0.8rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    font-weight: 500;
+}
+
+    </style>
+</head>
+<body>
+    <header id="home">
+        <div class="particles" id="particles"></div>
+        <div class="header-content">
+            <h1 class="logo">AGG</h1>
+            <p class="tagline">Sustainable Goat & Cattle Farming Since 1995</p>
+            <div style="display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
+                <a href="#contact" class="btn pulse">
+                    <i class="fas fa-calendar-alt"></i> Visit Us
+                </a>
+                <a href="#products" class="btn btn-outline pulse">
+                    <i class="fas fa-shopping-basket"></i> Our Products
+                </a>
+            </div>
+        </div>
+    </header>
+    
+    <nav id="mainNav">
+        <div class="nav-container">
+            <a href="#home" class="logo-mobile" style="font-size: 1.5rem; color: white; text-decoration: none; font-weight: bold; display: none;">
+                AGG
+            </a>
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <i class="fas fa-bars"></i>
+            </button>
+            <ul class="nav-links" id="navLinks">
+    <li><a href="#home"><i class="fas fa-home"></i> Home</a></li>
+    <li><a href="#about"><i class="fas fa-info-circle"></i> About</a></li>
+    <li><a href="#team"><i class="fas fa-users"></i> Our Team</a></li>
+    <li><a href="#animals"><i class="fas fa-paw"></i> Our Animals</a></li>
+    <li><a href="#dam"><i class="fas fa-tint"></i> Water Dam</a></li>
+    <li><a href="#eucalyptus"><i class="fas fa-tree"></i> Eucalyptus</a></li>
+    <li><a href="#products"><i class="fas fa-shopping-basket"></i> Products</a></li>
+    <li><a href="#testimonials"><i class="fas fa-quote-left"></i> Testimonials</a></li>
+    <li><a href="#contact"><i class="fas fa-envelope"></i> Contact</a></li>
+</ul>
+        </div>
+    </nav>
+    
+    <section id="about" class="section">
+        <div class="decorative-shape" style="top: -50px; left: -50px;"></div>
+        <div class="decorative-shape" style="bottom: -50px; right: -50px; transform: rotate(180deg);"></div>
+        
+        <h2 class="section-title">About AGG Farm</h2>
+        <p class="section-subtitle">A family legacy of sustainable farming and environmental stewardship spanning two generations. We combine traditional farming wisdom with modern sustainable practices to deliver the highest quality products while protecting our land for future generations.</p>
+        
+        <div class="about-highlights">
+            <div class="highlight-card">
+                <div class="highlight-icon">
+                    <i class="fas fa-tractor"></i>
+                </div>
+                <h3>580 Acres</h3>
+                <p>of sustainably managed farmland with rotational grazing systems</p>
+            </div>
+            
+            <div class="highlight-card">
+                <div class="highlight-icon">
+                    <i class="fas fa-leaf"></i>
+                </div>
+                <h3>Organic Practices</h3>
+                <p>No synthetic pesticides or fertilizers since our founding in 2011</p>
+            </div>
+            
+            <div class="highlight-card">
+                <div class="highlight-icon">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <h3>Animal Welfare</h3>
+                <p>Certified by the Animal Welfare Approved program</p>
+            </div>
+            
+            <div class="highlight-card">
+                <div class="highlight-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3>Family Farm</h3>
+                <p>Two generations working together daily</p>
+            </div>
+        </div>
+    </section>
+    
+    <section id="animals" class="section" style="background-color: var(--light);">
+        <h2 class="section-title">Our Animals</h2>
+        <p class="section-subtitle">Raised with care and respect in their natural environment. Our animals enjoy open pastures, clean water, and a stress-free life.</p>
+        
+        <div class="animal-section">
+            <div class="animal-card">
+                <img src="goats.jpg" alt="Goat herd" class="animal-img">
+                <div class="animal-content">
+                    <h3>Goat Farming</h3>
+                    <p>We specialize in Boer and Anglo-Nubian goats, known for their excellent meat and milk production. Our herd of 150 goats enjoys daily pasture rotation and natural browse.</p>
+                    <a href="#products" class="btn">
+                        <i class="fas fa-shopping-basket"></i> View Products
+                    </a>
+                </div>
+            </div>
+            
+            <div class="animal-card">
+                <img src="catt.avif" alt="Cattle herd" class="animal-img">
+                <div class="animal-content">
+                    <h3>Cattle Ranch</h3>
+                    <p>Our grass-fed cattle program focuses on Angus and Hereford breeds, producing premium quality beef. Cattle are pasture-raised with no antibiotics or added hormones.</p>
+                    <a href="#products" class="btn">
+                        <i class="fas fa-shopping-basket"></i> View Products
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section id="dam" class="section water-section">
+        <h2 class="section-title">Our Water Dam</h2>
+        <p class="section-subtitle">The heart of our farm's sustainable water management system, providing irrigation, wildlife habitat, and natural beauty.</p>
+        
+        <div class="dam-container">
+            <div class="dam-info">
+                <h3>Sustainable Water Management</h3>
+                <p>Our 5-acre dam was constructed in 2012 and has since become a thriving ecosystem that supports our farming operations and local wildlife:</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Primary irrigation source for pastures via solar-powered pumps</li>
+                    <li><i class="fas fa-check"></i> Stocked with bass and bluegill for natural pest control</li>
+                    <li><i class="fas fa-check"></i> Certified wildlife habitat by the National Wildlife Federation</li>
+                    <li><i class="fas fa-check"></i> Emergency water supply for fire prevention</li>
+                    <li><i class="fas fa-check"></i> Recreational fishing (by appointment)</li>
+                </ul>
+                <p>We practice careful water conservation and have implemented a drip irrigation system to maximize efficiency. Annual water testing ensures quality for both livestock and wildlife.</p>
+                <a href="#contact" class="btn btn-secondary">
+                    <i class="fas fa-phone"></i> Schedule a Fishing Visit
+                </a>
+            </div>
+            
+            <div class="dam-img">
+                <img src="dam.webp" alt="Farm dam with surrounding landscape">
+            </div>
+        </div>
+    </section>
+    
+    <section id="eucalyptus" class="section">
+        <div class="decorative-shape" style="top: 100px; right: -100px;"></div>
+        
+        <h2 class="section-title">Eucalyptus Plantation</h2>
+        <p class="section-subtitle">Sustainable forestry that benefits our farm ecosystem while providing valuable resources.</p>
+        
+        <div class="dam-container" style="margin-top: 3rem;">
+            <div class="dam-img">
+                <img src="el.jpg" alt="Rows of eucalyptus trees">
+            </div>
+            
+            <div class="dam-info">
+                <h3>Multi-Purpose Forestry</h3>
+                <p>We manage our 40-acre eucalyptus plantation with these sustainable goals:</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Windbreak to protect animals and crops from harsh winds</li>
+                    <li><i class="fas fa-check"></i> Sustainable timber production (7-year rotation cycle)</li>
+                    <li><i class="fas fa-check"></i> Habitat for pollinators and beneficial insects</li>
+                    <li><i class="fas fa-check"></i> Carbon sequestration - estimated 50 tons annually</li>
+                    <li><i class="fas fa-check"></i> Erosion control on sloping areas of the farm</li>
+                </ul>
+                <p>We offer eucalyptus poles for fencing, firewood, and essential oil production materials. All harvesting is done sustainably with replanting.</p>
+                <a href="#products" class="btn">
+                    <i class="fas fa-shopping-basket"></i> View Products
+                </a>
+            </div>
+        </div>
+        
+        <h3 style="margin: 3rem 0 1.5rem; text-align: center; color: var(--primary); font-size: 1.8rem;">Eucalyptus Gallery</h3>
+        <div class="eucalyptus-gallery">
+            <div class="gallery-item">
+                <img src="el1.jpg" alt="Eucalyptus leaves closeup">
+                <div class="gallery-caption">
+                    <h4>Eucalyptus Leaves</h4>
+                    <p>Rich in essential oils with natural insect-repellent properties</p>
+                </div>
+            </div>
+            <div class="gallery-item">
+                <img src="el2.jpg" alt="Harvesting eucalyptus">
+                <div class="gallery-caption">
+                    <h4>Sustainable Harvesting</h4>
+                    <p>Selective cutting ensures continuous growth</p>
+                </div>
+            </div>
+            <div class="gallery-item">
+                <img src="el3.avif" alt="Wildlife in eucalyptus grove">
+                <div class="gallery-caption">
+                    <h4>Wildlife Habitat</h4>
+                    <p>Home to numerous bird species and pollinators</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Newsletter Section -->
+    <div class="section">
+        <div class="newsletter">
+            <div class="newsletter-content">
+                <h3>Join Our Farm Newsletter</h3>
+                <p>Get seasonal updates, special offers, and farming tips straight to your inbox.</p>
+                <form class="newsletter-form">
+                    <input type="email" placeholder="Your email address" required>
+                    <button type="submit">Subscribe</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <section id="products" class="section" style="background-color: var(--light);">
+        <h2 class="section-title">Our Farm Products</h2>
+        <p class="section-subtitle">Fresh, sustainable products directly from our farm to your table. Available at our farm store or local farmers markets.</p>
+        
+        <div class="products-container">
+            <div class="product-card">
+                <div class="product-badge">Best Seller</div>
+                <img src="gc.avif" alt="Artisanal goat cheese" class="product-img">
+                <div class="product-info">
+                    <span class="category">Dairy</span>
+                    <h3>Artisanal Goat Cheese</h3>
+                    <p>Handcrafted using traditional methods. Available in multiple varieties including herbed, smoked, and aged.</p>
+                    <p class="price">7000UGX/liter <span class="old-price">8000UGX/lITER</span></p>
+                    <a href="#contact" class="btn">
+                        <i class="fas fa-cart-plus"></i> Order Now
+                    </a>
+                </div>
+            </div>
+            
+            <div class="product-card">
+                <img src="gm.jpeg" alt="Fresh goat milk" class="product-img">
+                <div class="product-info">
+                    <span class="category">Dairy</span>
+                    <h3>Fresh Goat Milk</h3>
+                    <p>Pasteurized, non-homogenized milk from our happy goats. Easier to digest than cow's milk.</p>
+                    <p class="price">4000UGX/liter</p>
+                    <a href="#contact" class="btn">
+                        <i class="fas fa-cart-plus"></i> Order Now
+                    </a>
+                </div>
+            </div>
+            
+            <div class="product-card">
+                <div class="product-badge">New</div>
+                <img src="gme.jpeg" alt="Grass-fed beef cuts" class="product-img">
+                <div class="product-info">
+                    <span class="category">Meat</span>
+                    <h3>Grass-Fed Beef</h3>
+                    <p>Available by the cut or as quarter/half/whole beef. Dry-aged for superior flavor and tenderness.</p>
+                    <p class="price">23000UGX/KG (average)</p>
+                    <a href="#contact" class="btn">
+                        <i class="fas fa-cart-plus"></i> Order Now
+                    </a>
+                </div>
+            </div>
+            
+            <div class="product-card">
+                <img src="gme2.jpeg" alt="Goat meat cuts" class="product-img">
+                <div class="product-info">
+                    <span class="category">Meat</span>
+                    <h3>Goat Meat</h3>
+                    <p>Lean, flavorful meat available fresh or frozen. Popular for traditional dishes and gourmet cuisine.</p>
+                    <p class="price">25000UGX/KG</p>
+                    <a href="#contact" class="btn">
+                        <i class="fas fa-cart-plus"></i> Order Now
+                    </a>
+                </div>
+            </div>
+            
+            <div class="product-card">
+                <img src="e.jpeg" alt="Eucalyptus firewood" class="product-img">
+                <div class="product-info">
+                    <span class="category">Forestry</span>
+                    <h3>Eucalyptus Firewood</h3>
+                    <p>Seasoned, high-BTU firewood. Burns hot and long with a pleasant aroma. Delivered or pickup.</p>
+                    <p class="price">30000UGX/25KG</p>
+                    <a href="#contact" class="btn">
+                        <i class="fas fa-cart-plus"></i> Order Now
+                    </a>
+                </div>
+            </div>
+            
+            <div class="product-card">
+                <div class="product-badge">Popular</div>
+                <img src="tu.jpg" alt="Farm tour experience" class="product-img">
+                <div class="product-info">
+                    <span class="category">Experience</span>
+                    <h3>Farm Tours</h3>
+                    <p>Educational tours of our sustainable farm operations. Great for families and school groups.</p>
+                    <p class="price">20000UGX/person</p>
+                    <a href="#contact" class="btn">
+                        <i class="fas fa-calendar-alt"></i> Book a Tour
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="testimonials" class="section testimonials">
+        <h2 class="section-title">What People Say</h2>
+        <p class="section-subtitle">Don't just take our word for it - hear from our satisfied customers and visitors</p>
+        
+        <div class="testimonial-container">
+            <div class="testimonial-card">
+                <div class="testimonial-rating">
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                </div>
+                <p class="testimonial-text">The goat cheese from Green Valley Farm is the best I've ever tasted. You can really tell the animals are well cared for and the cheese is made with love. We use it in our restaurant's signature salad and customers rave about it.</p>
+                <p class="testimonial-author">
+                    <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Sarah M.">
+                    <span>- Sarah M., Local Restaurant Owner</span>
+                </p>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-rating">
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                </div>
+                <p class="testimonial-text">We purchased a quarter beef last year and were so impressed with the quality that we've already reserved a half beef for this year. The flavor is incredible! The marbling and texture are unlike anything you can get at the supermarket.</p>
+                <p class="testimonial-author">
+                    <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="James & Lisa T.">
+                    <span>- James &amp; Lisa T., Regular Customers</span>
+                </p>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-rating">
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star-half-alt"></i>
+                </div>
+                <p class="testimonial-text">Our school field trip to Green Valley Farm was educational and fun. The kids loved seeing the animals and learning about sustainable farming practices. The farmers were so patient with all their questions - we'll definitely be back next year!</p>
+                <p class="testimonial-author">
+                    <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Mrs. Rodriguez">
+                    <span>- Mrs. Rodriguez, 4th Grade Teacher</span>
+                </p>
+            </div>
+        </div>
+    </section>
+    
+    <section id="contact" class="section">
+        <h2 class="section-title">Visit or Contact Us</h2>
+        <p class="section-subtitle">We welcome visitors by appointment and are always happy to answer questions about our farm and products</p>
+        
+        <div class="contact-container">
+            <div class="contact-info">
+                <h3><i class="fas fa-map-marker-alt contact-icon"></i> Location</h3>
+                <p><i class="fas fa-road contact-icon"></i> 123 Farm Road<br>Countryside, ST 12345</p>
+                
+                <h3 style="margin-top: 2rem;"><i class="fas fa-clock contact-icon"></i> Hours</h3>
+                <div class="contact-hours">
+                    <div class="contact-hour-row">
+                        <span>Monday-Friday</span>
+                        <span>9am-5pm</span>
+                    </div>
+                    <div class="contact-hour-row">
+                        <span>Saturday</span>
+                        <span>10am-4pm</span>
+                    </div>
+                    <div class="contact-hour-row">
+                        <span>Sunday</span>
+                        <span>Closed</span>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 2rem;"><i class="fas fa-phone contact-icon"></i> Contact</h3>
+                <p><i class="fas fa-envelope contact-icon"></i> info@greenvalleyfarm.com</p>
+                <p><i class="fas fa-mobile-alt contact-icon"></i> (555) 123-4567</p>
+                
+                <div style="margin-top: 2rem;">
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3022.215209132329!2d-73.9878449240179!3d40.75798597138999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDDCsDQ1JzI4LjgiTiA3M8KwNTknMTMuNyJX!5e0!3m2!1sen!2sus!4v1689876543210!5m2!1sen!2sus" width="100%" height="300" style="border:0; border-radius: 8px;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+            </div>
+            
+            <div class="contact-form">
+                <h3>Send Us a Message</h3>
+                <form id="contactForm">
+                    <div class="form-group">
+                        <input type="text" id="name" name="name" placeholder=" " required>
+                        <label for="name">Name</label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="email" id="email" name="email" placeholder=" " required>
+                        <label for="email">Email</label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="tel" id="phone" name="phone" placeholder=" ">
+                        <label for="phone">Phone</label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="text" id="subject" name="subject" placeholder=" ">
+                        <label for="subject">Subject</label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <textarea id="message" name="message" placeholder=" " required></textarea>
+                        <label for="message">Message</label>
+                    </div>
+                    
+                    <button type="submit" class="btn">
+                        <i class="fas fa-paper-plane"></i> Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+    
+<section id="team" class="section">
+    <h2 class="section-title">Meet Our Farm Family</h2>
+    <p class="section-subtitle">Three generations working together to bring you the finest sustainable farm products</p>
+    
+    <div class="team-grid">
+        <div class="team-member">
+            <div class="team-years">28 yrs</div>
+            <img src="https://images.unsplash.com/photo-1556910638-9a2cc5e9aa0d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80" alt="John Peterson" class="team-photo">
+            <div class="team-info">
+                <h3>John Peterson</h3>
+                <span class="team-position">Founder & Head Farmer</span>
+                <span class="team-specialty">Livestock Management</span>
+                <p class="team-bio">John founded Green Valley Farm in 1995 with a vision for sustainable agriculture. His decades of experience guide our farming practices.</p>
+                <div class="team-social">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="team-member">
+            <div class="team-years">15 yrs</div>
+            <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1961&q=80" alt="Sarah Peterson" class="team-photo">
+            <div class="team-info">
+                <h3>Sarah Peterson</h3>
+                <span class="team-position">Farm Manager</span>
+                <span class="team-specialty">Dairy Production</span>
+                <p class="team-bio">John's daughter Sarah oversees daily operations and our artisanal cheese production. She's a certified cheesemaker and animal welfare specialist.</p>
+                <div class="team-social">
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-pinterest"></i></a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="team-member">
+            <div class="team-years">8 yrs</div>
+            <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80" alt="Michael Peterson" class="team-photo">
+            <div class="team-info">
+                <h3>Michael Peterson</h3>
+                <span class="team-position">Operations Manager</span>
+                <span class="team-specialty">Sustainable Forestry</span>
+                <p class="team-bio">Sarah's husband Michael manages our eucalyptus plantation and sustainable forestry operations. He's a certified arborist and conservationist.</p>
+                <div class="team-social">
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="team-member">
+            <div class="team-years">5 yrs</div>
+            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1888&q=80" alt="Emma Peterson" class="team-photo">
+            <div class="team-info">
+                <h3>Emma Peterson</h3>
+                <span class="team-position">Farm Educator</span>
+                <span class="team-specialty">Visitor Experiences</span>
+                <p class="team-bio">The youngest generation, Emma leads our educational programs and farm tours. She's studying Agricultural Science at the state university.</p>
+                <div class="team-social">
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-tiktok"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 4rem;">
+        <a href="#contact" class="btn">
+            <i class="fas fa-users"></i> Meet the Team in Person
+        </a>
+    </div>
+</section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="social-links">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-youtube"></i></a>
+                <a href="#"><i class="fab fa-tiktok"></i></a>
+            </div>
+            
+            <ul class="footer-links">
+                <li><a href="#home"><i class="fas fa-chevron-right"></i> Home</a></li>
+                <li><a href="#about"><i class="fas fa-chevron-right"></i> About</a></li>
+                <li><a href="#team"><i class="fas fa-chevron-right"></i> Our Team</a></li>
+                <li><a href="#animals"><i class="fas fa-chevron-right"></i> Our Animals</a></li>
+                <li><a href="#dam"><i class="fas fa-chevron-right"></i> Water Dam</a></li>
+                <li><a href="#eucalyptus"><i class="fas fa-chevron-right"></i> Eucalyptus</a></li>
+                <li><a href="#products"><i class="fas fa-chevron-right"></i> Products</a></li>
+                <li><a href="#testimonials"><i class="fas fa-chevron-right"></i> Testimonials</a></li>
+                <li><a href="#contact"><i class="fas fa-chevron-right"></i> Contact</a></li>
+                <li><a href="#"><i class="fas fa-chevron-right"></i> Privacy Policy</a></li>
+                <li><a href="#"><i class="fas fa-chevron-right"></i> Terms of Service</a></li>
+            </ul>
+            
+            <p>&copy; 2025 AGG FARM . All rights reserved.</p>
+            <p style="margin-top: 0.5rem; font-size: 0.9rem;">Sustainable farming since 1995</p>
+        </div>
+    </footer>
+    
+    <a href="#home" class="back-to-top" id="backToTop">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+    
+    <script>
+        // Create floating particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 20;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                
+                // Random size between 2px and 6px
+                const size = Math.random() * 4 + 2;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                
+                // Random position
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+                
+                // Random animation duration between 10s and 20s
+                const duration = Math.random() * 10 + 10;
+                particle.style.animationDuration = `${duration}s`;
+                
+                // Random delay
+                particle.style.animationDelay = `${Math.random() * 5}s`;
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+        
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const navLinks = document.getElementById('navLinks');
+        
+        mobileMenuBtn.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            mobileMenuBtn.innerHTML = navLinks.classList.contains('active') ? 
+                '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
+        });
+        
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 100,
+                        behavior: 'smooth'
+                    });
+                    
+                    // Close mobile menu if open
+                    if (navLinks.classList.contains('active')) {
+                        navLinks.classList.remove('active');
+                        mobileMenuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+                    }
+                }
+            });
+        });
+        
+        // Simple form submission handler
+        const contactForm = document.getElementById('contactForm');
+        if (contactForm) {
+            contactForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Show success message
+                const submitButton = this.querySelector('button[type="submit"]');
+                const originalButtonHTML = submitButton.innerHTML;
+                submitButton.innerHTML = '<i class="fas fa-check"></i> Message Sent!';
+                submitButton.style.backgroundColor = '#4CAF50';
+                
+                // Reset form
+                this.reset();
+                
+                // Reset button after 3 seconds
+                setTimeout(() => {
+                    submitButton.innerHTML = originalButtonHTML;
+                    submitButton.style.backgroundColor = '';
+                }, 3000);
+            });
+        }
+
+        // Animate elements when they come into view
+        const animateOnScroll = () => {
+            const elements = document.querySelectorAll('.animal-card, .testimonial-card, .product-card, .highlight-card, .gallery-item');
+            
+            elements.forEach(element => {
+                const elementPosition = element.getBoundingClientRect().top;
+                const screenPosition = window.innerHeight / 1.3;
+                
+                if (elementPosition < screenPosition) {
+                    element.style.opacity = '1';
+                    element.style.transform = 'translateY(0)';
+                }
+            });
+        };
+
+        // Set initial state for animated elements
+        document.querySelectorAll('.animal-card, .testimonial-card, .product-card, .highlight-card, .gallery-item').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        });
+
+        // Run animation check on load and scroll
+        window.addEventListener('load', () => {
+            animateOnScroll();
+            createParticles();
+        });
+        window.addEventListener('scroll', animateOnScroll);
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 50) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+        });
+
+        // Back to top button
+        const backToTop = document.getElementById('backToTop');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                backToTop.classList.add('visible');
+            } else {
+                backToTop.classList.remove('visible');
+            }
+        });
+
+        // Mobile logo visibility
+        window.addEventListener('scroll', () => {
+            const mobileLogo = document.querySelector('.logo-mobile');
+            if (window.innerWidth <= 992) {
+                if (window.scrollY > 100) {
+                    mobileLogo.style.display = 'block';
+                } else {
+                    mobileLogo.style.display = 'none';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

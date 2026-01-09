@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGG Farm - Premium Cattle Farming</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Additional styles specific to cattle page */
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .hero-stat {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(5px);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 150px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .hero-stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--secondary);
+        }
+        
+        .hero-stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .breed-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            height: 350px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .breed-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: 20px;
+            color: white;
+            transform: translateY(100px);
+            transition: transform 0.3s ease;
+        }
+        
+        .breed-card:hover .breed-overlay {
+            transform: translateY(0);
+        }
+        
+        .breed-specs {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .spec-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .process-steps {
+            counter-reset: step-counter;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .process-step {
+            position: relative;
+            padding-left: 100px;
+            margin-bottom: 50px;
+        }
+        
+        .process-step:before {
+            counter-increment: step-counter;
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 70px;
+            height: 70px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .process-step h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+        
+        .testimonial-card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .testimonial-card:before {
+            content: '"';
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 5rem;
+            color: rgba(74, 143, 41, 0.1);
+            font-family: serif;
+            line-height: 1;
+        }
+        
+        .testimonial-content {
+            position: relative;
+            z-index: 1;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+        
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .author-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .gallery-item {
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            aspect-ratio: 1/1;
+        }
+        
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        
+        .gallery-item:hover img {
+            transform: scale(1.1);
+        }
+        
+        .gallery-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 15px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .gallery-item:hover .gallery-caption {
+            transform: translateY(0);
+        }
+        
+        .cta-banner {
+            background: linear-gradient(135deg, var(--primary), #3a7bd5);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin: 80px auto;
+            max-width: 1200px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta-banner:before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+        
+        .cta-banner:after {
+            content: '';
+            position: absolute;
+            bottom: -80px;
+            left: -80px;
+            width: 300px;
+            height: 300px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+        
+        .cta-banner h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .cta-banner p {
+            max-width: 700px;
+            margin: 0 auto 30px;
+            font-size: 1.1rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .btn-ghost {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+        }
+        
+        .btn-ghost:hover {
+            background: white;
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="#" class="nav-brand">
+                <span class="nav-logo">AGG</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#gallery">Gallery</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+    
+    <header class="department-header" style="background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.65)), url('catt.avif');">
+        <div class="header-container">
+            <div class="header-logo-container animate__animated animate__fadeIn">
+            </div>
+            
+            <div class="header-content">
+                <p class="header-tagline animate__animated animate__fadeInUp animate__delay-1s">Sustainable, grass-fed beef with exceptional quality and flavor</p>
+                
+                <div class="hero-stats-container animate__animated animate__fadeInUp animate__delay-2s">
+                    <div class="hero-stats">
+                        <div class="hero-stat">
+                            <div class="hero-stat-number">500+</div>
+                            <div class="hero-stat-label">Healthy Cattle</div>
+                        </div>
+                        <div class="hero-stat">
+                            <div class="hero-stat-number">13</div>
+                            <div class="hero-stat-label">Years Experience</div>
+                        </div>
+                        <div class="hero-stat">
+                            <div class="hero-stat-number">100%</div>
+                            <div class="hero-stat-label">Grass-Fed</div>
+                        </div>
+                        <div class="hero-stat">
+                            <div class="hero-stat-number">4</div>
+                            <div class="hero-stat-label">Premium Breeds</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="cattle-about">
+        <h2 class="section-title">Our Cattle Farming Philosophy</h2>
+        <div class="about-grid">
+            <div class="about-card animate__animated animate__fadeIn" data-animation-delay="0.1s">
+                <div class="about-img">
+                    <img src="gfm.jpg" alt="Cattle Grazing">
+                </div>
+                <div class="about-content">
+                    <h3>Grass-Fed Excellence</h3>
+                    <p>Our cattle are raised on open pastures with access to fresh water from our dam. No antibiotics or hormones are used in our raising process.</p>
+                    <ul class="feature-list" style="margin-top: 15px;">
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> 100% grass-fed diet</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> No antibiotics or hormones</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Natural mineral supplements</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="about-card animate__animated animate__fadeIn" data-animation-delay="0.2s">
+                <div class="about-img">
+                    <img src="pb.webp" alt="Cattle Breeds">
+                </div>
+                <div class="about-content">
+                    <h3>Premium Genetic Selection</h3>
+                    <p>We raise Angus and Hereford cattle known for their excellent meat quality and adaptability to our climate.</p>
+                    <ul class="feature-list" style="margin-top: 15px;">
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Superior marbling genetics</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Climate-adapted breeds</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Disease-resistant bloodlines</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="about-card animate__animated animate__fadeIn" data-animation-delay="0.3s">
+                <div class="about-img">
+                    <img src="rgc.png" alt="Rotational Grazing">
+                </div>
+                <div class="about-content">
+                    <h3>Holistic Land Management</h3>
+                    <p>We practice rotational grazing to maintain pasture health and provide the highest quality beef while improving soil health.</p>
+                    <ul class="feature-list" style="margin-top: 15px;">
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Rotational grazing system</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Soil regeneration practices</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Water conservation methods</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="cattle-breeds" style="background: #f9f9f9; padding: 80px 20px;">
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <h2 class="section-title">Our Premium Cattle Breeds</h2>
+            <p class="department-overview" style="margin-bottom: 40px;">
+                We specialize in breeds selected for their superior meat quality, marbling, and adaptability to our sustainable farming practices.
+            </p>
+            
+            <div class="animal-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
+                <div class="breed-card">
+                    <img src="ac.jpg" alt="Angus Cattle" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div class="breed-overlay">
+                        <h3 style="margin: 0; color: white;">Angus</h3>
+                        <p style="margin: 10px 0; font-size: 0.9rem;">Renowned for exceptional marbling and rich, beefy flavor. The gold standard for premium beef.</p>
+                        <div class="breed-specs">
+                            <div class="spec-item">
+                                <i class="fas fa-weight" style="color: var(--secondary);"></i>
+                                <span>550-850 kg</span>
+                            </div>
+                            <div class="spec-item">
+                                <i class="fas fa-star" style="color: var(--secondary);"></i>
+                                <span>Prime Grade</span>
+                            </div>
+                            <div class="spec-item">
+                                <i class="fas fa-globe" style="color: var(--secondary);"></i>
+                                <span>Scotland</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="breed-card">
+                    <img src="hc.jpg" alt="Hereford Cattle" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div class="breed-overlay">
+                        <h3 style="margin: 0; color: white;">Hereford</h3>
+                        <p style="margin: 10px 0; font-size: 0.9rem;">Hardy, efficient grazers producing well-marbled beef with excellent flavor.</p>
+                        <div class="breed-specs">
+                            <div class="spec-item">
+                                <i class="fas fa-weight" style="color: var(--secondary);"></i>
+                                <span>500-800 kg</span>
+                            </div>
+                            <div class="spec-item">
+                                <i class="fas fa-star" style="color: var(--secondary);"></i>
+                                <span>Choice Grade</span>
+                            </div>
+                            <div class="spec-item">
+                                <i class="fas fa-globe" style="color: var(--secondary);"></i>
+                                <span>England</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="breed-card">
+                    <img src="wc.webp" alt="Wagyu Cattle" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div class="breed-overlay">
+                        <h3 style="margin: 0; color: white;">Wagyu</h3>
+                        <p style="margin: 10px 0; font-size: 0.9rem;">Legendary for its intense marbling and buttery texture. The pinnacle of beef excellence.</p>
+                        <div class="breed-specs">
+                            <div class="spec-item">
+                                <i class="fas fa-weight" style="color: var(--secondary);"></i>
+                                <span>450-700 kg</span>
+                            </div>
+                            <div class="spec-item">
+                                <i class="fas fa-star" style="color: var(--secondary);"></i>
+                                <span>A5 Grade</span>
+                            </div>
+                            <div class="spec-item">
+                                <i class="fas fa-globe" style="color: var(--secondary);"></i>
+                                <span>Japan</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="cattle-process">
+        <h2 class="section-title">Our Sustainable Process</h2>
+        <div class="process-steps">
+            <div class="process-step">
+                <h3>Pasture Management</h3>
+                <p>We implement rotational grazing across our 500-acre pasture system, allowing vegetation to recover while providing our cattle with diverse, nutrient-rich forage. Our pastures are never treated with synthetic herbicides or pesticides.</p>
+            </div>
+            
+            <div class="process-step">
+                <h3>Breeding Program</h3>
+                <p>Our selective breeding program focuses on health, temperament, and meat quality traits. We work with veterinary geneticists to maintain the highest quality bloodlines while improving feed efficiency and marbling characteristics.</p>
+            </div>
+            
+            <div class="process-step">
+                <h3>Animal Care</h3>
+                <p>From birth to maturity, our cattle receive individualized care. Our protocols include regular health checks, low-stress handling techniques, and preventative treatments using natural remedies whenever possible.</p>
+            </div>
+            
+            <div class="process-step">
+                <h3>Processing</h3>
+                <p>Our cattle are processed at USDA-certified facilities with the highest standards of humane treatment. We use dry-aging techniques to enhance flavor and tenderness, resulting in superior beef quality.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="cattle-products" class="products" style="background: #f9f9f9;">
+        <h2 class="section-title">Premium Beef Products</h2>
+        <p class="department-overview" style="margin-bottom: 40px;">
+            From premium cuts to specialty items, we offer the highest quality grass-fed beef available.
+        </p>
+        
+        <div class="products-grid">
+            <div class="product-card animate__animated animate__fadeIn" data-animation-delay="0.1s">
+                <div class="product-img">
+                    <img src="gfr.webp" alt="Ribeye Steak">
+                    <div class="product-badge" style="position: absolute; top: 15px; right: 15px; background: var(--secondary); color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">BEST SELLER</div>
+                </div>
+                <div class="product-content">
+                    <h3>Grass-Fed Ribeye</h3>
+                    <p>Our signature cut with exceptional marbling and rich flavor. Perfect for grilling or pan-searing to showcase the natural beef flavor.</p>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                        <span style="font-weight: bold; color: var(--primary);">$24.99/lb</span>
+                        <a href="#" class="btn" style="padding: 5px 15px; font-size: 0.9rem;">Order Now</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="product-card animate__animated animate__fadeIn" data-animation-delay="0.2s">
+                <div class="product-img">
+                    <img src="gb.jpg" alt="Ground Beef">
+                </div>
+                <div class="product-content">
+                    <h3>Ground Beef</h3>
+                    <p>85/15 lean-to-fat ratio for perfect burgers or meatballs. Packed with flavor from our grass-fed cattle.</p>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                        <span style="font-weight: bold; color: var(--primary);">$9.99/lb</span>
+                        <a href="#" class="btn" style="padding: 5px 15px; font-size: 0.9rem;">Order Now</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="product-card animate__animated animate__fadeIn" data-animation-delay="0.3s">
+                <div class="product-img">
+                    <img src="dab.jpg" alt="Dry-Aged Beef">
+                </div>
+                <div class="product-content">
+                    <h3>Dry-Aged Beef</h3>
+                    <p>28-day dry-aged beef with concentrated flavor and buttery texture. Our premium offering for discerning palates.</p>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                        <span style="font-weight: bold; color: var(--primary);">From $34.99/lb</span>
+                        <a href="#" class="btn" style="padding: 5px 15px; font-size: 0.9rem;">Order Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="cattle-testimonials">
+        <h2 class="section-title">What Our Customers Say</h2>
+        <div class="testimonials-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-top: 40px;">
+            <div class="testimonial-card">
+                <div class="testimonial-content">
+                    "The grass-fed beef from AGG Farm is by far the best I've ever tasted. The flavor is rich and complex, with none of the gaminess you sometimes get with grass-fed beef. My steakhouse customers can't get enough!"
+                </div>
+                <div class="testimonial-author">
+                    <img src="customer1.jpg" alt="Chef Robert" class="author-avatar">
+                    <div>
+                        <div style="font-weight: bold;">Chef Robert</div>
+                        <div style="font-size: 0.9rem; color: #666;">Steakhouse Owner</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-content">
+                    "As someone who cares about both animal welfare and nutrition, AGG Farm checks all the boxes. Their beef is not only ethically raised but also incredibly delicious and tender. Worth every penny!"
+                </div>
+                <div class="testimonial-author">
+                    <img src="customer2.jpg" alt="Emily S." class="author-avatar">
+                    <div>
+                        <div style="font-weight: bold;">Emily S.</div>
+                        <div style="font-size: 0.9rem; color: #666;">Health-conscious Consumer</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-content">
+                    "The quality and consistency of AGG's beef products are unmatched. Their sustainable practices and transparency about their farming methods make me proud to serve their products in my shop."
+                </div>
+                <div class="testimonial-author">
+                    <img src="customer3.jpg" alt="James P." class="author-avatar">
+                    <div>
+                        <div style="font-weight: bold;">James P.</div>
+                        <div style="font-size: 0.9rem; color: #666;">Butcher Shop Owner</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="cattle-gallery" style="padding-bottom: 40px;">
+        <h2 class="section-title">Life on Our Cattle Ranch</h2>
+        <div class="gallery" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div class="gallery-item">
+                <img src="cp.jpg" alt="Cattle grazing in pasture">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Open Pastures</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">Our cattle roam freely on lush pastures</p>
+                </div>
+            </div>
+            
+            <div class="gallery-item">
+                <img src="cwh.webp" alt="Cattle at watering hole">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Fresh Water</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">Clean water sources throughout the ranch</p>
+                </div>
+            </div>
+            
+            <div class="gallery-item">
+                <img src="bc.jpg" alt="Baby calves">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Newborn Calves</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">Healthy calves born each season</p>
+                </div>
+            </div>
+            
+            <div class="gallery-item">
+                <img src="cs.jpg" alt="Cattle shelter">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Shelter</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">Protection from extreme weather</p>
+                </div>
+            </div>
+            
+            <div class="gallery-item">
+                <img src="vetc.jpg" alt="Veterinary care">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Health Checks</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">Regular veterinary monitoring</p>
+                </div>
+            </div>
+            
+            <div class="gallery-item">
+                <img src="pc.png" alt="Beef products">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Premium Cuts</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">From our ranch to your table</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="cta-banner animate__animated animate__pulse animate__infinite animate__slower">
+        <h2>Ready to Experience Our Premium Beef?</h2>
+        <p>Join our community of satisfied customers who appreciate quality, sustainability, and exceptional flavor.</p>
+        <a href="#contact" class="btn" style="margin-right: 15px;">Contact Us</a>
+        <a href="#products" class="btn btn-ghost">View Products</a>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-column">
+                <h3>AGG Cattle Ranch</h3>
+                <p>Specializing in sustainable, grass-fed beef production with premium breeds. Family owned and operated since 1995.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Beef Products</h3>
+                <ul class="footer-links">
+                    <li><a href="#">Premium Steaks</a></li>
+                    <li><a href="#">Ground Beef</a></li>
+                    <li><a href="#">Dry-Aged Beef</a></li>
+                    <li><a href="#">Specialty Cuts</a></li>
+                    <li><a href="#">Breeding Stock</a></li>
+                    <li><a href="#">Seasonal Specials</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Ranch Experiences</h3>
+                <ul class="footer-links">
+                    <li><a href="#">Ranch Tours</a></li>
+                    <li><a href="#">Butchery Workshops</a></li>
+                    <li><a href="#">Grilling Classes</a></li>
+                    <li><a href="#">Farm-to-Table Dinners</a></li>
+                    <li><a href="#">Seasonal Events</a></li>
+                    <li><a href="#">Educational Programs</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Newsletter</h3>
+                <p>Subscribe for updates on new products, ranch events, and seasonal offers.</p>
+                <form style="margin-top: 15px;">
+                    <input type="email" placeholder="Your Email" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ddd;">
+                    <button type="submit" class="btn" style="width: 100%; padding: 10px;">Subscribe</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="copyright">
+            <p>&copy; 2023 AGG Cattle Ranch. All Rights Reserved. | <a href="#" style="color: #aaa;">Privacy Policy</a> | <a href="#" style="color: #aaa;">Terms of Service</a></p>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu toggle
+        const mobileMenuButton = document.querySelector('.mobile-menu-button');
+        const navLinks = document.querySelector('.nav-links');
+
+        mobileMenuButton.addEventListener('click', function() {
+            navLinks.classList.toggle('active');
+            this.classList.toggle('active');
+            
+            // Close dropdown menus when mobile menu is toggled
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                menu.style.display = 'none';
+            });
+        });
+
+        // Dropdown toggle
+        document.querySelectorAll('.dropdown > a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                if (window.innerWidth <= 768) {
+                    e.preventDefault();
+                    const dropdown = this.parentElement;
+                    const menu = dropdown.querySelector('.dropdown-menu');
+                    
+                    // Close all other dropdowns
+                    document.querySelectorAll('.dropdown-menu').forEach(m => {
+                        if (m !== menu) m.style.display = 'none';
+                    });
+                    
+                    // Toggle this dropdown
+                    if (menu.style.display === 'block') {
+                        menu.style.display = 'none';
+                        dropdown.classList.remove('active');
+                    } else {
+                        menu.style.display = 'block';
+                        dropdown.classList.add('active');
+                    }
+                }
+            });
+        });
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                    menu.style.display = 'none';
+                });
+                document.querySelectorAll('.dropdown').forEach(dropdown => {
+                    dropdown.classList.remove('active');
+                });
+            }
+        });
+
+        // Animation on scroll
+        function animateOnScroll() {
+            const elements = document.querySelectorAll('.animate__animated');
+            
+            elements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                const windowHeight = window.innerHeight;
+                
+                if (elementTop < windowHeight - 100) {
+                    const animation = element.getAttribute('data-animation') || 'fadeIn';
+                    const delay = element.getAttribute('data-animation-delay') || '0';
+                    
+                    element.style.animationDelay = delay + 's';
+                    element.classList.add(animation);
+                    
+                    // Remove the attribute to prevent re-animation
+                    element.removeAttribute('data-animate');
+                }
+            });
+        }
+
+        // Run on load and scroll
+        window.addEventListener('load', animateOnScroll);
+        window.addEventListener('scroll', animateOnScroll);
+    </script>
+</body>
+</html>

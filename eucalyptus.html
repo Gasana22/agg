@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGG Farm - Eucalyptus Department</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Additional styles specific to eucalyptus page */
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .hero-stat {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(5px);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 150px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .hero-stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--secondary);
+        }
+        
+        .hero-stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .benefit-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            height: 350px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .benefit-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: 20px;
+            color: white;
+            transform: translateY(100px);
+            transition: transform 0.3s ease;
+        }
+        
+        .benefit-card:hover .benefit-overlay {
+            transform: translateY(0);
+        }
+        
+        .process-steps {
+            counter-reset: step-counter;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .process-step {
+            position: relative;
+            padding-left: 100px;
+            margin-bottom: 50px;
+        }
+        
+        .process-step:before {
+            counter-increment: step-counter;
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 70px;
+            height: 70px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .process-step h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+        
+        .testimonial-card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .testimonial-card:before {
+            content: '"';
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 5rem;
+            color: rgba(74, 143, 41, 0.1);
+            font-family: serif;
+            line-height: 1;
+        }
+        
+        .testimonial-content {
+            position: relative;
+            z-index: 1;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+        
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .author-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .gallery-item {
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            aspect-ratio: 1/1;
+        }
+        
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        
+        .gallery-item:hover img {
+            transform: scale(1.1);
+        }
+        
+        .gallery-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 15px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .gallery-item:hover .gallery-caption {
+            transform: translateY(0);
+        }
+        
+        .cta-banner {
+            background: linear-gradient(135deg, var(--primary), #3a7bd5);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin: 80px auto;
+            max-width: 1200px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta-banner:before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+        
+        .cta-banner:after {
+            content: '';
+            position: absolute;
+            bottom: -80px;
+            left: -80px;
+            width: 300px;
+            height: 300px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+        
+        .cta-banner h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .cta-banner p {
+            max-width: 700px;
+            margin: 0 auto 30px;
+            font-size: 1.1rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .btn-ghost {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+        }
+        
+        .btn-ghost:hover {
+            background: white;
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="#" class="nav-brand">
+            </a>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#gallery">Gallery</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+    
+    <header class="department-header" style="background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.65)), url('el2.jpg');">
+        <div class="header-container">
+            <div class="header-logo-container animate__animated animate__fadeIn">
+                <img src="AGG  logo-03.png" alt="AGG Farm Logo" class="header-logo">
+            </div>
+            
+            <div class="header-content">
+                <p class="header-tagline animate__animated animate__fadeInUp animate__delay-1s">Sustainable eucalyptus cultivation for timber, oil, and environmental benefits</p>
+                
+                <div class="hero-stats-container animate__animated animate__fadeInUp animate__delay-2s">
+                    <div class="hero-stats">
+                        <div class="hero-stat">
+                            <div class="hero-stat-number">50+</div>
+                            <div class="hero-stat-label">Acres Planted</div>
+                        </div>
+                        <div class="hero-stat">
+                            <div class="hero-stat-number">1000+</div>
+                            <div class="hero-stat-label">Tons CO2 Sequestered</div>
+                        </div>
+                        <div class="hero-stat">
+                            <div class="hero-stat-number">20+</div>
+                            <div class="hero-stat-label">Local Jobs Created</div>
+                        </div>
+                        <div class="hero-stat">
+                            <div class="hero-stat-number">15</div>
+                            <div class="hero-stat-label">Years Experience</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="eucalyptus-about">
+        <h2 class="section-title">Our Eucalyptus Operations</h2>
+        <div class="about-grid">
+            <div class="about-card animate__animated animate__fadeIn" data-animation-delay="0.1s">
+                <div class="about-img">
+                    <img src="el2.jpg" alt="Eucalyptus Plantation">
+                </div>
+                <div class="about-content">
+                    <h3>Sustainable Plantation</h3>
+                    <p>Our eucalyptus trees are grown using sustainable practices that promote soil health and biodiversity.</p>
+                    <ul class="feature-list" style="margin-top: 15px;">
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Eco-friendly cultivation</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Soil conservation</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Water management</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="about-card animate__animated animate__fadeIn" data-animation-delay="0.2s">
+                <div class="about-img">
+                    <img src="oil.jpg" alt="Eucalyptus Oil">
+                </div>
+                <div class="about-content">
+                    <h3>Essential Oil Production</h3>
+                    <p>We distill premium eucalyptus oil from our leaves, known for its therapeutic properties and fresh aroma.</p>
+                    <ul class="feature-list" style="margin-top: 15px;">
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> 100% pure essential oil</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Therapeutic grade quality</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Sustainable extraction</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="about-card animate__animated animate__fadeIn" data-animation-delay="0.3s">
+                <div class="about-img">
+                    <img src="e.jpeg" alt="Timber Production">
+                </div>
+                <div class="about-content">
+                    <h3>Timber Products</h3>
+                    <p>Our fast-growing eucalyptus provides high-quality timber for construction, furniture, and paper products.</p>
+                    <ul class="feature-list" style="margin-top: 15px;">
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Fast-growing</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Termite-resistant</li>
+                        <li><i class="fas fa-check-circle" style="color: var(--primary);"></i> Durable material</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="eucalyptus-benefits" style="background: #f9f9f9; padding: 80px 20px;">
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <h2 class="section-title">Environmental Benefits</h2>
+            <p class="department-overview" style="margin-bottom: 40px;">
+                Our eucalyptus plantations provide numerous environmental benefits while delivering high-quality products.
+            </p>
+            
+            <div class="animal-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
+                <div class="benefit-card">
+                    <img src="css.jpg" alt="Carbon Sequestration" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div class="benefit-overlay">
+                        <h3 style="margin: 0; color: white;">Carbon Sequestration</h3>
+                        <p style="margin: 10px 0; font-size: 0.9rem;">Our plantations absorb significant amounts of CO2, helping combat climate change.</p>
+                    </div>
+                </div>
+                
+                <div class="benefit-card">
+                    <img src="bd.webp" alt="Biodiversity" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div class="benefit-overlay">
+                        <h3 style="margin: 0; color: white;">Biodiversity</h3>
+                        <p style="margin: 10px 0; font-size: 0.9rem;">We maintain diverse ecosystems within our plantations.</p>
+                    </div>
+                </div>
+                
+                <div class="benefit-card">
+                    <img src="wm.jpg" alt="Water Management" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div class="benefit-overlay">
+                        <h3 style="margin: 0; color: white;">Water Management</h3>
+                        <p style="margin: 10px 0; font-size: 0.9rem;">Our trees help regulate water cycles and prevent soil erosion.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="eucalyptus-process">
+        <h2 class="section-title">Our Sustainable Process</h2>
+        <div class="process-steps">
+            <div class="process-step">
+                <h3>Planting & Growth</h3>
+                <p>We implement sustainable planting techniques with proper spacing and soil preparation. Our trees grow rapidly, reaching maturity in just 7-10 years.</p>
+            </div>
+            
+            <div class="process-step">
+                <h3>Maintenance</h3>
+                <p>Our selective pruning and thinning program focuses on tree health and optimal growth. We use natural methods to maintain soil fertility.</p>
+            </div>
+            
+            <div class="process-step">
+                <h3>Harvesting</h3>
+                <p>We follow sustainable harvesting protocols that ensure continuous forest cover while maximizing timber yield and oil production.</p>
+            </div>
+            
+            <div class="process-step">
+                <h3>Processing</h3>
+                <p>From timber milling to oil distillation, we process all materials on-site with minimal waste and maximum efficiency.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="eucalyptus-products" class="products" style="background: #f9f9f9;">
+        <h2 class="section-title">Our Eucalyptus Products</h2>
+        <p class="department-overview" style="margin-bottom: 40px;">
+            From essential oils to premium timber, we offer the highest quality eucalyptus products available.
+        </p>
+        
+        <div class="products-grid">
+            <div class="product-card animate__animated animate__fadeIn" data-animation-delay="0.1s">
+                <div class="product-img">
+                    <img src="oil.jpg" alt="Eucalyptus Oil">
+                    <div class="product-badge" style="position: absolute; top: 15px; right: 15px; background: var(--secondary); color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">BEST SELLER</div>
+                </div>
+                <div class="product-content">
+                    <h3>Pure Eucalyptus Oil</h3>
+                    <p>100% pure essential oil with therapeutic grade quality for aromatherapy and medicinal uses.</p>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                        <span style="font-weight: bold; color: var(--primary);">$14.99/oz</span>
+                        <a href="#" class="btn" style="padding: 5px 15px; font-size: 0.9rem;">Order Now</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="product-card animate__animated animate__fadeIn" data-animation-delay="0.2s">
+                <div class="product-img">
+                    <img src="elu.jpg" alt="Eucalyptus Lumber">
+                </div>
+                <div class="product-content">
+                    <h3>Eucalyptus Lumber</h3>
+                    <p>Durable, termite-resistant timber for construction and furniture making.</p>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                        <span style="font-weight: bold; color: var(--primary);">$3.99/board ft</span>
+                        <a href="#" class="btn" style="padding: 5px 15px; font-size: 0.9rem;">Order Now</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="product-card animate__animated animate__fadeIn" data-animation-delay="0.3s">
+                <div class="product-img">
+                    <img src="ef.webp" alt="Eucalyptus Firewood">
+                </div>
+                <div class="product-content">
+                    <h3>Premium Firewood</h3>
+                    <p>High-energy firewood that burns hot and long, perfect for heating and cooking.</p>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                        <span style="font-weight: bold; color: var(--primary);">$120/cord</span>
+                        <a href="#" class="btn" style="padding: 5px 15px; font-size: 0.9rem;">Order Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="eucalyptus-testimonials">
+        <h2 class="section-title">What Our Customers Say</h2>
+        <div class="testimonials-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-top: 40px;">
+            <div class="testimonial-card">
+                <div class="testimonial-content">
+                    "The eucalyptus oil from AGG Farm is the purest I've found. The aroma is incredibly fresh and therapeutic. I use it daily in my diffuser and for homemade cleaning products."
+                </div>
+                <div class="testimonial-author">
+                    <img src="customer1.jpg" alt="Sarah J." class="author-avatar">
+                    <div>
+                        <div style="font-weight: bold;">Sarah J.</div>
+                        <div style="font-size: 0.9rem; color: #666;">Aromatherapist</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-content">
+                    "As a furniture maker, I appreciate the quality of AGG's eucalyptus lumber. It's durable, beautiful, and sustainably sourced. My clients love the unique grain patterns."
+                </div>
+                <div class="testimonial-author">
+                    <img src="customer2.jpg" alt="Michael T." class="author-avatar">
+                    <div>
+                        <div style="font-weight: bold;">Michael T.</div>
+                        <div style="font-size: 0.9rem; color: #666;">Furniture Craftsman</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-content">
+                    "The sustainability practices at AGG Farm are truly impressive. Their eucalyptus plantations actually improve the local ecosystem while providing valuable products."
+                </div>
+                <div class="testimonial-author">
+                    <img src="customer3.jpg" alt="Lisa M." class="author-avatar">
+                    <div>
+                        <div style="font-weight: bold;">Lisa M.</div>
+                        <div style="font-size: 0.9rem; color: #666;">Environmental Consultant</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="eucalyptus-gallery" style="padding-bottom: 40px;">
+        <h2 class="section-title">Our Eucalyptus Plantation</h2>
+        <div class="gallery" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div class="gallery-item">
+                <img src="el2.jpg" alt="Eucalyptus plantation">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Sustainable Plantation</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">Well-spaced trees for optimal growth</p>
+                </div>
+            </div>
+            
+            <div class="gallery-item">
+                <img src="he.jpeg" alt="Harvesting process">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Harvesting</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">Sustainable timber harvesting</p>
+                </div>
+            </div>
+            
+            <div class="gallery-item">
+                <img src="tp.jpg" alt="Lumber yard">
+                <div class="gallery-caption">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Timber Processing</h3>
+                    <p style="margin: 5px 0 0; font-size: 0.8rem;">Drying and milling lumber</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="cta-banner animate__animated animate__pulse animate__infinite animate__slower">
+        <h2>Ready to Experience Our Eucalyptus Products?</h2>
+        <p>Join our community of satisfied customers who appreciate quality, sustainability, and exceptional value.</p>
+        <a href="#contact" class="btn" style="margin-right: 15px;">Contact Us</a>
+        <a href="#products" class="btn btn-ghost">View Products</a>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-column">
+                <h3>AGG Eucalyptus Farm</h3>
+                <p>Specializing in sustainable eucalyptus cultivation for timber, oil, and environmental benefits. Family owned and operated since 1995.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Eucalyptus Products</h3>
+                <ul class="footer-links">
+                    <li><a href="#">Essential Oil</a></li>
+                    <li><a href="#">Timber & Lumber</a></li>
+                    <li><a href="#">Firewood</a></li>
+                    <li><a href="#">Mulch</a></li>
+                    <li><a href="#">Landscaping Trees</a></li>
+                    <li><a href="#">Seasonal Specials</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Farm Experiences</h3>
+                <ul class="footer-links">
+                    <li><a href="#">Farm Tours</a></li>
+                    <li><a href="#">Oil Distillation Demos</a></li>
+                    <li><a href="#">Timber Workshops</a></li>
+                    <li><a href="#">Sustainability Talks</a></li>
+                    <li><a href="#">Seasonal Events</a></li>
+                    <li><a href="#">Educational Programs</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Newsletter</h3>
+                <p>Subscribe for updates on new products, farm events, and seasonal offers.</p>
+                <form style="margin-top: 15px;">
+                    <input type="email" placeholder="Your Email" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ddd;">
+                    <button type="submit" class="btn" style="width: 100%; padding: 10px;">Subscribe</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="copyright">
+            <p>&copy; 2023 AGG Eucalyptus Farm. All Rights Reserved. | <a href="#" style="color: #aaa;">Privacy Policy</a> | <a href="#" style="color: #aaa;">Terms of Service</a></p>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu toggle
+        const mobileMenuButton = document.querySelector('.mobile-menu-button');
+        const navLinks = document.querySelector('.nav-links');
+
+        mobileMenuButton.addEventListener('click', function() {
+            navLinks.classList.toggle('active');
+            this.classList.toggle('active');
+            
+            // Close dropdown menus when mobile menu is toggled
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                menu.style.display = 'none';
+            });
+        });
+
+        // Animation on scroll
+        function animateOnScroll() {
+            const elements = document.querySelectorAll('.animate__animated');
+            
+            elements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                const windowHeight = window.innerHeight;
+                
+                if (elementTop < windowHeight - 100) {
+                    const animation = element.getAttribute('data-animation') || 'fadeIn';
+                    const delay = element.getAttribute('data-animation-delay') || '0';
+                    
+                    element.style.animationDelay = delay + 's';
+                    element.classList.add(animation);
+                    
+                    // Remove the attribute to prevent re-animation
+                    element.removeAttribute('data-animate');
+                }
+            });
+        }
+
+        // Run on load and scroll
+        window.addEventListener('load', animateOnScroll);
+        window.addEventListener('scroll', animateOnScroll);
+    </script>
+</body>
+</html>
