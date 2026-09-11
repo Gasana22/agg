@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\Procurement;
 
+use App\Enums\NotificationType;
 use App\Enums\PurchaseOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Procurement\StoreDeliveryRequest;
 use App\Http\Requests\Procurement\UpdateDeliveryRequest;
 use App\Http\Resources\DeliveryResource;
 use App\Models\Delivery;
+use App\Models\Notification;
 use App\Models\PurchaseOrder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -39,11 +41,24 @@ class DeliveryController extends Controller
         ]);
 
         if (! in_array($purchaseOrder->status, [PurchaseOrderStatus::Delivered, PurchaseOrderStatus::Cancelled], true)) {
+            $newlyDelivered = $request->boolean('is_complete');
+
             $purchaseOrder->update([
-                'status' => $request->boolean('is_complete')
+                'status' => $newlyDelivered
                     ? PurchaseOrderStatus::Delivered->value
                     : PurchaseOrderStatus::PartiallyDelivered->value,
             ]);
+
+            if ($newlyDelivered) {
+                Notification::send(
+                    $purchaseOrder->creator,
+                    $purchaseOrder->farm,
+                    NotificationType::PurchaseOrderDelivered,
+                    "Purchase order #{$purchaseOrder->id} delivered",
+                    'The full order has now been received.',
+                    $purchaseOrder,
+                );
+            }
         }
 
         return new DeliveryResource($delivery->load('receiver'));

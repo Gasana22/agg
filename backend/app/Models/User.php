@@ -167,6 +167,11 @@ class User extends Authenticatable implements JWTSubject
             || $this->roleOnFarm($farm) === FarmRole::StoreManager;
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class)->latest();
+    }
+
     public function isSupervisorOf(WorkerProfile $profile): bool
     {
         return $profile->supervisor_id === $this->id;

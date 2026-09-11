@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api\Finance;
 
 use App\Enums\AttendanceStatus;
+use App\Enums\NotificationType;
 use App\Enums\PayrollPaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Finance\PayPayrollPaymentRequest;
 use App\Http\Requests\Finance\StorePayrollPaymentRequest;
 use App\Http\Resources\PayrollPaymentResource;
+use App\Models\Notification;
 use App\Models\PayrollPayment;
 use App\Models\WorkerProfile;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -93,6 +95,19 @@ class PayrollPaymentController extends Controller
             'paid_date' => now(),
         ]);
 
-        return new PayrollPaymentResource($payrollPayment->load(['workerProfile.user', 'recorder']));
+        $payrollPayment->load(['workerProfile.user', 'recorder']);
+
+        if ($payrollPayment->workerProfile->user) {
+            Notification::send(
+                $payrollPayment->workerProfile->user,
+                $payrollPayment->workerProfile->farm,
+                NotificationType::PayrollPaid,
+                'You were paid',
+                "Net amount: {$payrollPayment->net_amount} for {$payrollPayment->period_start} to {$payrollPayment->period_end}.",
+                $payrollPayment,
+            );
+        }
+
+        return new PayrollPaymentResource($payrollPayment);
     }
 }

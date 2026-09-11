@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Api\WorkerManagement;
 
+use App\Enums\FarmRole;
+use App\Enums\NotificationType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\WorkerManagement\ApproveAttendanceRequest;
 use App\Http\Requests\WorkerManagement\CheckInRequest;
 use App\Http\Requests\WorkerManagement\CheckOutRequest;
 use App\Http\Resources\AttendanceResource;
 use App\Models\Attendance;
+use App\Models\Notification;
 use App\Models\WorkerProfile;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Auth;
@@ -53,6 +56,8 @@ class AttendanceController extends Controller
             'check_in_photo_path' => $photoPath,
             'status' => 'pending',
         ]);
+
+        $this->notifyApprovers($workerProfile, $attendance);
 
         return new AttendanceResource($attendance);
     }
@@ -100,5 +105,37 @@ class AttendanceController extends Controller
         ]);
 
         return new AttendanceResource($attendance->load('approver'));
+    }
+
+    /**
+     * Notifies the farm's managers, plus the worker's specific supervisor
+     * if one is set and isn't already a manager — mirroring exactly who
+     * AttendancePolicy::approve() would let approve this record.
+     */
+    private function notifyApprovers(WorkerProfile $workerProfile, Attendance $attendance): void
+    {
+        $workerName = $workerProfile->user?->name ?? 'A worker';
+
+        Notification::sendToFarmRoles(
+            $workerProfile->farm,
+            [FarmRole::FarmOwner, FarmRole::FarmManager],
+            NotificationType::AttendancePendingApproval,
+            "{$workerName} checked in — approval needed",
+            'Review and approve or reject today\'s check-in.',
+            $attendance,
+        );
+
+        $supervisor = $workerProfile->supervisor;
+
+        if ($supervisor && ! $supervisor->canManageFarm($workerProfile->farm)) {
+            Notification::send(
+                $supervisor,
+                $workerProfile->farm,
+                NotificationType::AttendancePendingApproval,
+                "{$workerName} checked in — approval needed",
+                'Review and approve or reject today\'s check-in.',
+                $attendance,
+            );
+        }
     }
 }

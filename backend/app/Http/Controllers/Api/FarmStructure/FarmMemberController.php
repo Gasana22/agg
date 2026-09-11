@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api\FarmStructure;
 
+use App\Enums\NotificationType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FarmStructure\AddFarmMemberRequest;
 use App\Http\Requests\FarmStructure\UpdateFarmMemberRequest;
 use App\Http\Resources\FarmMemberResource;
 use App\Models\Farm;
+use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -37,6 +39,14 @@ class FarmMemberController extends Controller
         }
 
         $farm->users()->attach($member->id, ['role_on_farm' => $request->validated('role_on_farm')]);
+
+        Notification::send(
+            $member,
+            $farm,
+            NotificationType::FarmMembershipAdded,
+            "You've been added to {$farm->name}",
+            "Your role on this farm is {$request->validated('role_on_farm')}.",
+        );
 
         return new FarmMemberResource($farm->users()->where('user_id', $member->id)->first());
     }

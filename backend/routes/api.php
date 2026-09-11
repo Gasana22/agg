@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\LivestockManagement\AnimalHealthLogController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalProductionRecordController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalSaleController;
 use App\Http\Controllers\Api\LivestockManagement\BreedingRecordController;
+use App\Http\Controllers\Api\Notifications\NotificationController;
 use App\Http\Controllers\Api\Procurement\DeliveryController;
 use App\Http\Controllers\Api\Procurement\PaymentController;
 use App\Http\Controllers\Api\Procurement\ProcurementReportController;
@@ -245,6 +246,12 @@ Route::middleware('auth:api')->group(function () {
     // 11. Reports & Analytics
     Route::get('farms/{farm}/dashboard', [FarmDashboardController::class, 'show']);
     Route::get('admin/dashboard', [AdminDashboardController::class, 'show']);
+
+    // 13. Notifications
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::patch('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
     // 16. Traceability & Chain of Custody
     Route::get('farms/{farm}/trace-batches', [TraceBatchController::class, 'index']);
