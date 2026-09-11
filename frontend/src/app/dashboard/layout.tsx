@@ -30,14 +30,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getUnreadNotificationCount } from "@/lib/modules/notifications";
 import { formatRole } from "@/lib/utils";
 
+// `roles` restricts a nav item to the listed farm roles (system_administrator
+// always sees everything, and omitting `roles` means every farm member can
+// see it). These two are the only items the backend actually gates for
+// viewing, not just managing:
+// - WorkerProfilePolicy::viewAny requires canManageFarm() — listing every
+//   worker's pay rate is manager-only, not something any member can see.
+// - ExpensePolicy::viewAny requires canManageFinance() — bookkeeping data
+//   is farm_owner/farm_manager/accountant territory, not any member's.
+// Everything else (Farm Structure, Crops, Livestock, Procurement,
+// Inventory, Assets, Maps, Reports, Traceability, Documents) is
+// deliberately viewAny = canViewFarm() on the backend: any farm member can
+// see it, even if only specific roles can create/edit/delete within it.
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/farms", label: "Farm Structure", icon: Map },
   { href: "/dashboard/crops", label: "Crop Management", icon: Sprout },
   { href: "/dashboard/livestock", label: "Livestock", icon: Beef },
-  { href: "/dashboard/workers", label: "Workers", icon: Users },
+  { href: "/dashboard/workers", label: "Workers", icon: Users, roles: ["farm_owner", "farm_manager"] },
   { href: "/dashboard/activities", label: "Activity Tracking", icon: ClipboardList },
-  { href: "/dashboard/finance", label: "Finance", icon: Wallet },
+  { href: "/dashboard/finance", label: "Finance", icon: Wallet, roles: ["farm_owner", "farm_manager", "accountant"] },
   { href: "/dashboard/procurement", label: "Procurement", icon: Truck },
   { href: "/dashboard/inventory", label: "Inventory", icon: Boxes },
   { href: "/dashboard/assets", label: "Assets", icon: Wrench },
@@ -46,12 +58,17 @@ const NAV_ITEMS = [
   { href: "/dashboard/traceability", label: "Traceability", icon: QrCode },
   { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
   { href: "/dashboard/documents", label: "Media & Documents", icon: FileText },
-];
+] satisfies { href: string; label: string; icon: React.ElementType; roles?: string[] }[];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, platformRoles, loading, logout } = useAuth();
-  const { farms, currentFarmId, setCurrentFarmId } = useFarm();
+  const { farms, currentFarmId, currentFarm, setCurrentFarmId } = useFarm();
   const router = useRouter();
+  const isSystemAdministrator = platformRoles.includes("system_administrator");
+  const myRole = currentFarm?.my_role ?? null;
+  const visibleNavItems = NAV_ITEMS.filter(
+    (item) => !item.roles || isSystemAdministrator || (myRole !== null && item.roles.includes(myRole))
+  );
 
   const { data: unreadCount } = useQuery({
     queryKey: ["notifications-unread-count"],
@@ -101,7 +118,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         )}
         <nav className="flex-1 space-y-1 overflow-y-auto p-2">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+          {visibleNavItems.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}

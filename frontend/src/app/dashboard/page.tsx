@@ -276,12 +276,7 @@ export default function DashboardPage() {
                   Check in, log your daily tasks, and record farm activity from Activity Tracking.
                 </CardContent>
               </Card>
-              <QuickLinks
-                links={[
-                  { href: "/dashboard/activities", label: "Activity Tracking" },
-                  { href: "/dashboard/workers", label: "Workers" },
-                ]}
-              />
+              <QuickLinks links={[{ href: "/dashboard/activities", label: "Activity Tracking" }]} />
             </>
           ) : (
             <>
