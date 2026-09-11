@@ -28,6 +28,7 @@ import { listMembers } from "@/lib/modules/farm-structure";
 import { listWorkerProfiles, createWorkerProfile } from "@/lib/modules/worker-management";
 import { useFarm } from "@/lib/farm-context";
 import { usePermissions } from "@/lib/permissions";
+import { AccessDenied } from "@/components/access-denied";
 
 const schema = z.object({
   user_id: z.string().min(1, "Pick a farm member"),
@@ -176,12 +177,7 @@ export default function WorkersPage() {
       </div>
 
       {isError ? (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            You don&apos;t have access to worker management on this farm. Only farm owners, managers, and
-            the farm&apos;s accountant can view worker profiles and pay rates.
-          </CardContent>
-        </Card>
+        <AccessDenied message="Worker profiles and pay rates are visible to farm owners, managers, and the farm's accountant." />
       ) : isLoading ? (
         <p className="text-sm text-muted-foreground">Loading workers…</p>
       ) : !profiles || profiles.length === 0 ? (

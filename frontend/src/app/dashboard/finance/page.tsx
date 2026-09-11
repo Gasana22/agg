@@ -39,7 +39,8 @@ import {
 import { listWorkerProfiles } from "@/lib/modules/worker-management";
 import { useFarm } from "@/lib/farm-context";
 import { usePermissions } from "@/lib/permissions";
-import { formatRole } from "@/lib/utils";
+import { AccessDenied } from "@/components/access-denied";
+import { formatRole, isForbidden } from "@/lib/utils";
 
 const expenseSchema = z.object({
   category: z.string().min(1, "Pick a category"),
@@ -93,7 +94,7 @@ export default function FinancePage() {
   const [payrollError, setPayrollError] = React.useState<string | null>(null);
   const [selectedWorkerId, setSelectedWorkerId] = React.useState<string>("");
 
-  const { data: income } = useQuery({
+  const { data: income, error: incomeError } = useQuery({
     queryKey: ["finance-income", currentFarmId, appliedFrom, appliedTo],
     queryFn: () => getFinanceIncome(currentFarmId!, appliedFrom, appliedTo),
     enabled: !!currentFarmId,
@@ -111,7 +112,7 @@ export default function FinancePage() {
     enabled: !!currentFarmId,
   });
 
-  const { data: expenses, isLoading: expensesLoading } = useQuery({
+  const { data: expenses, isLoading: expensesLoading, error: expensesError } = useQuery({
     queryKey: ["expenses", currentFarmId],
     queryFn: () => listExpenses(currentFarmId!),
     enabled: !!currentFarmId,
@@ -202,6 +203,18 @@ export default function FinancePage() {
       queryClient.invalidateQueries({ queryKey: ["finance-profit-loss", currentFarmId] });
     },
   });
+
+  if (isForbidden(incomeError) || isForbidden(expensesError)) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-2xl font-semibold">Finance</h1>
+          <p className="text-sm text-muted-foreground">Income, expenses, and payroll.</p>
+        </div>
+        <AccessDenied message="Finance is visible to farm owners, managers, and accountants." />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
