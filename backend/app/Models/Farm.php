@@ -86,6 +86,11 @@ class Farm extends Model
         return $this->hasMany(Animal::class);
     }
 
+    public function poultryFlocks()
+    {
+        return $this->hasMany(PoultryFlock::class);
+    }
+
     public function breedingRecords()
     {
         return $this->hasMany(BreedingRecord::class);

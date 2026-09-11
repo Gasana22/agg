@@ -175,9 +175,16 @@ export default function LivestockPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Livestock</h1>
-        <p className="text-sm text-muted-foreground">Animal registry and breeding records.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Livestock</h1>
+          <p className="text-sm text-muted-foreground">Animal registry and breeding records.</p>
+        </div>
+        <Link href="/dashboard/livestock/poultry">
+          <Button variant="outline" size="sm">
+            Poultry →
+          </Button>
+        </Link>
       </div>
 
       <Card>

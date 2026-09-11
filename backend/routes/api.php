@@ -26,6 +26,10 @@ use App\Http\Controllers\Api\LivestockManagement\AnimalHealthLogController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalProductionRecordController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalSaleController;
 use App\Http\Controllers\Api\LivestockManagement\BreedingRecordController;
+use App\Http\Controllers\Api\LivestockManagement\PoultryFlockController;
+use App\Http\Controllers\Api\LivestockManagement\PoultryMortalityLogController;
+use App\Http\Controllers\Api\LivestockManagement\PoultryProductionRecordController;
+use App\Http\Controllers\Api\LivestockManagement\PoultrySaleController;
 use App\Http\Controllers\Api\Maps\FarmMapController;
 use App\Http\Controllers\Api\Notifications\NotificationController;
 use App\Http\Controllers\Api\Procurement\DeliveryController;
@@ -148,6 +152,31 @@ Route::middleware('auth:api')->group(function () {
     Route::get('animal-sales/{animalSale}', [AnimalSaleController::class, 'show']);
     Route::patch('animal-sales/{animalSale}', [AnimalSaleController::class, 'update']);
     Route::delete('animal-sales/{animalSale}', [AnimalSaleController::class, 'destroy']);
+
+    // 4b. Poultry (flock-based, not individually tagged like Animal)
+    Route::get('farms/{farm}/poultry-flocks', [PoultryFlockController::class, 'index']);
+    Route::post('farms/{farm}/poultry-flocks', [PoultryFlockController::class, 'store']);
+    Route::get('poultry-flocks/{poultryFlock}', [PoultryFlockController::class, 'show']);
+    Route::patch('poultry-flocks/{poultryFlock}', [PoultryFlockController::class, 'update']);
+    Route::delete('poultry-flocks/{poultryFlock}', [PoultryFlockController::class, 'destroy']);
+
+    Route::get('poultry-flocks/{poultryFlock}/mortality-logs', [PoultryMortalityLogController::class, 'index']);
+    Route::post('poultry-flocks/{poultryFlock}/mortality-logs', [PoultryMortalityLogController::class, 'store'])->middleware('idempotent');
+    Route::get('poultry-mortality-logs/{poultryMortalityLog}', [PoultryMortalityLogController::class, 'show']);
+    Route::patch('poultry-mortality-logs/{poultryMortalityLog}', [PoultryMortalityLogController::class, 'update']);
+    Route::delete('poultry-mortality-logs/{poultryMortalityLog}', [PoultryMortalityLogController::class, 'destroy']);
+
+    Route::get('poultry-flocks/{poultryFlock}/production-records', [PoultryProductionRecordController::class, 'index']);
+    Route::post('poultry-flocks/{poultryFlock}/production-records', [PoultryProductionRecordController::class, 'store'])->middleware('idempotent');
+    Route::get('poultry-production-records/{poultryProductionRecord}', [PoultryProductionRecordController::class, 'show']);
+    Route::patch('poultry-production-records/{poultryProductionRecord}', [PoultryProductionRecordController::class, 'update']);
+    Route::delete('poultry-production-records/{poultryProductionRecord}', [PoultryProductionRecordController::class, 'destroy']);
+
+    Route::get('poultry-flocks/{poultryFlock}/sales', [PoultrySaleController::class, 'index']);
+    Route::post('poultry-flocks/{poultryFlock}/sales', [PoultrySaleController::class, 'store']);
+    Route::get('poultry-sales/{poultrySale}', [PoultrySaleController::class, 'show']);
+    Route::patch('poultry-sales/{poultrySale}', [PoultrySaleController::class, 'update']);
+    Route::delete('poultry-sales/{poultrySale}', [PoultrySaleController::class, 'destroy']);
 
     // 5. Worker Management
     Route::get('farms/{farm}/worker-profiles', [WorkerProfileController::class, 'index']);
