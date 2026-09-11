@@ -102,7 +102,15 @@ export default function TraceBatchDetailPage() {
 
       {batch && (
         <p className="text-xs text-muted-foreground">
-          Public trace URL: <span className="font-mono">{batch.trace_url}</span>
+          Public trace URL:{" "}
+          <a
+            href={batch.trace_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-primary hover:underline"
+          >
+            {batch.trace_url}
+          </a>
         </p>
       )}
 
