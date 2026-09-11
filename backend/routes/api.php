@@ -20,6 +20,12 @@ use App\Http\Controllers\Api\LivestockManagement\AnimalHealthLogController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalProductionRecordController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalSaleController;
 use App\Http\Controllers\Api\LivestockManagement\BreedingRecordController;
+use App\Http\Controllers\Api\Procurement\DeliveryController;
+use App\Http\Controllers\Api\Procurement\PaymentController;
+use App\Http\Controllers\Api\Procurement\ProcurementReportController;
+use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
+use App\Http\Controllers\Api\Procurement\PurchaseOrderItemController;
+use App\Http\Controllers\Api\Procurement\SupplierController;
 use App\Http\Controllers\Api\WorkerManagement\AttendanceController;
 use App\Http\Controllers\Api\WorkerManagement\DailyTaskController;
 use App\Http\Controllers\Api\WorkerManagement\WorkerProfileController;
@@ -164,7 +170,34 @@ Route::middleware('auth:api')->group(function () {
     Route::get('farms/{farm}/finance/profit-and-loss', [FinanceReportController::class, 'profitAndLoss']);
 
     // 8. Procurement
-    // Route::apiResource('purchase-orders', PurchaseOrderController::class);
+    Route::get('farms/{farm}/suppliers', [SupplierController::class, 'index']);
+    Route::post('farms/{farm}/suppliers', [SupplierController::class, 'store']);
+    Route::get('suppliers/{supplier}', [SupplierController::class, 'show']);
+    Route::patch('suppliers/{supplier}', [SupplierController::class, 'update']);
+    Route::delete('suppliers/{supplier}', [SupplierController::class, 'destroy']);
+
+    Route::get('farms/{farm}/purchase-orders', [PurchaseOrderController::class, 'index']);
+    Route::post('farms/{farm}/purchase-orders', [PurchaseOrderController::class, 'store']);
+    Route::get('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show']);
+    Route::patch('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update']);
+    Route::delete('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy']);
+
+    Route::patch('purchase-order-items/{purchaseOrderItem}', [PurchaseOrderItemController::class, 'update']);
+    Route::delete('purchase-order-items/{purchaseOrderItem}', [PurchaseOrderItemController::class, 'destroy']);
+
+    Route::get('purchase-orders/{purchaseOrder}/deliveries', [DeliveryController::class, 'index']);
+    Route::post('purchase-orders/{purchaseOrder}/deliveries', [DeliveryController::class, 'store']);
+    Route::get('deliveries/{delivery}', [DeliveryController::class, 'show']);
+    Route::patch('deliveries/{delivery}', [DeliveryController::class, 'update']);
+    Route::delete('deliveries/{delivery}', [DeliveryController::class, 'destroy']);
+
+    Route::get('purchase-orders/{purchaseOrder}/payments', [PaymentController::class, 'index']);
+    Route::post('purchase-orders/{purchaseOrder}/payments', [PaymentController::class, 'store']);
+    Route::get('payments/{payment}', [PaymentController::class, 'show']);
+    Route::patch('payments/{payment}', [PaymentController::class, 'update']);
+    Route::delete('payments/{payment}', [PaymentController::class, 'destroy']);
+
+    Route::get('farms/{farm}/procurement/summary', [ProcurementReportController::class, 'summary']);
 
     // 9. Inventory
     // Route::apiResource('inventory', InventoryController::class);

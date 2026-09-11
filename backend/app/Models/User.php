@@ -109,6 +109,28 @@ class User extends Authenticatable implements JWTSubject
             || $this->roleOnFarm($farm) === FarmRole::LivestockManager;
     }
 
+    /**
+     * Procurement authority: everyone canManageFarm() covers, plus
+     * store_manager — ordering and receiving supplies is that role's job.
+     */
+    public function canManageProcurement(Farm $farm): bool
+    {
+        return $this->canManageFarm($farm)
+            || $this->roleOnFarm($farm) === FarmRole::StoreManager;
+    }
+
+    /**
+     * Financial-record authority: everyone canManageFarm() covers, plus
+     * accountant — bookkeeping (expenses, payroll disbursement, supplier
+     * payments, reading the P&L) is that role's job, without granting
+     * authority over farm operations themselves.
+     */
+    public function canManageFinance(Farm $farm): bool
+    {
+        return $this->canManageFarm($farm)
+            || $this->roleOnFarm($farm) === FarmRole::Accountant;
+    }
+
     public function isSupervisorOf(WorkerProfile $profile): bool
     {
         return $profile->supervisor_id === $this->id;

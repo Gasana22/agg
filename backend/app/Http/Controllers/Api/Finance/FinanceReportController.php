@@ -18,7 +18,7 @@ class FinanceReportController extends Controller
 {
     public function income(Request $request, Farm $farm): JsonResponse
     {
-        abort_unless($request->user()->canManageFarm($farm), 403);
+        abort_unless($request->user()->canManageFinance($farm), 403);
 
         [$from, $to] = $this->range($request);
 
@@ -31,7 +31,7 @@ class FinanceReportController extends Controller
 
     public function expenses(Request $request, Farm $farm): JsonResponse
     {
-        abort_unless($request->user()->canManageFarm($farm), 403);
+        abort_unless($request->user()->canManageFinance($farm), 403);
 
         [$from, $to] = $this->range($request);
 
@@ -44,7 +44,7 @@ class FinanceReportController extends Controller
 
     public function profitAndLoss(Request $request, Farm $farm): JsonResponse
     {
-        abort_unless($request->user()->canManageFarm($farm), 403);
+        abort_unless($request->user()->canManageFinance($farm), 403);
 
         [$from, $to] = $this->range($request);
 

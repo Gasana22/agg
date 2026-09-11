@@ -98,4 +98,14 @@ class Farm extends Model
     {
         return $this->hasMany(PayrollPayment::class);
     }
+
+    public function suppliers()
+    {
+        return $this->hasMany(Supplier::class);
+    }
+
+    public function purchaseOrders()
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
 }

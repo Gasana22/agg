@@ -10,26 +10,26 @@ class ExpensePolicy
 {
     public function viewAny(User $user, Farm $farm): bool
     {
-        return $user->canManageFarm($farm);
+        return $user->canManageFinance($farm);
     }
 
     public function view(User $user, Expense $expense): bool
     {
-        return $user->canManageFarm($expense->farm);
+        return $user->canManageFinance($expense->farm);
     }
 
     public function create(User $user, Farm $farm): bool
     {
-        return $user->canManageFarm($farm);
+        return $user->canManageFinance($farm);
     }
 
     public function update(User $user, Expense $expense): bool
     {
-        return $user->canManageFarm($expense->farm);
+        return $user->canManageFinance($expense->farm);
     }
 
     public function delete(User $user, Expense $expense): bool
     {
-        return $user->canManageFarm($expense->farm);
+        return $user->canManageFinance($expense->farm);
     }
 }

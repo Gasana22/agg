@@ -23,25 +23,26 @@ class PayrollPaymentPolicy
     }
 
     /**
-     * Running payroll and marking it paid is a management action.
+     * Running payroll and marking it paid is a bookkeeping action —
+     * managers and the farm's accountant.
      */
     public function create(User $user, WorkerProfile $profile): bool
     {
-        return $user->canManageFarm($profile->farm);
+        return $user->canManageFinance($profile->farm);
     }
 
     public function update(User $user, PayrollPayment $payment): bool
     {
-        return $user->canManageFarm($payment->farm);
+        return $user->canManageFinance($payment->farm);
     }
 
     public function delete(User $user, PayrollPayment $payment): bool
     {
-        return $user->canManageFarm($payment->farm);
+        return $user->canManageFinance($payment->farm);
     }
 
     private function canSee(User $user, WorkerProfile $profile): bool
     {
-        return $user->canManageFarm($profile->farm) || $profile->user_id === $user->id;
+        return $user->canManageFinance($profile->farm) || $profile->user_id === $user->id;
     }
 }
