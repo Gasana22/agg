@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
         // any single farm's operations. No farm membership at all.
         $admin = User::factory()->create([
             'name' => 'System Admin',
-            'email' => 'admin@sfmtp.test',
+            'email' => 'admin@farmsap.test',
             'password' => bcrypt('password'),
         ]);
         $admin->assignRole('system_administrator');

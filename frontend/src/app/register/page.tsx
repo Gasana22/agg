@@ -66,7 +66,7 @@ export default function RegisterPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">Create account</CardTitle>
-            <CardDescription>Register a customer account for SFMTP.</CardDescription>
+            <CardDescription>Register a customer account for Farmsap.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">

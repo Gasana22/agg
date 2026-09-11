@@ -33,7 +33,7 @@ type FarmContextValue = {
 
 const FarmContext = React.createContext<FarmContextValue | null>(null);
 
-const STORAGE_KEY = "sfmtp_current_farm_id";
+const STORAGE_KEY = "farmsap_current_farm_id";
 
 function readStoredFarmId(): number | null {
   if (typeof window === "undefined") return null;

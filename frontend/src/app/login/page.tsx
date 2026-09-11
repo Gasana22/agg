@@ -58,7 +58,7 @@ export default function LoginPage() {
       >
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">SFMTP Admin</CardTitle>
+            <CardTitle className="text-xl">Farmsap Admin</CardTitle>
             <CardDescription>
               Sign in to the Smart Farm Management & Traceability Platform.
             </CardDescription>

@@ -98,7 +98,7 @@ function NavContent({
   return (
     <div className="flex h-full flex-col">
       <div className="border-b px-4 py-4">
-        <p className="text-sm font-semibold">SFMTP</p>
+        <p className="text-sm font-semibold">Farmsap</p>
         <p className="text-xs text-muted-foreground">Farm Management & Traceability</p>
       </div>
       {!isSystemAdministrator && farms.length > 0 && (
@@ -232,7 +232,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <NavContent {...navContentProps} onNavigate={() => setMobileNavOpen(false)} />
             </SheetContent>
           </Sheet>
-          <p className="text-sm font-semibold">SFMTP</p>
+          <p className="text-sm font-semibold">Farmsap</p>
         </header>
         <aside className="hidden w-64 shrink-0 flex-col border-r bg-card md:flex">
           <NavContent {...navContentProps} />

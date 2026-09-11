@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SFMTP Admin",
+  title: "Farmsap Admin",
   description: "Smart Farm Management & Traceability Platform",
 };
 

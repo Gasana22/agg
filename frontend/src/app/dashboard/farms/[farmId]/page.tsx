@@ -316,7 +316,7 @@ export default function FarmDetailPage() {
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    The user must already have an SFMTP account.
+                    The user must already have a Farmsap account.
                   </p>
                 </div>
                 <div className="flex flex-col gap-1.5">

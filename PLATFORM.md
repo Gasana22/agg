@@ -1,6 +1,6 @@
-# SFMTP — Smart Farm Management & Traceability Platform
+# Farmsap — Smart Farm Management & Traceability Platform
 
-This is the admin platform being built for AGG Farm, per the SFMTP spec
+This is the admin platform being built for AGG Farm, per the Farmsap spec
 (Next.js admin portal + Laravel API + PostgreSQL; Flutter mobile app to
 follow in a later phase). The repo root still holds the original static
 marketing site (`index.html` etc.) — that is unrelated and untouched.
@@ -36,10 +36,10 @@ marketing site (`index.html` etc.) — that is unrelated and untouched.
    php artisan serve --port=8000
    ```
 
-   The seeder creates the 10 SFMTP roles (`system_administrator`,
+   The seeder creates the 10 Farmsap roles (`system_administrator`,
    `farm_owner`, `farm_manager`, `agronomist`, `livestock_manager`,
    `store_manager`, `accountant`, `field_worker`, `supplier`, `customer`)
-   and a system admin user: `admin@sfmtp.test` / `password`.
+   and a system admin user: `admin@farmsap.test` / `password`.
 
 3. **Frontend**
 
@@ -61,7 +61,7 @@ marketing site (`index.html` etc.) — that is unrelated and untouched.
   (Farm Structure Management, module 2 of the spec).
 - Frontend: auth context (`src/lib/auth-context.tsx`) backed by a typed
   axios client, protected `/dashboard` shell with a sidebar listing every
-  SFMTP module as a placeholder route.
+  Farmsap module as a placeholder route.
 - `routes/api.php` has commented route-group scaffolding for each of the
   16 modules in the spec (crops, livestock, workers, finance, inventory,
   assets, traceability, etc.) as a landing spot for the next phase of work.

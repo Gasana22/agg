@@ -14,7 +14,7 @@ export type FarmMembership = {
   };
 };
 
-export type SfmtpUser = {
+export type FarmsapUser = {
   id: number;
   name: string;
   email: string;
@@ -23,7 +23,7 @@ export type SfmtpUser = {
 };
 
 type AuthState = {
-  user: SfmtpUser | null;
+  user: FarmsapUser | null;
   /** Platform-wide roles only (system_administrator, supplier, customer).
    *  Per-farm roles are on user.farms[].pivot.role_on_farm. */
   platformRoles: string[];
@@ -43,7 +43,7 @@ type AuthContextValue = AuthState & {
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
 
-const TOKEN_KEY = "sfmtp_token";
+const TOKEN_KEY = "farmsap_token";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<AuthState>({

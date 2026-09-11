@@ -71,7 +71,7 @@ Route::prefix('auth')->group(function () {
     });
 });
 
-// Authenticated API surface. Each SFMTP module gets its own route group and
+// Authenticated API surface. Each Farmsap module gets its own route group and
 // controller namespace as it is built; scaffolding left here as landing spots.
 Route::middleware('auth:api')->group(function () {
     // 2. Farm Structure Management (farm -> blocks -> sections -> plots)

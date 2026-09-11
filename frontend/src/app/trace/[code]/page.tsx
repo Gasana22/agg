@@ -32,7 +32,7 @@ export default function PublicTracePage() {
     <div className="flex min-h-full flex-1 items-start justify-center bg-muted/30 px-4 py-10">
       <div className="flex w-full max-w-xl flex-col gap-4">
         <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">SFMTP Traceability</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Farmsap Traceability</p>
         </div>
 
         {isLoading ? (
