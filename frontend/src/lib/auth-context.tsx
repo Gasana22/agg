@@ -69,6 +69,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   React.useEffect(() => {
+    // A real network fetch on mount (reading the session token, then
+    // calling the API), not state derivable during render — the lint
+    // rule's "compute it during render instead" fix doesn't apply here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadMe();
   }, [loadMe]);
 

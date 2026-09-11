@@ -22,7 +22,9 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "@/lib/auth-context";
+import { useFarm } from "@/lib/farm-context";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatRole } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -44,6 +46,7 @@ const NAV_ITEMS = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, platformRoles, loading, logout } = useAuth();
+  const { farms, currentFarmId, setCurrentFarmId } = useFarm();
   const router = useRouter();
 
   React.useEffect(() => {
@@ -67,6 +70,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <p className="text-sm font-semibold">SFMTP</p>
           <p className="text-xs text-muted-foreground">Farm Management & Traceability</p>
         </div>
+        {farms.length > 0 && (
+          <div className="border-b px-3 py-3">
+            <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">Current farm</p>
+            <Select
+              value={currentFarmId ? String(currentFarmId) : undefined}
+              onValueChange={(v) => setCurrentFarmId(Number(v))}
+            >
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue placeholder="Select a farm" />
+              </SelectTrigger>
+              <SelectContent>
+                {farms.map((farm) => (
+                  <SelectItem key={farm.id} value={String(farm.id)}>
+                    {farm.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <nav className="flex-1 space-y-1 overflow-y-auto p-2">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
             <Link
