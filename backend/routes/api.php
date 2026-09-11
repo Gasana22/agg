@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\FarmStructure\BlockController;
+use App\Http\Controllers\Api\FarmStructure\FarmController;
+use App\Http\Controllers\Api\FarmStructure\PlotController;
+use App\Http\Controllers\Api\FarmStructure\SectionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -21,7 +25,11 @@ Route::prefix('auth')->group(function () {
 // Authenticated API surface. Each SFMTP module gets its own route group and
 // controller namespace as it is built; scaffolding left here as landing spots.
 Route::middleware('auth:api')->group(function () {
-    // Route::apiResource('farms', FarmController::class);
+    // 2. Farm Structure Management (farm -> blocks -> sections -> plots)
+    Route::apiResource('farms', FarmController::class);
+    Route::apiResource('farms.blocks', BlockController::class)->shallow();
+    Route::apiResource('blocks.sections', SectionController::class)->shallow();
+    Route::apiResource('sections.plots', PlotController::class)->shallow();
 
     // 3. Crop Management
     // Route::apiResource('crops', CropController::class);

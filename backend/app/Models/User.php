@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\FarmRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -13,7 +14,7 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, HasRoles, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -63,6 +64,37 @@ class User extends Authenticatable implements JWTSubject
             ->using(FarmUser::class)
             ->withPivot('role_on_farm')
             ->withTimestamps();
+    }
+
+    /**
+     * This user's role on the given farm, or null if they aren't assigned
+     * to it at all. Independent of any platform-wide role.
+     */
+    public function roleOnFarm(Farm $farm): ?FarmRole
+    {
+        $membership = $this->farms()->where('farm_id', $farm->id)->first();
+
+        return $membership?->pivot->role_on_farm;
+    }
+
+    /**
+     * Platform-wide administrators manage the system itself (all farms,
+     * all users, settings) — this bypasses per-farm membership checks.
+     */
+    public function isSystemAdministrator(): bool
+    {
+        return $this->hasRole('system_administrator');
+    }
+
+    public function canViewFarm(Farm $farm): bool
+    {
+        return $this->isSystemAdministrator() || $this->roleOnFarm($farm) !== null;
+    }
+
+    public function canManageFarm(Farm $farm): bool
+    {
+        return $this->isSystemAdministrator()
+            || in_array($this->roleOnFarm($farm), [FarmRole::FarmOwner, FarmRole::FarmManager], true);
     }
 
     public function getJWTIdentifier()

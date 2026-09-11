@@ -53,4 +53,9 @@ class Farm extends Model
             ->withPivot('role_on_farm')
             ->withTimestamps();
     }
+
+    public function blocks()
+    {
+        return $this->hasMany(Block::class);
+    }
 }
