@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\AssetManagement\AssetController;
+use App\Http\Controllers\Api\AssetManagement\AssetMaintenanceLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CropManagement\CropActivityController;
 use App\Http\Controllers\Api\CropManagement\CropController;
@@ -218,7 +220,17 @@ Route::middleware('auth:api')->group(function () {
     Route::get('farms/{farm}/inventory/low-stock', [InventoryReportController::class, 'lowStock']);
 
     // 10. Asset Management
-    // Route::apiResource('assets', AssetController::class);
+    Route::get('farms/{farm}/assets', [AssetController::class, 'index']);
+    Route::post('farms/{farm}/assets', [AssetController::class, 'store']);
+    Route::get('assets/{asset}', [AssetController::class, 'show']);
+    Route::patch('assets/{asset}', [AssetController::class, 'update']);
+    Route::delete('assets/{asset}', [AssetController::class, 'destroy']);
+
+    Route::get('assets/{asset}/maintenance-logs', [AssetMaintenanceLogController::class, 'index']);
+    Route::post('assets/{asset}/maintenance-logs', [AssetMaintenanceLogController::class, 'store']);
+    Route::get('asset-maintenance-logs/{assetMaintenanceLog}', [AssetMaintenanceLogController::class, 'show']);
+    Route::patch('asset-maintenance-logs/{assetMaintenanceLog}', [AssetMaintenanceLogController::class, 'update']);
+    Route::delete('asset-maintenance-logs/{assetMaintenanceLog}', [AssetMaintenanceLogController::class, 'destroy']);
 
     // 11. Reports & Analytics
     // Route::prefix('reports')->group(function () { ... });

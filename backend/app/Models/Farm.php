@@ -113,4 +113,9 @@ class Farm extends Model
     {
         return $this->hasMany(InventoryItem::class);
     }
+
+    public function assets()
+    {
+        return $this->hasMany(Asset::class);
+    }
 }

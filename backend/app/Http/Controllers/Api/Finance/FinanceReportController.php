@@ -6,6 +6,7 @@ use App\Enums\PayrollPaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AnimalHealthLog;
 use App\Models\AnimalSale;
+use App\Models\AssetMaintenanceLog;
 use App\Models\CropActivity;
 use App\Models\CropSale;
 use App\Models\DailyTask;
@@ -120,17 +121,25 @@ class FinanceReportController extends Controller
             ->whereBetween('paid_date', [$from, $to])
             ->sum('net_amount');
 
+        $assetMaintenance = (float) AssetMaintenanceLog::whereHas(
+            'asset',
+            fn ($q) => $q->where('farm_id', $farm->id)
+        )
+            ->whereBetween('date', [$from, $to])
+            ->sum('cost');
+
         $otherExpenses = (float) $farm->expenses()
             ->whereBetween('date', [$from, $to])
             ->sum('amount');
 
-        $total = $cropOperations + $livestockCare + $generalTasks + $payroll + $otherExpenses;
+        $total = $cropOperations + $livestockCare + $generalTasks + $payroll + $assetMaintenance + $otherExpenses;
 
         return [
             'crop_operations' => round($cropOperations, 2),
             'livestock_care' => round($livestockCare, 2),
             'general_tasks' => round($generalTasks, 2),
             'payroll' => round($payroll, 2),
+            'asset_maintenance' => round($assetMaintenance, 2),
             'other_expenses' => round($otherExpenses, 2),
             'total' => round($total, 2),
         ];
