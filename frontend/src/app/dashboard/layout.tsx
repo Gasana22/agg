@@ -30,35 +30,41 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getUnreadNotificationCount } from "@/lib/modules/notifications";
 import { formatRole } from "@/lib/utils";
 
-// `roles` restricts a nav item to the listed farm roles (system_administrator
-// always sees everything, and omitting `roles` means every farm member can
-// see it). These two are the only items the backend actually gates for
-// viewing, not just managing:
-// - WorkerProfilePolicy::viewAny requires canManageFarm() — listing every
-//   worker's pay rate is manager-only, not something any member can see.
+// `roles` restricts a farm-scoped nav item to the listed farm roles.
+// `farmScoped: false` marks the few items that are about the *system*
+// (or personal to the user) rather than a specific farm's operations —
+// those are the only ones system_administrator sees, since admin
+// manages the platform, not any one farm's day-to-day (see
+// User::isSystemAdministrator()'s doc comment on the backend: it no
+// longer bypasses canViewFarm()/canManageFarm(), only Farm-record
+// access itself does). Everything else defaults to farmScoped: true.
+//
+// Within farm-scoped items, most are viewAny = canViewFarm() on the
+// backend — any farm member can see them, even if only specific roles
+// can create/edit/delete within them — except these two, which the
+// backend gates even for viewing:
+// - WorkerProfilePolicy::viewAny requires canManageFarm() || canManageFinance()
+//   — listing every worker's pay rate is manager territory, plus the
+//   accountant, who needs it to pick who to run payroll for.
 // - ExpensePolicy::viewAny requires canManageFinance() — bookkeeping data
 //   is farm_owner/farm_manager/accountant territory, not any member's.
-// Everything else (Farm Structure, Crops, Livestock, Procurement,
-// Inventory, Assets, Maps, Reports, Traceability, Documents) is
-// deliberately viewAny = canViewFarm() on the backend: any farm member can
-// see it, even if only specific roles can create/edit/delete within it.
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/farms", label: "Farm Structure", icon: Map },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard, farmScoped: false },
+  { href: "/dashboard/farms", label: "Farm Structure", icon: Map, farmScoped: false },
   { href: "/dashboard/crops", label: "Crop Management", icon: Sprout },
   { href: "/dashboard/livestock", label: "Livestock", icon: Beef },
-  { href: "/dashboard/workers", label: "Workers", icon: Users, roles: ["farm_owner", "farm_manager"] },
+  { href: "/dashboard/workers", label: "Workers", icon: Users, roles: ["farm_owner", "farm_manager", "accountant"] },
   { href: "/dashboard/activities", label: "Activity Tracking", icon: ClipboardList },
   { href: "/dashboard/finance", label: "Finance", icon: Wallet, roles: ["farm_owner", "farm_manager", "accountant"] },
   { href: "/dashboard/procurement", label: "Procurement", icon: Truck },
   { href: "/dashboard/inventory", label: "Inventory", icon: Boxes },
   { href: "/dashboard/assets", label: "Assets", icon: Wrench },
   { href: "/dashboard/map", label: "Maps & GIS", icon: MapPinned },
-  { href: "/dashboard/reports", label: "Reports & Analytics", icon: BarChart3 },
+  { href: "/dashboard/reports", label: "Reports & Analytics", icon: BarChart3, farmScoped: false },
   { href: "/dashboard/traceability", label: "Traceability", icon: QrCode },
-  { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
+  { href: "/dashboard/notifications", label: "Notifications", icon: Bell, farmScoped: false },
   { href: "/dashboard/documents", label: "Media & Documents", icon: FileText },
-] satisfies { href: string; label: string; icon: React.ElementType; roles?: string[] }[];
+] satisfies { href: string; label: string; icon: React.ElementType; roles?: string[]; farmScoped?: boolean }[];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, platformRoles, loading, logout } = useAuth();
@@ -66,9 +72,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const isSystemAdministrator = platformRoles.includes("system_administrator");
   const myRole = currentFarm?.my_role ?? null;
-  const visibleNavItems = NAV_ITEMS.filter(
-    (item) => !item.roles || isSystemAdministrator || (myRole !== null && item.roles.includes(myRole))
-  );
+  const visibleNavItems = isSystemAdministrator
+    ? NAV_ITEMS.filter((item) => item.farmScoped === false)
+    : NAV_ITEMS.filter((item) => !item.roles || (myRole !== null && item.roles.includes(myRole)));
 
   const { data: unreadCount } = useQuery({
     queryKey: ["notifications-unread-count"],
@@ -97,7 +103,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <p className="text-sm font-semibold">SFMTP</p>
           <p className="text-xs text-muted-foreground">Farm Management & Traceability</p>
         </div>
-        {farms.length > 0 && (
+        {!isSystemAdministrator && farms.length > 0 && (
           <div className="border-b px-3 py-3">
             <p className="mb-1.5 px-1 text-xs font-medium text-muted-foreground">Current farm</p>
             <Select

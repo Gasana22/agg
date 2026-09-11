@@ -174,8 +174,8 @@ export default function WorkersPage() {
       {isError ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            You don&apos;t have access to worker management on this farm. Only farm owners and managers
-            can view worker profiles and pay rates.
+            You don&apos;t have access to worker management on this farm. Only farm owners, managers, and
+            the farm&apos;s accountant can view worker profiles and pay rates.
           </CardContent>
         </Card>
       ) : isLoading ? (

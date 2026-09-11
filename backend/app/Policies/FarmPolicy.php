@@ -17,9 +17,16 @@ class FarmPolicy
         return true;
     }
 
+    /**
+     * Viewing the Farm record itself (name, location, active status) is
+     * system-administration territory as much as farm-operations — the
+     * admin bypass is explicit here, unlike canViewFarm()/canManageFarm(),
+     * which no longer bypass for operational data (crops, livestock,
+     * finance, staff, ...).
+     */
     public function view(User $user, Farm $farm): bool
     {
-        return $user->canViewFarm($farm);
+        return $user->isSystemAdministrator() || $user->canViewFarm($farm);
     }
 
     /**
@@ -33,11 +40,11 @@ class FarmPolicy
 
     public function update(User $user, Farm $farm): bool
     {
-        return $user->canManageFarm($farm);
+        return $user->isSystemAdministrator() || $user->canManageFarm($farm);
     }
 
     public function delete(User $user, Farm $farm): bool
     {
-        return $user->canManageFarm($farm);
+        return $user->isSystemAdministrator() || $user->canManageFarm($farm);
     }
 }

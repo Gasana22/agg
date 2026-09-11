@@ -38,6 +38,7 @@ import {
   FARM_ROLES,
   type Block,
 } from "@/lib/modules/farm-structure";
+import { useAuth } from "@/lib/auth-context";
 import { useFarm } from "@/lib/farm-context";
 import { formatRole } from "@/lib/utils";
 
@@ -69,6 +70,8 @@ export default function FarmDetailPage() {
   const { farms } = useFarm();
   const farm = farms.find((f) => f.id === farmId);
   const queryClient = useQueryClient();
+  const { platformRoles } = useAuth();
+  const isSystemAdministrator = platformRoles.includes("system_administrator");
 
   const [memberDialogOpen, setMemberDialogOpen] = React.useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = React.useState(false);
@@ -79,14 +82,21 @@ export default function FarmDetailPage() {
   const [editingBlock, setEditingBlock] = React.useState<Block | null>(null);
   const [blockEditError, setBlockEditError] = React.useState<string | null>(null);
 
+  // Members and blocks are farm-operations data (WorkerProfile-adjacent
+  // staffing and physical structure) — not something system_administrator
+  // has authority over, only farm_owner/farm_manager do. See
+  // User::canViewFarm()/canManageFarm(). Skip the requests entirely for
+  // admin rather than firing doomed ones.
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ["farm-members", farmId],
     queryFn: () => listMembers(farmId),
+    enabled: !isSystemAdministrator,
   });
 
   const { data: blocks, isLoading: blocksLoading } = useQuery({
     queryKey: ["blocks", farmId],
     queryFn: () => listBlocks(farmId),
+    enabled: !isSystemAdministrator,
   });
 
   const memberForm = useForm<MemberFormValues>({ resolver: zodResolver(memberSchema) });
@@ -260,6 +270,15 @@ export default function FarmDetailPage() {
         </Dialog>
       </div>
 
+      {isSystemAdministrator ? (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            Members, blocks, sections, and plots are this farm&apos;s own operations — managed by its farm
+            owner and manager, not platform administration.
+          </CardContent>
+        </Card>
+      ) : (
+        <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Members</CardTitle>
@@ -493,6 +512,8 @@ export default function FarmDetailPage() {
           )}
         </CardContent>
       </Card>
+        </>
+      )}
 
       <Dialog
         open={!!editingBlock}

@@ -36,7 +36,7 @@ export default function ReportsPage() {
   const { data: dash } = useQuery({
     queryKey: ["farm-dashboard", currentFarmId],
     queryFn: () => getFarmDashboard(currentFarmId!),
-    enabled: !!currentFarmId,
+    enabled: !!currentFarmId && !isSystemAdministrator,
   });
 
   const { data: admin } = useQuery({

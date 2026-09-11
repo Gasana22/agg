@@ -78,23 +78,37 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
-     * Platform-wide administrators manage the system itself (all farms,
-     * all users, settings) — this bypasses per-farm membership checks.
+     * Platform-wide administrators manage the system itself — farm
+     * accounts, platform users, and settings — not any farm's day-to-day
+     * operations. Deliberately does NOT bypass canViewFarm()/canManageFarm()
+     * below (or anything built on them): a system_administrator with no
+     * role_on_farm has no more business reading a farm's crops, livestock,
+     * finances, or staff than a stranger would. Where the admin genuinely
+     * does manage something — the Farm record itself (FarmPolicy), the
+     * platform-wide dashboard, the full farm list — that's authorized
+     * explicitly against this flag at the call site instead.
      */
     public function isSystemAdministrator(): bool
     {
         return $this->hasRole('system_administrator');
     }
 
+    /**
+     * Farm-operations authority: any member of the farm, in any role. Not
+     * bypassed by system_administrator — see isSystemAdministrator().
+     */
     public function canViewFarm(Farm $farm): bool
     {
-        return $this->isSystemAdministrator() || $this->roleOnFarm($farm) !== null;
+        return $this->roleOnFarm($farm) !== null;
     }
 
+    /**
+     * Farm-operations authority: the farm's owner or manager. Not bypassed
+     * by system_administrator — see isSystemAdministrator().
+     */
     public function canManageFarm(Farm $farm): bool
     {
-        return $this->isSystemAdministrator()
-            || in_array($this->roleOnFarm($farm), [FarmRole::FarmOwner, FarmRole::FarmManager], true);
+        return in_array($this->roleOnFarm($farm), [FarmRole::FarmOwner, FarmRole::FarmManager], true);
     }
 
     /**
