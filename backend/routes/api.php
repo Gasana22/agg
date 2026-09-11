@@ -12,6 +12,11 @@ use App\Http\Controllers\Api\FarmStructure\FarmController;
 use App\Http\Controllers\Api\FarmStructure\FarmMemberController;
 use App\Http\Controllers\Api\FarmStructure\PlotController;
 use App\Http\Controllers\Api\FarmStructure\SectionController;
+use App\Http\Controllers\Api\LivestockManagement\AnimalController;
+use App\Http\Controllers\Api\LivestockManagement\AnimalHealthLogController;
+use App\Http\Controllers\Api\LivestockManagement\AnimalProductionRecordController;
+use App\Http\Controllers\Api\LivestockManagement\AnimalSaleController;
+use App\Http\Controllers\Api\LivestockManagement\BreedingRecordController;
 use App\Http\Controllers\Api\WorkerManagement\AttendanceController;
 use App\Http\Controllers\Api\WorkerManagement\DailyTaskController;
 use App\Http\Controllers\Api\WorkerManagement\WorkerProfileController;
@@ -86,7 +91,35 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('crop-sales/{cropSale}', [CropSaleController::class, 'destroy']);
 
     // 4. Livestock Management
-    // Route::apiResource('livestock', LivestockController::class);
+    Route::get('farms/{farm}/animals', [AnimalController::class, 'index']);
+    Route::post('farms/{farm}/animals', [AnimalController::class, 'store']);
+    Route::get('animals/{animal}', [AnimalController::class, 'show']);
+    Route::patch('animals/{animal}', [AnimalController::class, 'update']);
+    Route::delete('animals/{animal}', [AnimalController::class, 'destroy']);
+
+    Route::get('animals/{animal}/health-logs', [AnimalHealthLogController::class, 'index']);
+    Route::post('animals/{animal}/health-logs', [AnimalHealthLogController::class, 'store']);
+    Route::get('animal-health-logs/{animalHealthLog}', [AnimalHealthLogController::class, 'show']);
+    Route::patch('animal-health-logs/{animalHealthLog}', [AnimalHealthLogController::class, 'update']);
+    Route::delete('animal-health-logs/{animalHealthLog}', [AnimalHealthLogController::class, 'destroy']);
+
+    Route::get('farms/{farm}/breeding-records', [BreedingRecordController::class, 'index']);
+    Route::post('farms/{farm}/breeding-records', [BreedingRecordController::class, 'store']);
+    Route::get('breeding-records/{breedingRecord}', [BreedingRecordController::class, 'show']);
+    Route::patch('breeding-records/{breedingRecord}', [BreedingRecordController::class, 'update']);
+    Route::delete('breeding-records/{breedingRecord}', [BreedingRecordController::class, 'destroy']);
+
+    Route::get('animals/{animal}/production-records', [AnimalProductionRecordController::class, 'index']);
+    Route::post('animals/{animal}/production-records', [AnimalProductionRecordController::class, 'store']);
+    Route::get('animal-production-records/{animalProductionRecord}', [AnimalProductionRecordController::class, 'show']);
+    Route::patch('animal-production-records/{animalProductionRecord}', [AnimalProductionRecordController::class, 'update']);
+    Route::delete('animal-production-records/{animalProductionRecord}', [AnimalProductionRecordController::class, 'destroy']);
+
+    Route::get('animals/{animal}/sales', [AnimalSaleController::class, 'index']);
+    Route::post('animals/{animal}/sales', [AnimalSaleController::class, 'store']);
+    Route::get('animal-sales/{animalSale}', [AnimalSaleController::class, 'show']);
+    Route::patch('animal-sales/{animalSale}', [AnimalSaleController::class, 'update']);
+    Route::delete('animal-sales/{animalSale}', [AnimalSaleController::class, 'destroy']);
 
     // 5. Worker Management
     Route::get('farms/{farm}/worker-profiles', [WorkerProfileController::class, 'index']);

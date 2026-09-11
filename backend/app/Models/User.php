@@ -97,6 +97,18 @@ class User extends Authenticatable implements JWTSubject
             || in_array($this->roleOnFarm($farm), [FarmRole::FarmOwner, FarmRole::FarmManager], true);
     }
 
+    /**
+     * Livestock-specific authority: everyone canManageFarm() covers, plus
+     * the livestock_manager role itself — otherwise that role would have
+     * no more authority over animals than a random farm member, which
+     * defeats the point of naming it.
+     */
+    public function canManageLivestock(Farm $farm): bool
+    {
+        return $this->canManageFarm($farm)
+            || $this->roleOnFarm($farm) === FarmRole::LivestockManager;
+    }
+
     public function isSupervisorOf(WorkerProfile $profile): bool
     {
         return $profile->supervisor_id === $this->id;

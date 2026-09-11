@@ -78,4 +78,14 @@ class Farm extends Model
     {
         return $this->hasMany(CropSeason::class);
     }
+
+    public function animals()
+    {
+        return $this->hasMany(Animal::class);
+    }
+
+    public function breedingRecords()
+    {
+        return $this->hasMany(BreedingRecord::class);
+    }
 }
