@@ -38,6 +38,7 @@ import { listCropSeasons } from "@/lib/modules/crop-management";
 import { listPurchaseOrders } from "@/lib/modules/procurement";
 import { useFarm } from "@/lib/farm-context";
 import { useAuth } from "@/lib/auth-context";
+import { useConfirm } from "@/components/confirm-provider";
 import { formatRole } from "@/lib/utils";
 
 type DocumentableType = (typeof DOCUMENTABLE_TYPES)[number];
@@ -60,6 +61,7 @@ export default function DocumentsPage() {
   const { currentFarmId, currentFarm } = useFarm();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
 
   const [documentableType, setDocumentableType] = React.useState<DocumentableType>("farm");
   const [documentableId, setDocumentableId] = React.useState<string>("");
@@ -333,7 +335,20 @@ export default function DocumentsPage() {
                     </TableCell>
                     <TableCell>
                       {(doc.uploader.id === user?.id || canManageFarm) && (
-                        <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(doc.id)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={async () => {
+                            if (
+                              await confirm({
+                                title: `Delete "${doc.original_filename}"?`,
+                                confirmLabel: "Delete",
+                              })
+                            ) {
+                              deleteMutation.mutate(doc.id);
+                            }
+                          }}
+                        >
                           <Trash2 className="size-4 text-destructive" />
                         </Button>
                       )}

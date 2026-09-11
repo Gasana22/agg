@@ -211,41 +211,43 @@ export default function FinancePage() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Financial summary</CardTitle>
           <form
-            className="flex items-end gap-2"
+            className="flex flex-col gap-2 sm:flex-row sm:items-end"
             onSubmit={(e) => {
               e.preventDefault();
               setAppliedFrom(from);
               setAppliedTo(to);
             }}
           >
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="finance-from" className="text-xs">
-                From
-              </Label>
-              <Input
-                id="finance-from"
-                type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                className="h-8 w-36"
-              />
+            <div className="grid grid-cols-2 gap-2 sm:flex">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="finance-from" className="text-xs">
+                  From
+                </Label>
+                <Input
+                  id="finance-from"
+                  type="date"
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                  className="h-8 w-full sm:w-36"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="finance-to" className="text-xs">
+                  To
+                </Label>
+                <Input
+                  id="finance-to"
+                  type="date"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  className="h-8 w-full sm:w-36"
+                />
+              </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="finance-to" className="text-xs">
-                To
-              </Label>
-              <Input
-                id="finance-to"
-                type="date"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="h-8 w-36"
-              />
-            </div>
-            <Button type="submit" size="sm">
+            <Button type="submit" size="sm" className="w-full sm:w-auto">
               Apply
             </Button>
           </form>

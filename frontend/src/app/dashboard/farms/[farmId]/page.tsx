@@ -41,6 +41,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useFarm } from "@/lib/farm-context";
 import { usePermissions } from "@/lib/permissions";
+import { useConfirm } from "@/components/confirm-provider";
 import { formatRole } from "@/lib/utils";
 
 const memberSchema = z.object({
@@ -74,6 +75,7 @@ export default function FarmDetailPage() {
   const { platformRoles } = useAuth();
   const isSystemAdministrator = platformRoles.includes("system_administrator");
   const { canManageFarm } = usePermissions();
+  const confirm = useConfirm();
 
   const [memberDialogOpen, setMemberDialogOpen] = React.useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = React.useState(false);
@@ -396,7 +398,17 @@ export default function FarmDetailPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeMemberMutation.mutate(member.id)}
+                          onClick={async () => {
+                            if (
+                              await confirm({
+                                title: `Remove ${member.name} from this farm?`,
+                                description: "They will lose access to this farm immediately.",
+                                confirmLabel: "Remove",
+                              })
+                            ) {
+                              removeMemberMutation.mutate(member.id);
+                            }
+                          }}
                         >
                           <Trash2 className="size-4 text-destructive" />
                         </Button>
@@ -510,7 +522,17 @@ export default function FarmDetailPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => deleteBlockMutation.mutate(block.id)}
+                            onClick={async () => {
+                              if (
+                                await confirm({
+                                  title: `Delete block "${block.name}"?`,
+                                  description: "This also removes its sections and plots.",
+                                  confirmLabel: "Delete",
+                                })
+                              ) {
+                                deleteBlockMutation.mutate(block.id);
+                              }
+                            }}
                           >
                             <Trash2 className="size-4 text-destructive" />
                           </Button>

@@ -34,6 +34,7 @@ import {
   type Plot,
 } from "@/lib/modules/farm-structure";
 import { usePermissions } from "@/lib/permissions";
+import { useConfirm } from "@/components/confirm-provider";
 
 const plotSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -56,6 +57,7 @@ export default function SectionDetailPage() {
   const sectionId = Number(params.sectionId);
   const queryClient = useQueryClient();
   const { canManageFarm } = usePermissions();
+  const confirm = useConfirm();
 
   const [plotOpen, setPlotOpen] = React.useState(false);
   const [plotError, setPlotError] = React.useState<string | null>(null);
@@ -321,7 +323,20 @@ export default function SectionDetailPage() {
                           >
                             <Pencil className="size-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => deletePlotMutation.mutate(plot.id)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={async () => {
+                              if (
+                                await confirm({
+                                  title: `Delete plot "${plot.name}"?`,
+                                  confirmLabel: "Delete",
+                                })
+                              ) {
+                                deletePlotMutation.mutate(plot.id);
+                              }
+                            }}
+                          >
                             <Trash2 className="size-4 text-destructive" />
                           </Button>
                         </>

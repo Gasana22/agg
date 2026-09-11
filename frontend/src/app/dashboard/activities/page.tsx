@@ -35,6 +35,7 @@ import {
 import { useFarm } from "@/lib/farm-context";
 import { useAuth } from "@/lib/auth-context";
 import { usePermissions } from "@/lib/permissions";
+import { useConfirm } from "@/components/confirm-provider";
 
 const schema = z.object({
   assigned_to: z.string().min(1, "Pick an assignee"),
@@ -60,6 +61,7 @@ export default function ActivitiesPage() {
   const { currentFarmId } = useFarm();
   const { user } = useAuth();
   const { canManageFarm } = usePermissions();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const [open, setOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -242,7 +244,16 @@ export default function ActivitiesPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => deleteMutation.mutate(task.id)}
+                              onClick={async () => {
+                                if (
+                                  await confirm({
+                                    title: `Delete "${task.title}"?`,
+                                    confirmLabel: "Delete",
+                                  })
+                                ) {
+                                  deleteMutation.mutate(task.id);
+                                }
+                              }}
                             >
                               <Trash2 className="size-4 text-destructive" />
                             </Button>

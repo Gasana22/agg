@@ -34,6 +34,7 @@ import {
   type Section,
 } from "@/lib/modules/farm-structure";
 import { usePermissions } from "@/lib/permissions";
+import { useConfirm } from "@/components/confirm-provider";
 
 const sectionSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -55,6 +56,7 @@ export default function BlockDetailPage() {
   const blockId = Number(params.blockId);
   const queryClient = useQueryClient();
   const { canManageFarm } = usePermissions();
+  const confirm = useConfirm();
 
   const [sectionOpen, setSectionOpen] = React.useState(false);
   const [sectionError, setSectionError] = React.useState<string | null>(null);
@@ -319,7 +321,17 @@ export default function BlockDetailPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => deleteSectionMutation.mutate(section.id)}
+                            onClick={async () => {
+                              if (
+                                await confirm({
+                                  title: `Delete section "${section.name}"?`,
+                                  description: "This also removes its plots.",
+                                  confirmLabel: "Delete",
+                                })
+                              ) {
+                                deleteSectionMutation.mutate(section.id);
+                              }
+                            }}
                           >
                             <Trash2 className="size-4 text-destructive" />
                           </Button>

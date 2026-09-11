@@ -37,6 +37,7 @@ import {
   PAYMENT_METHODS,
 } from "@/lib/modules/procurement";
 import { usePermissions } from "@/lib/permissions";
+import { useConfirm } from "@/components/confirm-provider";
 import { formatRole } from "@/lib/utils";
 
 const deliverySchema = z.object({
@@ -73,6 +74,7 @@ export default function PurchaseOrderDetailPage() {
   const params = useParams<{ orderId: string }>();
   const orderId = Number(params.orderId);
   const { canManageProcurement, canManageFinance } = usePermissions();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
 
   const [deliveryOpen, setDeliveryOpen] = React.useState(false);
@@ -276,7 +278,16 @@ export default function PurchaseOrderDetailPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => deleteItemMutation.mutate(item.id)}
+                          onClick={async () => {
+                            if (
+                              await confirm({
+                                title: `Remove "${item.item_name}" from this order?`,
+                                confirmLabel: "Remove",
+                              })
+                            ) {
+                              deleteItemMutation.mutate(item.id);
+                            }
+                          }}
                         >
                           <Trash2 className="size-4 text-destructive" />
                         </Button>
