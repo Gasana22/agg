@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\FarmRole;
 use Illuminate\Database\Eloquent\Model;
 
 class Farm extends Model
@@ -15,6 +16,15 @@ class Farm extends Model
         'gps_lng',
         'is_active',
     ];
+
+    protected static function booted(): void
+    {
+        static::created(function (Farm $farm) {
+            $farm->users()->syncWithoutDetaching([
+                $farm->owner_id => ['role_on_farm' => FarmRole::FarmOwner->value],
+            ]);
+        });
+    }
 
     protected function casts(): array
     {
@@ -30,8 +40,17 @@ class Farm extends Model
         return $this->belongsTo(User::class, 'owner_id');
     }
 
+    /**
+     * Users assigned to this farm, with their role on this specific farm
+     * (farm_owner, farm_manager, agronomist, ...). A user's role here is
+     * independent of their role on any other farm, and independent of
+     * whether they hold a platform-wide role like system_administrator.
+     */
     public function users()
     {
-        return $this->belongsToMany(User::class)->withPivot('role_on_farm')->withTimestamps();
+        return $this->belongsToMany(User::class)
+            ->using(FarmUser::class)
+            ->withPivot('role_on_farm')
+            ->withTimestamps();
     }
 }

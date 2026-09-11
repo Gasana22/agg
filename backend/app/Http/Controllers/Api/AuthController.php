@@ -45,7 +45,9 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => $user,
-            'roles' => $user->getRoleNames(),
+            // Platform-wide (system_administrator, supplier, customer) — not
+            // tied to any farm. Per-farm roles are on user.farms[].pivot.role_on_farm.
+            'platform_roles' => $user->getRoleNames(),
         ]);
     }
 
@@ -70,7 +72,7 @@ class AuthController extends Controller
             'token_type' => 'bearer',
             'expires_in' => Auth::guard('api')->factory()->getTTL() * 60,
             'user' => $user,
-            'roles' => $user->getRoleNames(),
+            'platform_roles' => $user->getRoleNames(),
         ]);
     }
 }

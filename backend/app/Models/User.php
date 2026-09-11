@@ -53,11 +53,16 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
-     * Farms this user owns or is assigned to.
+     * Farms this user is assigned to, with their role on each farm.
+     * Not a system_administrator concern: that role manages the platform,
+     * not farm membership.
      */
     public function farms()
     {
-        return $this->belongsToMany(Farm::class)->withPivot('role_on_farm')->withTimestamps();
+        return $this->belongsToMany(Farm::class)
+            ->using(FarmUser::class)
+            ->withPivot('role_on_farm')
+            ->withTimestamps();
     }
 
     public function getJWTIdentifier()
@@ -68,7 +73,7 @@ class User extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims(): array
     {
         return [
-            'roles' => $this->getRoleNames(),
+            'platform_roles' => $this->getRoleNames(),
         ];
     }
 }

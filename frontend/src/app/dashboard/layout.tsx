@@ -23,6 +23,7 @@ import {
 
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
+import { formatRole } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -42,7 +43,7 @@ const NAV_ITEMS = [
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, roles, loading, logout } = useAuth();
+  const { user, platformRoles, loading, logout } = useAuth();
   const router = useRouter();
 
   React.useEffect(() => {
@@ -80,9 +81,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
         <div className="border-t p-3">
           <p className="truncate text-sm font-medium">{user.name}</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {roles.join(", ") || "no role"}
-          </p>
+          {platformRoles.length > 0 ? (
+            <p className="truncate text-xs text-muted-foreground">
+              {platformRoles.map(formatRole).join(", ")} (platform)
+            </p>
+          ) : user.farms && user.farms.length > 0 ? (
+            <div className="mt-0.5 flex flex-col gap-0.5">
+              {user.farms.map((farm) => (
+                <p key={farm.id} className="truncate text-xs text-muted-foreground">
+                  {formatRole(farm.pivot.role_on_farm)} · {farm.name}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="truncate text-xs text-muted-foreground">No role assigned</p>
+          )}
           <Button
             variant="ghost"
             size="sm"
