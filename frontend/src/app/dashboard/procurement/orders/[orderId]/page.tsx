@@ -36,6 +36,7 @@ import {
   PURCHASE_ORDER_STATUSES,
   PAYMENT_METHODS,
 } from "@/lib/modules/procurement";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 const deliverySchema = z.object({
@@ -71,6 +72,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "warning" | "succ
 export default function PurchaseOrderDetailPage() {
   const params = useParams<{ orderId: string }>();
   const orderId = Number(params.orderId);
+  const { canManageProcurement, canManageFinance } = usePermissions();
   const queryClient = useQueryClient();
 
   const [deliveryOpen, setDeliveryOpen] = React.useState(false);
@@ -184,37 +186,41 @@ export default function PurchaseOrderDetailPage() {
         {order && (
           <div className="flex items-center gap-2">
             <Badge variant={STATUS_VARIANT[order.status] ?? "secondary"}>{formatRole(order.status)}</Badge>
-            <Select value={order.status} onValueChange={(v) => statusMutation.mutate(v)}>
-              <SelectTrigger className="h-8 w-44">
-                <SelectValue placeholder="Change status" />
-              </SelectTrigger>
-              <SelectContent>
-                {PURCHASE_ORDER_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {formatRole(status)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => {
-                setPoEditError(null);
-                setEditSupplierId(String(order.supplier.id));
-                poEditForm.reset({
-                  supplier_id: String(order.supplier.id),
-                  order_date: order.order_date.slice(0, 10),
-                  expected_delivery_date: order.expected_delivery_date?.slice(0, 10) ?? "",
-                  notes: order.notes ?? "",
-                });
-                setPoEditOpen(true);
-              }}
-            >
-              <Pencil className="size-4" />
-              Edit
-            </Button>
+            {canManageProcurement && (
+              <>
+                <Select value={order.status} onValueChange={(v) => statusMutation.mutate(v)}>
+                  <SelectTrigger className="h-8 w-44">
+                    <SelectValue placeholder="Change status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PURCHASE_ORDER_STATUSES.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {formatRole(status)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => {
+                    setPoEditError(null);
+                    setEditSupplierId(String(order.supplier.id));
+                    poEditForm.reset({
+                      supplier_id: String(order.supplier.id),
+                      order_date: order.order_date.slice(0, 10),
+                      expected_delivery_date: order.expected_delivery_date?.slice(0, 10) ?? "",
+                      notes: order.notes ?? "",
+                    });
+                    setPoEditOpen(true);
+                  }}
+                >
+                  <Pencil className="size-4" />
+                  Edit
+                </Button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -266,13 +272,15 @@ export default function PurchaseOrderDetailPage() {
                     <TableCell className="text-muted-foreground">{item.unit_price}</TableCell>
                     <TableCell className="text-muted-foreground">{item.line_total}</TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteItemMutation.mutate(item.id)}
-                      >
-                        <Trash2 className="size-4 text-destructive" />
-                      </Button>
+                      {canManageProcurement && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteItemMutation.mutate(item.id)}
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -378,6 +386,7 @@ export default function PurchaseOrderDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Payments</CardTitle>
+          {canManageFinance && (
           <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -445,6 +454,7 @@ export default function PurchaseOrderDetailPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {!order || order.payments.length === 0 ? (

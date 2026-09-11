@@ -33,6 +33,7 @@ import {
   deletePlot,
   type Plot,
 } from "@/lib/modules/farm-structure";
+import { usePermissions } from "@/lib/permissions";
 
 const plotSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -54,6 +55,7 @@ export default function SectionDetailPage() {
   const blockId = Number(params.blockId);
   const sectionId = Number(params.sectionId);
   const queryClient = useQueryClient();
+  const { canManageFarm } = usePermissions();
 
   const [plotOpen, setPlotOpen] = React.useState(false);
   const [plotError, setPlotError] = React.useState<string | null>(null);
@@ -151,6 +153,7 @@ export default function SectionDetailPage() {
             {section?.gps_lat && section?.gps_lng ? `${section.gps_lat}, ${section.gps_lng}` : "No GPS set"}
           </p>
         </div>
+        {canManageFarm && (
         <Dialog
           open={sectionEditOpen}
           onOpenChange={(open) => {
@@ -218,11 +221,13 @@ export default function SectionDetailPage() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Plots</CardTitle>
+          {canManageFarm && (
           <Dialog open={plotOpen} onOpenChange={setPlotOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -267,6 +272,7 @@ export default function SectionDetailPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {plotsLoading ? (
@@ -298,24 +304,28 @@ export default function SectionDetailPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingPlot(plot);
-                          plotEditForm.reset({
-                            name: plot.name,
-                            gps_lat: plot.gps_lat ?? "",
-                            gps_lng: plot.gps_lng ?? "",
-                          });
-                          setPlotEditError(null);
-                        }}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => deletePlotMutation.mutate(plot.id)}>
-                        <Trash2 className="size-4 text-destructive" />
-                      </Button>
+                      {canManageFarm && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditingPlot(plot);
+                              plotEditForm.reset({
+                                name: plot.name,
+                                gps_lat: plot.gps_lat ?? "",
+                                gps_lng: plot.gps_lng ?? "",
+                              });
+                              setPlotEditError(null);
+                            }}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => deletePlotMutation.mutate(plot.id)}>
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

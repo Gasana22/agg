@@ -27,6 +27,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { listMembers } from "@/lib/modules/farm-structure";
 import { listWorkerProfiles, createWorkerProfile } from "@/lib/modules/worker-management";
 import { useFarm } from "@/lib/farm-context";
+import { usePermissions } from "@/lib/permissions";
 
 const schema = z.object({
   user_id: z.string().min(1, "Pick a farm member"),
@@ -39,6 +40,7 @@ type FormValues = z.infer<typeof schema>;
 
 export default function WorkersPage() {
   const { currentFarmId } = useFarm();
+  const { canManageFarm } = usePermissions();
   const queryClient = useQueryClient();
   const [open, setOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -89,6 +91,7 @@ export default function WorkersPage() {
             Worker profiles, pay rates, and supervisors for this farm.
           </p>
         </div>
+        {canManageFarm && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
@@ -169,6 +172,7 @@ export default function WorkersPage() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {isError ? (

@@ -37,6 +37,7 @@ import {
   type BreedingRecord,
 } from "@/lib/modules/livestock";
 import { useFarm } from "@/lib/farm-context";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 const breedingEditSchema = z.object({
@@ -79,6 +80,7 @@ const ANIMAL_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructi
 
 export default function LivestockPage() {
   const { currentFarmId } = useFarm();
+  const { canManageLivestock } = usePermissions();
   const queryClient = useQueryClient();
   const [animalOpen, setAnimalOpen] = React.useState(false);
   const [breedingOpen, setBreedingOpen] = React.useState(false);
@@ -190,6 +192,7 @@ export default function LivestockPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Animal registry</CardTitle>
+          {canManageLivestock && (
           <Dialog open={animalOpen} onOpenChange={setAnimalOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -324,6 +327,7 @@ export default function LivestockPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {animalsLoading ? (
@@ -377,6 +381,7 @@ export default function LivestockPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Breeding records</CardTitle>
+          {canManageLivestock && (
           <Dialog open={breedingOpen} onOpenChange={setBreedingOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2" disabled={!animals || animals.length === 0}>
@@ -462,6 +467,7 @@ export default function LivestockPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {breedingLoading ? (
@@ -511,22 +517,24 @@ export default function LivestockPage() {
                       </Select>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingBreeding(record);
-                          breedingEditForm.reset({
-                            expected_due_date: record.expected_due_date ?? "",
-                            actual_birth_date: record.actual_birth_date ?? "",
-                            offspring_count: record.offspring_count != null ? String(record.offspring_count) : "",
-                            notes: record.notes ?? "",
-                          });
-                          setBreedingEditError(null);
-                        }}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
+                      {canManageLivestock && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingBreeding(record);
+                            breedingEditForm.reset({
+                              expected_due_date: record.expected_due_date ?? "",
+                              actual_birth_date: record.actual_birth_date ?? "",
+                              offspring_count: record.offspring_count != null ? String(record.offspring_count) : "",
+                              notes: record.notes ?? "",
+                            });
+                            setBreedingEditError(null);
+                          }}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

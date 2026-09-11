@@ -35,6 +35,7 @@ import {
   type Supplier,
 } from "@/lib/modules/procurement";
 import { useFarm } from "@/lib/farm-context";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 const supplierSchema = z.object({
@@ -82,6 +83,7 @@ function today() {
 
 export default function ProcurementPage() {
   const { currentFarmId } = useFarm();
+  const { canManageProcurement } = usePermissions();
   const queryClient = useQueryClient();
 
   const [supplierOpen, setSupplierOpen] = React.useState(false);
@@ -255,6 +257,7 @@ export default function ProcurementPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Suppliers</CardTitle>
+          {canManageProcurement && (
           <Dialog open={supplierOpen} onOpenChange={setSupplierOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -313,6 +316,7 @@ export default function ProcurementPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {suppliersLoading ? (
@@ -344,24 +348,26 @@ export default function ProcurementPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingSupplier(supplier);
-                          setSupplierEditError(null);
-                          supplierEditForm.reset({
-                            name: supplier.name,
-                            category: supplier.category ?? "",
-                            phone: supplier.phone ?? "",
-                            email: supplier.email ?? "",
-                            address: supplier.address ?? "",
-                            notes: supplier.notes ?? "",
-                          });
-                        }}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
+                      {canManageProcurement && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingSupplier(supplier);
+                            setSupplierEditError(null);
+                            supplierEditForm.reset({
+                              name: supplier.name,
+                              category: supplier.category ?? "",
+                              phone: supplier.phone ?? "",
+                              email: supplier.email ?? "",
+                              address: supplier.address ?? "",
+                              notes: supplier.notes ?? "",
+                            });
+                          }}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -374,6 +380,7 @@ export default function ProcurementPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Purchase orders</CardTitle>
+          {canManageProcurement && (
           <Dialog open={poOpen} onOpenChange={setPoOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2" disabled={!suppliers || suppliers.length === 0}>
@@ -492,6 +499,7 @@ export default function ProcurementPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {ordersLoading ? (

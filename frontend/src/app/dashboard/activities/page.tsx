@@ -33,6 +33,8 @@ import {
   type DailyTask,
 } from "@/lib/modules/worker-management";
 import { useFarm } from "@/lib/farm-context";
+import { useAuth } from "@/lib/auth-context";
+import { usePermissions } from "@/lib/permissions";
 
 const schema = z.object({
   assigned_to: z.string().min(1, "Pick an assignee"),
@@ -56,6 +58,8 @@ const STATUS_LABEL: Record<DailyTask["status"], string> = {
 
 export default function ActivitiesPage() {
   const { currentFarmId } = useFarm();
+  const { user } = useAuth();
+  const { canManageFarm } = usePermissions();
   const queryClient = useQueryClient();
   const [open, setOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -111,6 +115,7 @@ export default function ActivitiesPage() {
           <h1 className="text-2xl font-semibold">Activity Tracking</h1>
           <p className="text-sm text-muted-foreground">Daily tasks assigned to workers on this farm.</p>
         </div>
+        {canManageFarm && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
@@ -171,6 +176,7 @@ export default function ActivitiesPage() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {isLoading ? (
@@ -197,6 +203,9 @@ export default function ActivitiesPage() {
               <TableBody>
                 {tasks.map((task) => {
                   const nextStatus = STATUS_FLOW[task.status];
+                  const canUpdateStatus =
+                    canManageFarm || task.assignee.id === user?.id || task.assigner.id === user?.id;
+                  const canDelete = canManageFarm || task.assigner.id === user?.id;
                   return (
                     <TableRow key={task.id}>
                       <TableCell className="font-medium">{task.title}</TableCell>
@@ -219,7 +228,7 @@ export default function ActivitiesPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {nextStatus && (
+                          {nextStatus && canUpdateStatus && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -229,13 +238,15 @@ export default function ActivitiesPage() {
                               {STATUS_LABEL[task.status]}
                             </Button>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteMutation.mutate(task.id)}
-                          >
-                            <Trash2 className="size-4 text-destructive" />
-                          </Button>
+                          {canDelete && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteMutation.mutate(task.id)}
+                            >
+                              <Trash2 className="size-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

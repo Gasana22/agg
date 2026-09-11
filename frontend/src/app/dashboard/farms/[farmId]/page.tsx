@@ -40,6 +40,7 @@ import {
 } from "@/lib/modules/farm-structure";
 import { useAuth } from "@/lib/auth-context";
 import { useFarm } from "@/lib/farm-context";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 const memberSchema = z.object({
@@ -72,6 +73,7 @@ export default function FarmDetailPage() {
   const queryClient = useQueryClient();
   const { platformRoles } = useAuth();
   const isSystemAdministrator = platformRoles.includes("system_administrator");
+  const { canManageFarm } = usePermissions();
 
   const [memberDialogOpen, setMemberDialogOpen] = React.useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = React.useState(false);
@@ -199,6 +201,7 @@ export default function FarmDetailPage() {
             {[farm?.village, farm?.district].filter(Boolean).join(", ") || "No location set"}
           </p>
         </div>
+        {(isSystemAdministrator || canManageFarm) && (
         <Dialog
           open={farmEditOpen}
           onOpenChange={(open) => {
@@ -268,6 +271,7 @@ export default function FarmDetailPage() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {isSystemAdministrator ? (
@@ -282,6 +286,7 @@ export default function FarmDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Members</CardTitle>
+          {canManageFarm && (
           <Dialog open={memberDialogOpen} onOpenChange={setMemberDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -341,6 +346,7 @@ export default function FarmDetailPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {membersLoading ? (
@@ -363,8 +369,8 @@ export default function FarmDetailPage() {
                     <TableCell className="font-medium">{member.name}</TableCell>
                     <TableCell className="text-muted-foreground">{member.email}</TableCell>
                     <TableCell>
-                      {member.role_on_farm === "farm_owner" ? (
-                        <Badge variant="outline">Farm Owner</Badge>
+                      {member.role_on_farm === "farm_owner" || !canManageFarm ? (
+                        <Badge variant="outline">{formatRole(member.role_on_farm)}</Badge>
                       ) : (
                         <Select
                           defaultValue={member.role_on_farm}
@@ -386,7 +392,7 @@ export default function FarmDetailPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {member.role_on_farm !== "farm_owner" && (
+                      {canManageFarm && member.role_on_farm !== "farm_owner" && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -407,6 +413,7 @@ export default function FarmDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Blocks</CardTitle>
+          {canManageFarm && (
           <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -451,6 +458,7 @@ export default function FarmDetailPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {blocksLoading ? (
@@ -482,28 +490,32 @@ export default function FarmDetailPage() {
                       {block.gps_lat && block.gps_lng ? `${block.gps_lat}, ${block.gps_lng}` : "—"}
                     </TableCell>
                     <TableCell className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingBlock(block);
-                          blockEditForm.reset({
-                            name: block.name,
-                            gps_lat: block.gps_lat ?? "",
-                            gps_lng: block.gps_lng ?? "",
-                          });
-                          setBlockEditError(null);
-                        }}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteBlockMutation.mutate(block.id)}
-                      >
-                        <Trash2 className="size-4 text-destructive" />
-                      </Button>
+                      {canManageFarm && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditingBlock(block);
+                              blockEditForm.reset({
+                                name: block.name,
+                                gps_lat: block.gps_lat ?? "",
+                                gps_lng: block.gps_lng ?? "",
+                              });
+                              setBlockEditError(null);
+                            }}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteBlockMutation.mutate(block.id)}
+                          >
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

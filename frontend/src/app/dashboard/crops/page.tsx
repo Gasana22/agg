@@ -34,6 +34,7 @@ import {
   type Crop,
 } from "@/lib/modules/crop-management";
 import { useFarm } from "@/lib/farm-context";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 const cropSchema = z.object({
@@ -65,6 +66,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "warning" | "succ
 
 export default function CropsPage() {
   const { currentFarmId } = useFarm();
+  const { canManageCrops } = usePermissions();
   const queryClient = useQueryClient();
   const [cropOpen, setCropOpen] = React.useState(false);
   const [seasonOpen, setSeasonOpen] = React.useState(false);
@@ -152,6 +154,7 @@ export default function CropsPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Crop catalog</CardTitle>
+          {canManageCrops && (
           <Dialog open={cropOpen} onOpenChange={setCropOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -200,6 +203,7 @@ export default function CropsPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {cropsLoading ? (
@@ -208,30 +212,38 @@ export default function CropsPage() {
             <p className="text-sm text-muted-foreground">No crops in the catalog yet.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {crops.map((crop) => (
-                <button
-                  key={crop.id}
-                  type="button"
-                  onClick={() => {
-                    setEditingCrop(crop);
-                    cropEditForm.reset({
-                      name: crop.name,
-                      variety: crop.variety ?? "",
-                      category: crop.category ?? "",
-                      description: crop.description ?? "",
-                    });
-                    setCropEditError(null);
-                  }}
-                  className="group"
-                >
-                  <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-sm group-hover:bg-accent">
+              {crops.map((crop) =>
+                canManageCrops ? (
+                  <button
+                    key={crop.id}
+                    type="button"
+                    onClick={() => {
+                      setEditingCrop(crop);
+                      cropEditForm.reset({
+                        name: crop.name,
+                        variety: crop.variety ?? "",
+                        category: crop.category ?? "",
+                        description: crop.description ?? "",
+                      });
+                      setCropEditError(null);
+                    }}
+                    className="group"
+                  >
+                    <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-sm group-hover:bg-accent">
+                      {crop.name}
+                      {crop.variety && <span className="text-muted-foreground">· {crop.variety}</span>}
+                      <span className="text-muted-foreground">({crop.seasons_count ?? 0})</span>
+                      <Pencil className="size-3 text-muted-foreground" />
+                    </Badge>
+                  </button>
+                ) : (
+                  <Badge key={crop.id} variant="outline" className="gap-1.5 px-3 py-1.5 text-sm">
                     {crop.name}
                     {crop.variety && <span className="text-muted-foreground">· {crop.variety}</span>}
                     <span className="text-muted-foreground">({crop.seasons_count ?? 0})</span>
-                    <Pencil className="size-3 text-muted-foreground" />
                   </Badge>
-                </button>
-              ))}
+                )
+              )}
             </div>
           )}
         </CardContent>
@@ -240,6 +252,7 @@ export default function CropsPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Crop seasons</CardTitle>
+          {canManageCrops && (
           <Dialog open={seasonOpen} onOpenChange={setSeasonOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2" disabled={!crops || crops.length === 0}>
@@ -313,6 +326,7 @@ export default function CropsPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {seasonsLoading ? (

@@ -33,6 +33,7 @@ import {
   deleteSection,
   type Section,
 } from "@/lib/modules/farm-structure";
+import { usePermissions } from "@/lib/permissions";
 
 const sectionSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -53,6 +54,7 @@ export default function BlockDetailPage() {
   const farmId = Number(params.farmId);
   const blockId = Number(params.blockId);
   const queryClient = useQueryClient();
+  const { canManageFarm } = usePermissions();
 
   const [sectionOpen, setSectionOpen] = React.useState(false);
   const [sectionError, setSectionError] = React.useState<string | null>(null);
@@ -147,6 +149,7 @@ export default function BlockDetailPage() {
             {block?.gps_lat && block?.gps_lng ? `${block.gps_lat}, ${block.gps_lng}` : "No GPS set"}
           </p>
         </div>
+        {canManageFarm && (
         <Dialog
           open={blockEditOpen}
           onOpenChange={(open) => {
@@ -204,11 +207,13 @@ export default function BlockDetailPage() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Sections</CardTitle>
+          {canManageFarm && (
           <Dialog open={sectionOpen} onOpenChange={setSectionOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -253,6 +258,7 @@ export default function BlockDetailPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {sectionsLoading ? (
@@ -293,28 +299,32 @@ export default function BlockDetailPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingSection(section);
-                          sectionEditForm.reset({
-                            name: section.name,
-                            gps_lat: section.gps_lat ?? "",
-                            gps_lng: section.gps_lng ?? "",
-                          });
-                          setSectionEditError(null);
-                        }}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteSectionMutation.mutate(section.id)}
-                      >
-                        <Trash2 className="size-4 text-destructive" />
-                      </Button>
+                      {canManageFarm && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditingSection(section);
+                              sectionEditForm.reset({
+                                name: section.name,
+                                gps_lat: section.gps_lat ?? "",
+                                gps_lng: section.gps_lng ?? "",
+                              });
+                              setSectionEditError(null);
+                            }}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteSectionMutation.mutate(section.id)}
+                          >
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -39,6 +39,7 @@ import {
   ANIMAL_SOURCES,
   ANIMAL_HEALTH_LOG_TYPES,
 } from "@/lib/modules/livestock";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 const animalEditSchema = z.object({
@@ -89,6 +90,7 @@ const ANIMAL_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructi
 export default function AnimalDetailPage() {
   const params = useParams<{ animalId: string }>();
   const animalId = Number(params.animalId);
+  const { canManageLivestock } = usePermissions();
   const queryClient = useQueryClient();
 
   const [healthOpen, setHealthOpen] = React.useState(false);
@@ -232,39 +234,43 @@ export default function AnimalDetailPage() {
         {animal && (
           <div className="flex items-center gap-2">
             <Badge variant={ANIMAL_STATUS_VARIANT[animal.status] ?? "secondary"}>{formatRole(animal.status)}</Badge>
-            <Select value={animal.status} onValueChange={(v) => statusMutation.mutate(v)}>
-              <SelectTrigger className="h-8 w-36">
-                <SelectValue placeholder="Change status" />
-              </SelectTrigger>
-              <SelectContent>
-                {ANIMAL_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {formatRole(status)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-2"
-              onClick={() => {
-                animalEditForm.reset({
-                  name: animal.name ?? "",
-                  breed: animal.breed ?? "",
-                  birth_date: animal.birth_date ?? "",
-                  acquired_date: animal.acquired_date ?? "",
-                  notes: animal.notes ?? "",
-                });
-                setEditSex(animal.sex ?? "");
-                setEditSource(animal.source ?? "");
-                setEditError(null);
-                setEditOpen(true);
-              }}
-            >
-              <Pencil className="size-4" />
-              Edit
-            </Button>
+            {canManageLivestock && (
+              <Select value={animal.status} onValueChange={(v) => statusMutation.mutate(v)}>
+                <SelectTrigger className="h-8 w-36">
+                  <SelectValue placeholder="Change status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ANIMAL_STATUSES.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {formatRole(status)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {canManageLivestock && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2"
+                onClick={() => {
+                  animalEditForm.reset({
+                    name: animal.name ?? "",
+                    breed: animal.breed ?? "",
+                    birth_date: animal.birth_date ?? "",
+                    acquired_date: animal.acquired_date ?? "",
+                    notes: animal.notes ?? "",
+                  });
+                  setEditSex(animal.sex ?? "");
+                  setEditSource(animal.source ?? "");
+                  setEditError(null);
+                  setEditOpen(true);
+                }}
+              >
+                <Pencil className="size-4" />
+                Edit
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -573,6 +579,7 @@ export default function AnimalDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Sales</CardTitle>
+          {canManageLivestock && (
           <Dialog open={saleOpen} onOpenChange={setSaleOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -627,6 +634,7 @@ export default function AnimalDetailPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {salesLoading ? (

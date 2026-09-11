@@ -38,6 +38,7 @@ import {
 } from "@/lib/modules/finance";
 import { listWorkerProfiles } from "@/lib/modules/worker-management";
 import { useFarm } from "@/lib/farm-context";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 const expenseSchema = z.object({
@@ -75,6 +76,7 @@ function today() {
 
 export default function FinancePage() {
   const { currentFarmId } = useFarm();
+  const { canManageFinance } = usePermissions();
   const queryClient = useQueryClient();
 
   const [from, setFrom] = React.useState(startOfMonth());
@@ -302,6 +304,7 @@ export default function FinancePage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Expenses</CardTitle>
+          {canManageFinance && (
           <Dialog open={expenseOpen} onOpenChange={setExpenseOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -372,6 +375,7 @@ export default function FinancePage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {expensesLoading ? (
@@ -401,23 +405,25 @@ export default function FinancePage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{expense.recorder.name}</TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingExpense(expense);
-                          expenseEditForm.reset({
-                            category: expense.category,
-                            description: expense.description,
-                            amount: expense.amount,
-                            date: expense.date.slice(0, 10),
-                          });
-                          setEditCategory(expense.category);
-                          setExpenseEditError(null);
-                        }}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
+                      {canManageFinance && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingExpense(expense);
+                            expenseEditForm.reset({
+                              category: expense.category,
+                              description: expense.description,
+                              amount: expense.amount,
+                              date: expense.date.slice(0, 10),
+                            });
+                            setEditCategory(expense.category);
+                            setExpenseEditError(null);
+                          }}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -443,6 +449,7 @@ export default function FinancePage() {
                 ))}
               </SelectContent>
             </Select>
+            {canManageFinance && (
             <Dialog open={payrollOpen} onOpenChange={setPayrollOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" className="gap-2" disabled={!selectedWorkerProfileId}>
@@ -498,6 +505,7 @@ export default function FinancePage() {
                 </form>
               </DialogContent>
             </Dialog>
+            )}
           </div>
         </CardHeader>
         <CardContent className="pb-6">
@@ -537,7 +545,7 @@ export default function FinancePage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {payment.status === "pending" && (
+                      {canManageFinance && payment.status === "pending" && (
                         <Button size="sm" variant="outline" onClick={() => payMutation.mutate(payment.id)}>
                           Mark paid
                         </Button>

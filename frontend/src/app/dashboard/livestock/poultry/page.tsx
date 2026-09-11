@@ -33,6 +33,7 @@ import {
   type PoultryFlock,
 } from "@/lib/modules/poultry";
 import { useFarm } from "@/lib/farm-context";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 const flockSchema = z.object({
@@ -55,6 +56,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "success"> = {
 
 export default function PoultryPage() {
   const { currentFarmId } = useFarm();
+  const { canManageLivestock } = usePermissions();
   const queryClient = useQueryClient();
   const [flockOpen, setFlockOpen] = React.useState(false);
   const [flockError, setFlockError] = React.useState<string | null>(null);
@@ -132,6 +134,7 @@ export default function PoultryPage() {
             Flocks tracked by headcount, not individually tagged like other animals.
           </p>
         </div>
+        {canManageLivestock && (
         <Dialog open={flockOpen} onOpenChange={setFlockOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
@@ -217,6 +220,7 @@ export default function PoultryPage() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <Card>
@@ -256,26 +260,28 @@ export default function PoultryPage() {
                       <Badge variant={STATUS_VARIANT[flock.status] ?? "secondary"}>{formatRole(flock.status)}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingFlock(flock);
-                          flockEditForm.reset({
-                            flock_code: flock.flock_code,
-                            name: flock.name ?? "",
-                            bird_type: flock.bird_type,
-                            breed: flock.breed ?? "",
-                            initial_count: String(flock.initial_count),
-                            acquired_date: flock.acquired_date ?? "",
-                            notes: flock.notes ?? "",
-                          });
-                          setEditSource(flock.source ?? "");
-                          setFlockEditError(null);
-                        }}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
+                      {canManageLivestock && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingFlock(flock);
+                            flockEditForm.reset({
+                              flock_code: flock.flock_code,
+                              name: flock.name ?? "",
+                              bird_type: flock.bird_type,
+                              breed: flock.breed ?? "",
+                              initial_count: String(flock.initial_count),
+                              acquired_date: flock.acquired_date ?? "",
+                              notes: flock.notes ?? "",
+                            });
+                            setEditSource(flock.source ?? "");
+                            setFlockEditError(null);
+                          }}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

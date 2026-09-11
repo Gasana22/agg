@@ -26,6 +26,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getTraceBatch, createTraceEvent, TRACE_EVENT_TYPES } from "@/lib/modules/traceability";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 const eventSchema = z.object({
@@ -51,6 +52,7 @@ export default function TraceBatchDetailPage() {
   const params = useParams<{ batchId: string }>();
   const batchId = Number(params.batchId);
   const queryClient = useQueryClient();
+  const { canManageFarm, canManageCrops, canManageLivestock } = usePermissions();
 
   const [eventOpen, setEventOpen] = React.useState(false);
   const [eventError, setEventError] = React.useState<string | null>(null);
@@ -85,6 +87,13 @@ export default function TraceBatchDetailPage() {
   });
 
   const isClosed = batch?.status === "sold" || batch?.status === "recalled";
+  // Mirrors TraceBatch::canBeManagedBy() on the backend: farm managers can
+  // always add events; otherwise it depends on which production domain the
+  // batch's source record belongs to.
+  const canAddEvent =
+    canManageFarm ||
+    (batch?.source_type === "App\\Models\\CropHarvest" && canManageCrops) ||
+    (batch?.source_type === "App\\Models\\AnimalProductionRecord" && canManageLivestock);
 
   return (
     <div className="flex flex-col gap-6">
@@ -117,6 +126,7 @@ export default function TraceBatchDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Chain of custody</CardTitle>
+          {canAddEvent && (
           <Dialog open={eventOpen} onOpenChange={setEventOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2" disabled={isClosed}>
@@ -189,6 +199,7 @@ export default function TraceBatchDetailPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {!batch || batch.events.length === 0 ? (

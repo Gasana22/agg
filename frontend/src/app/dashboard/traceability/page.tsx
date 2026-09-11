@@ -24,6 +24,7 @@ import { listTraceBatches, createTraceBatch } from "@/lib/modules/traceability";
 import { listCropSeasons, listCropHarvests } from "@/lib/modules/crop-management";
 import { listAnimals, listProductionRecords } from "@/lib/modules/livestock";
 import { useFarm } from "@/lib/farm-context";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 type SourceType = "crop_harvest" | "animal_production_record";
@@ -40,6 +41,7 @@ function resetRegisterState() {
 
 export default function TraceabilityPage() {
   const { currentFarmId } = useFarm();
+  const { canManageCrops, canManageLivestock } = usePermissions();
   const queryClient = useQueryClient();
   const [registerOpen, setRegisterOpen] = React.useState(false);
   const [registerError, setRegisterError] = React.useState<string | null>(null);
@@ -98,6 +100,7 @@ export default function TraceabilityPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Trace batches</CardTitle>
+          {(canManageCrops || canManageLivestock) && (
           <Dialog
             open={registerOpen}
             onOpenChange={(open) => {
@@ -238,6 +241,7 @@ export default function TraceabilityPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {batchesLoading ? (

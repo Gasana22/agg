@@ -41,6 +41,7 @@ import {
   CROP_MONITORING_TYPES,
   type CropHarvest,
 } from "@/lib/modules/crop-management";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 const activitySchema = z.object({
@@ -100,6 +101,7 @@ export default function CropSeasonDetailPage() {
   const params = useParams<{ seasonId: string }>();
   const seasonId = Number(params.seasonId);
   const queryClient = useQueryClient();
+  const { canManageCrops, canManageFarm } = usePermissions();
 
   const [activityOpen, setActivityOpen] = React.useState(false);
   const [monitoringOpen, setMonitoringOpen] = React.useState(false);
@@ -260,38 +262,42 @@ export default function CropSeasonDetailPage() {
         {season && (
           <div className="flex items-center gap-2">
             <Badge variant={STATUS_VARIANT[season.status] ?? "secondary"}>{formatRole(season.status)}</Badge>
-            <Select value={season.status} onValueChange={(v) => statusMutation.mutate(v)}>
-              <SelectTrigger className="h-8 w-44">
-                <SelectValue placeholder="Change status" />
-              </SelectTrigger>
-              <SelectContent>
-                {CROP_SEASON_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {formatRole(status)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-2"
-              onClick={() => {
-                seasonEditForm.reset({
-                  season_name: season.season_name,
-                  planned_planting_date: season.planned_planting_date ?? "",
-                  actual_planting_date: season.actual_planting_date ?? "",
-                  budget: season.budget ?? "",
-                  expected_yield: season.expected_yield ?? "",
-                  expected_yield_unit: season.expected_yield_unit ?? "",
-                });
-                setSeasonEditError(null);
-                setSeasonEditOpen(true);
-              }}
-            >
-              <Pencil className="size-4" />
-              Edit
-            </Button>
+            {canManageCrops && (
+              <>
+                <Select value={season.status} onValueChange={(v) => statusMutation.mutate(v)}>
+                  <SelectTrigger className="h-8 w-44">
+                    <SelectValue placeholder="Change status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CROP_SEASON_STATUSES.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {formatRole(status)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    seasonEditForm.reset({
+                      season_name: season.season_name,
+                      planned_planting_date: season.planned_planting_date ?? "",
+                      actual_planting_date: season.actual_planting_date ?? "",
+                      budget: season.budget ?? "",
+                      expected_yield: season.expected_yield ?? "",
+                      expected_yield_unit: season.expected_yield_unit ?? "",
+                    });
+                    setSeasonEditError(null);
+                    setSeasonEditOpen(true);
+                  }}
+                >
+                  <Pencil className="size-4" />
+                  Edit
+                </Button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -652,9 +658,11 @@ export default function CropSeasonDetailPage() {
                     <TableCell className="text-muted-foreground">{harvest.recorder.name}</TableCell>
                     <TableCell className="text-muted-foreground">{harvest.sales_count ?? 0}</TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => setSaleHarvest(harvest)}>
-                        Record sale
-                      </Button>
+                      {canManageFarm && (
+                        <Button variant="outline" size="sm" onClick={() => setSaleHarvest(harvest)}>
+                          Record sale
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

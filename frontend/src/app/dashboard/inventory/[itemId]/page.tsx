@@ -32,6 +32,7 @@ import {
   INVENTORY_TRANSACTION_TYPES,
 } from "@/lib/modules/inventory";
 import { formatRole } from "@/lib/utils";
+import { usePermissions } from "@/lib/permissions";
 
 const transactionSchema = z.object({
   type: z.string().min(1, "Pick a type"),
@@ -46,6 +47,7 @@ export default function InventoryItemDetailPage() {
   const params = useParams<{ itemId: string }>();
   const itemId = Number(params.itemId);
   const queryClient = useQueryClient();
+  const { canManageInventory } = usePermissions();
 
   const [transactionOpen, setTransactionOpen] = React.useState(false);
   const [transactionError, setTransactionError] = React.useState<string | null>(null);
@@ -121,6 +123,7 @@ export default function InventoryItemDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Transactions</CardTitle>
+          {canManageInventory && (
           <Dialog open={transactionOpen} onOpenChange={setTransactionOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -197,6 +200,7 @@ export default function InventoryItemDetailPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {transactionsLoading ? (

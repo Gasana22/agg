@@ -35,6 +35,7 @@ import {
   MAINTENANCE_LOG_TYPES,
 } from "@/lib/modules/assets";
 import { listMembers } from "@/lib/modules/farm-structure";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 const logSchema = z.object({
@@ -68,6 +69,7 @@ export default function AssetDetailPage() {
   const params = useParams<{ assetId: string }>();
   const assetId = Number(params.assetId);
   const queryClient = useQueryClient();
+  const { canManageAssets } = usePermissions();
 
   const [logOpen, setLogOpen] = React.useState(false);
   const [logError, setLogError] = React.useState<string | null>(null);
@@ -172,27 +174,29 @@ export default function AssetDetailPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => {
-                setAssetEditError(null);
-                setEditAssignedTo(asset.assignee ? String(asset.assignee.id) : "");
-                assetEditForm.reset({
-                  name: asset.name,
-                  category: asset.category ?? "",
-                  serial_number: asset.serial_number ?? "",
-                  purchase_date: asset.purchase_date?.slice(0, 10) ?? "",
-                  purchase_cost: asset.purchase_cost ?? "",
-                  notes: asset.notes ?? "",
-                });
-                setAssetEditOpen(true);
-              }}
-            >
-              <Pencil className="size-4" />
-              Edit
-            </Button>
+            {canManageAssets && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => {
+                  setAssetEditError(null);
+                  setEditAssignedTo(asset.assignee ? String(asset.assignee.id) : "");
+                  assetEditForm.reset({
+                    name: asset.name,
+                    category: asset.category ?? "",
+                    serial_number: asset.serial_number ?? "",
+                    purchase_date: asset.purchase_date?.slice(0, 10) ?? "",
+                    purchase_cost: asset.purchase_cost ?? "",
+                    notes: asset.notes ?? "",
+                  });
+                  setAssetEditOpen(true);
+                }}
+              >
+                <Pencil className="size-4" />
+                Edit
+              </Button>
+            )}
           </div>
         )}
       </div>

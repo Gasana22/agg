@@ -32,6 +32,7 @@ import {
   type InventoryItem,
 } from "@/lib/modules/inventory";
 import { useFarm } from "@/lib/farm-context";
+import { usePermissions } from "@/lib/permissions";
 
 const itemSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -44,6 +45,7 @@ type ItemFormValues = z.infer<typeof itemSchema>;
 
 export default function InventoryPage() {
   const { currentFarmId } = useFarm();
+  const { canManageInventory } = usePermissions();
   const queryClient = useQueryClient();
   const [itemOpen, setItemOpen] = React.useState(false);
   const [itemError, setItemError] = React.useState<string | null>(null);
@@ -138,6 +140,7 @@ export default function InventoryPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Inventory items</CardTitle>
+          {canManageInventory && (
           <Dialog open={itemOpen} onOpenChange={setItemOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -196,6 +199,7 @@ export default function InventoryPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {itemsLoading ? (
@@ -235,23 +239,25 @@ export default function InventoryPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingItem(item);
-                          setItemEditError(null);
-                          itemEditForm.reset({
-                            name: item.name,
-                            category: item.category ?? "",
-                            unit: item.unit,
-                            reorder_level: item.reorder_level ?? "",
-                            notes: item.notes ?? "",
-                          });
-                        }}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
+                      {canManageInventory && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingItem(item);
+                            setItemEditError(null);
+                            itemEditForm.reset({
+                              name: item.name,
+                              category: item.category ?? "",
+                              unit: item.unit,
+                              reorder_level: item.reorder_level ?? "",
+                              notes: item.notes ?? "",
+                            });
+                          }}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

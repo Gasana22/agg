@@ -38,6 +38,7 @@ import {
   POULTRY_FLOCK_STATUSES,
   POULTRY_SOURCES,
 } from "@/lib/modules/poultry";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 const mortalitySchema = z.object({
@@ -85,6 +86,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "success"> = {
 export default function PoultryFlockDetailPage() {
   const params = useParams<{ flockId: string }>();
   const flockId = Number(params.flockId);
+  const { canManageLivestock } = usePermissions();
   const queryClient = useQueryClient();
 
   const [mortalityOpen, setMortalityOpen] = React.useState(false);
@@ -235,40 +237,44 @@ export default function PoultryFlockDetailPage() {
         {flock && (
           <div className="flex items-center gap-2">
             <Badge variant={STATUS_VARIANT[flock.status] ?? "secondary"}>{formatRole(flock.status)}</Badge>
-            <Select value={flock.status} onValueChange={(v) => statusMutation.mutate(v)}>
-              <SelectTrigger className="h-8 w-36">
-                <SelectValue placeholder="Change status" />
-              </SelectTrigger>
-              <SelectContent>
-                {POULTRY_FLOCK_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {formatRole(status)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => {
-                setFlockEditError(null);
-                setEditSource(flock.source ?? "");
-                flockEditForm.reset({
-                  flock_code: flock.flock_code,
-                  name: flock.name ?? "",
-                  bird_type: flock.bird_type,
-                  breed: flock.breed ?? "",
-                  initial_count: String(flock.initial_count),
-                  acquired_date: flock.acquired_date?.slice(0, 10) ?? "",
-                  notes: flock.notes ?? "",
-                });
-                setFlockEditOpen(true);
-              }}
-            >
-              <Pencil className="size-4" />
-              Edit
-            </Button>
+            {canManageLivestock && (
+              <Select value={flock.status} onValueChange={(v) => statusMutation.mutate(v)}>
+                <SelectTrigger className="h-8 w-36">
+                  <SelectValue placeholder="Change status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {POULTRY_FLOCK_STATUSES.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {formatRole(status)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {canManageLivestock && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => {
+                  setFlockEditError(null);
+                  setEditSource(flock.source ?? "");
+                  flockEditForm.reset({
+                    flock_code: flock.flock_code,
+                    name: flock.name ?? "",
+                    bird_type: flock.bird_type,
+                    breed: flock.breed ?? "",
+                    initial_count: String(flock.initial_count),
+                    acquired_date: flock.acquired_date?.slice(0, 10) ?? "",
+                    notes: flock.notes ?? "",
+                  });
+                  setFlockEditOpen(true);
+                }}
+              >
+                <Pencil className="size-4" />
+                Edit
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -456,6 +462,7 @@ export default function PoultryFlockDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Sales</CardTitle>
+          {canManageLivestock && (
           <Dialog open={saleOpen} onOpenChange={setSaleOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -519,6 +526,7 @@ export default function PoultryFlockDetailPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {salesLoading ? (

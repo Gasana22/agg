@@ -34,6 +34,7 @@ import {
   approveAttendance,
 } from "@/lib/modules/worker-management";
 import { listMembers } from "@/lib/modules/farm-structure";
+import { usePermissions } from "@/lib/permissions";
 
 const editSchema = z.object({
   employee_id: z.string().optional(),
@@ -56,6 +57,7 @@ export default function WorkerDetailPage() {
   const params = useParams<{ workerProfileId: string }>();
   const workerProfileId = Number(params.workerProfileId);
   const { user } = useAuth();
+  const { canManageFarm } = usePermissions();
   const queryClient = useQueryClient();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [pendingAction, setPendingAction] = React.useState<"check-in" | "check-out" | null>(null);
@@ -83,6 +85,8 @@ export default function WorkerDetailPage() {
   });
 
   const isOwnProfile = profile?.user.id === user?.id;
+  const isSupervisor = !!profile?.supervisor && profile.supervisor.id === user?.id;
+  const canApproveAttendance = canManageFarm || isSupervisor;
   const today = new Date().toISOString().slice(0, 10);
   const todayAttendance = attendances?.find((a) => a.date.slice(0, 10) === today);
 
@@ -173,6 +177,7 @@ export default function WorkerDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Profile</CardTitle>
+          {canManageFarm && (
           <Dialog
             open={editOpen}
             onOpenChange={(open) => {
@@ -249,6 +254,7 @@ export default function WorkerDetailPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 pb-6 text-sm sm:grid-cols-4">
           <div>
@@ -358,7 +364,7 @@ export default function WorkerDetailPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {att.status === "pending" && (
+                      {att.status === "pending" && canApproveAttendance && (
                         <div className="flex gap-1">
                           <Button
                             variant="ghost"

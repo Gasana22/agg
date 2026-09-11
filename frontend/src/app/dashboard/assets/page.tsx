@@ -28,6 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { listAssets, createAsset } from "@/lib/modules/assets";
 import { listMembers } from "@/lib/modules/farm-structure";
 import { useFarm } from "@/lib/farm-context";
+import { usePermissions } from "@/lib/permissions";
 import { formatRole } from "@/lib/utils";
 
 const assetSchema = z.object({
@@ -49,6 +50,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "warning" | "succ
 
 export default function AssetsPage() {
   const { currentFarmId } = useFarm();
+  const { canManageAssets } = usePermissions();
   const queryClient = useQueryClient();
   const [assetOpen, setAssetOpen] = React.useState(false);
   const [assetError, setAssetError] = React.useState<string | null>(null);
@@ -99,6 +101,7 @@ export default function AssetsPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Assets</CardTitle>
+          {canManageAssets && (
           <Dialog open={assetOpen} onOpenChange={setAssetOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
@@ -172,6 +175,7 @@ export default function AssetsPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </CardHeader>
         <CardContent className="pb-6">
           {assetsLoading ? (
