@@ -15,6 +15,9 @@ use App\Http\Controllers\Api\FarmStructure\SectionController;
 use App\Http\Controllers\Api\Finance\ExpenseController;
 use App\Http\Controllers\Api\Finance\FinanceReportController;
 use App\Http\Controllers\Api\Finance\PayrollPaymentController;
+use App\Http\Controllers\Api\Inventory\InventoryItemController;
+use App\Http\Controllers\Api\Inventory\InventoryReportController;
+use App\Http\Controllers\Api\Inventory\InventoryTransactionController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalHealthLogController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalProductionRecordController;
@@ -200,7 +203,19 @@ Route::middleware('auth:api')->group(function () {
     Route::get('farms/{farm}/procurement/summary', [ProcurementReportController::class, 'summary']);
 
     // 9. Inventory
-    // Route::apiResource('inventory', InventoryController::class);
+    Route::get('farms/{farm}/inventory-items', [InventoryItemController::class, 'index']);
+    Route::post('farms/{farm}/inventory-items', [InventoryItemController::class, 'store']);
+    Route::get('inventory-items/{inventoryItem}', [InventoryItemController::class, 'show']);
+    Route::patch('inventory-items/{inventoryItem}', [InventoryItemController::class, 'update']);
+    Route::delete('inventory-items/{inventoryItem}', [InventoryItemController::class, 'destroy']);
+
+    Route::get('inventory-items/{inventoryItem}/transactions', [InventoryTransactionController::class, 'index']);
+    Route::post('inventory-items/{inventoryItem}/transactions', [InventoryTransactionController::class, 'store']);
+    Route::get('inventory-transactions/{inventoryTransaction}', [InventoryTransactionController::class, 'show']);
+    Route::patch('inventory-transactions/{inventoryTransaction}', [InventoryTransactionController::class, 'update']);
+    Route::delete('inventory-transactions/{inventoryTransaction}', [InventoryTransactionController::class, 'destroy']);
+
+    Route::get('farms/{farm}/inventory/low-stock', [InventoryReportController::class, 'lowStock']);
 
     // 10. Asset Management
     // Route::apiResource('assets', AssetController::class);

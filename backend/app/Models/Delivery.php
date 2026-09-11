@@ -31,4 +31,9 @@ class Delivery extends Model
     {
         return $this->belongsTo(User::class, 'received_by');
     }
+
+    public function inventoryTransactions()
+    {
+        return $this->hasMany(InventoryTransaction::class);
+    }
 }

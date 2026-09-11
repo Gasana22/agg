@@ -108,4 +108,9 @@ class Farm extends Model
     {
         return $this->hasMany(PurchaseOrder::class);
     }
+
+    public function inventoryItems()
+    {
+        return $this->hasMany(InventoryItem::class);
+    }
 }
