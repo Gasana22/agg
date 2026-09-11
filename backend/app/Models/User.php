@@ -98,6 +98,20 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
+     * Crop-specific authority: everyone canManageFarm() covers, plus the
+     * agronomist role itself — otherwise that role would have no more
+     * authority over crop records than a random farm member, which
+     * defeats the point of naming it. Crop sales are deliberately excluded
+     * (see CropSalePolicy) — revenue is Accountant/manager territory, not
+     * an agronomist's.
+     */
+    public function canManageCrops(Farm $farm): bool
+    {
+        return $this->canManageFarm($farm)
+            || $this->roleOnFarm($farm) === FarmRole::Agronomist;
+    }
+
+    /**
      * Livestock-specific authority: everyone canManageFarm() covers, plus
      * the livestock_manager role itself — otherwise that role would have
      * no more authority over animals than a random farm member, which

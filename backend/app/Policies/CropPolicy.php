@@ -20,16 +20,16 @@ class CropPolicy
 
     public function create(User $user, Farm $farm): bool
     {
-        return $user->canManageFarm($farm);
+        return $user->canManageCrops($farm);
     }
 
     public function update(User $user, Crop $crop): bool
     {
-        return $user->canManageFarm($crop->farm);
+        return $user->canManageCrops($crop->farm);
     }
 
     public function delete(User $user, Crop $crop): bool
     {
-        return $user->canManageFarm($crop->farm);
+        return $user->canManageCrops($crop->farm);
     }
 }

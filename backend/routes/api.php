@@ -31,6 +31,9 @@ use App\Http\Controllers\Api\Procurement\ProcurementReportController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderItemController;
 use App\Http\Controllers\Api\Procurement\SupplierController;
+use App\Http\Controllers\Api\Traceability\TraceabilityController;
+use App\Http\Controllers\Api\Traceability\TraceBatchController;
+use App\Http\Controllers\Api\Traceability\TraceEventController;
 use App\Http\Controllers\Api\WorkerManagement\AttendanceController;
 use App\Http\Controllers\Api\WorkerManagement\DailyTaskController;
 use App\Http\Controllers\Api\WorkerManagement\WorkerProfileController;
@@ -39,6 +42,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/health', function () {
     return response()->json(['status' => 'ok', 'time' => now()->toIso8601String()]);
 });
+
+// Public traceability lookup — what a QR code printed on packaging leads
+// to. No authentication: any shopper can scan and see provenance.
+Route::get('/trace/{code}', [TraceabilityController::class, 'show']);
+Route::get('/trace/{code}/qr', [TraceabilityController::class, 'qr']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
@@ -236,6 +244,10 @@ Route::middleware('auth:api')->group(function () {
     // Route::prefix('reports')->group(function () { ... });
 
     // 16. Traceability & Chain of Custody
-    // Route::apiResource('trace-batches', TraceBatchController::class);
-    // Route::get('/trace/{batchId}/qr', [TraceabilityController::class, 'qr']);
+    Route::get('farms/{farm}/trace-batches', [TraceBatchController::class, 'index']);
+    Route::post('farms/{farm}/trace-batches', [TraceBatchController::class, 'store']);
+    Route::get('trace-batches/{traceBatch}', [TraceBatchController::class, 'show']);
+
+    Route::get('trace-batches/{traceBatch}/events', [TraceEventController::class, 'index']);
+    Route::post('trace-batches/{traceBatch}/events', [TraceEventController::class, 'store']);
 });

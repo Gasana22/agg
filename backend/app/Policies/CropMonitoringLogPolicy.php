@@ -29,11 +29,11 @@ class CropMonitoringLogPolicy
 
     public function update(User $user, CropMonitoringLog $log): bool
     {
-        return $user->canManageFarm($log->cropSeason->farm) || $log->reported_by === $user->id;
+        return $user->canManageCrops($log->cropSeason->farm) || $log->reported_by === $user->id;
     }
 
     public function delete(User $user, CropMonitoringLog $log): bool
     {
-        return $user->canManageFarm($log->cropSeason->farm);
+        return $user->canManageCrops($log->cropSeason->farm);
     }
 }

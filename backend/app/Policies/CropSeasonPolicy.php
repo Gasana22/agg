@@ -23,16 +23,16 @@ class CropSeasonPolicy
      */
     public function create(User $user, Farm $farm): bool
     {
-        return $user->canManageFarm($farm);
+        return $user->canManageCrops($farm);
     }
 
     public function update(User $user, CropSeason $cropSeason): bool
     {
-        return $user->canManageFarm($cropSeason->farm);
+        return $user->canManageCrops($cropSeason->farm);
     }
 
     public function delete(User $user, CropSeason $cropSeason): bool
     {
-        return $user->canManageFarm($cropSeason->farm);
+        return $user->canManageCrops($cropSeason->farm);
     }
 }

@@ -118,4 +118,9 @@ class Farm extends Model
     {
         return $this->hasMany(Asset::class);
     }
+
+    public function traceBatches()
+    {
+        return $this->hasMany(TraceBatch::class);
+    }
 }

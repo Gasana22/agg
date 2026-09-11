@@ -33,7 +33,7 @@ class CropActivityPolicy
      */
     public function update(User $user, CropActivity $activity): bool
     {
-        return $user->canManageFarm($activity->cropSeason->farm) || $activity->performed_by === $user->id;
+        return $user->canManageCrops($activity->cropSeason->farm) || $activity->performed_by === $user->id;
     }
 
     /**
@@ -41,6 +41,6 @@ class CropActivityPolicy
      */
     public function delete(User $user, CropActivity $activity): bool
     {
-        return $user->canManageFarm($activity->cropSeason->farm);
+        return $user->canManageCrops($activity->cropSeason->farm);
     }
 }

@@ -29,11 +29,11 @@ class CropHarvestPolicy
 
     public function update(User $user, CropHarvest $harvest): bool
     {
-        return $user->canManageFarm($harvest->cropSeason->farm);
+        return $user->canManageCrops($harvest->cropSeason->farm);
     }
 
     public function delete(User $user, CropHarvest $harvest): bool
     {
-        return $user->canManageFarm($harvest->cropSeason->farm);
+        return $user->canManageCrops($harvest->cropSeason->farm);
     }
 }
