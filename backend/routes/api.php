@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\Procurement\PurchaseOrderItemController;
 use App\Http\Controllers\Api\Procurement\SupplierController;
 use App\Http\Controllers\Api\Reports\AdminDashboardController;
 use App\Http\Controllers\Api\Reports\FarmDashboardController;
+use App\Http\Controllers\Api\Sync\SyncController;
 use App\Http\Controllers\Api\Traceability\TraceabilityController;
 use App\Http\Controllers\Api\Traceability\TraceBatchController;
 use App\Http\Controllers\Api\Traceability\TraceEventController;
@@ -94,13 +95,13 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('crop-seasons/{cropSeason}', [CropSeasonController::class, 'destroy']);
 
     Route::get('crop-seasons/{cropSeason}/activities', [CropActivityController::class, 'index']);
-    Route::post('crop-seasons/{cropSeason}/activities', [CropActivityController::class, 'store']);
+    Route::post('crop-seasons/{cropSeason}/activities', [CropActivityController::class, 'store'])->middleware('idempotent');
     Route::get('crop-activities/{cropActivity}', [CropActivityController::class, 'show']);
     Route::patch('crop-activities/{cropActivity}', [CropActivityController::class, 'update']);
     Route::delete('crop-activities/{cropActivity}', [CropActivityController::class, 'destroy']);
 
     Route::get('crop-seasons/{cropSeason}/monitoring-logs', [CropMonitoringLogController::class, 'index']);
-    Route::post('crop-seasons/{cropSeason}/monitoring-logs', [CropMonitoringLogController::class, 'store']);
+    Route::post('crop-seasons/{cropSeason}/monitoring-logs', [CropMonitoringLogController::class, 'store'])->middleware('idempotent');
     Route::get('crop-monitoring-logs/{cropMonitoringLog}', [CropMonitoringLogController::class, 'show']);
     Route::patch('crop-monitoring-logs/{cropMonitoringLog}', [CropMonitoringLogController::class, 'update']);
     Route::delete('crop-monitoring-logs/{cropMonitoringLog}', [CropMonitoringLogController::class, 'destroy']);
@@ -125,7 +126,7 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('animals/{animal}', [AnimalController::class, 'destroy']);
 
     Route::get('animals/{animal}/health-logs', [AnimalHealthLogController::class, 'index']);
-    Route::post('animals/{animal}/health-logs', [AnimalHealthLogController::class, 'store']);
+    Route::post('animals/{animal}/health-logs', [AnimalHealthLogController::class, 'store'])->middleware('idempotent');
     Route::get('animal-health-logs/{animalHealthLog}', [AnimalHealthLogController::class, 'show']);
     Route::patch('animal-health-logs/{animalHealthLog}', [AnimalHealthLogController::class, 'update']);
     Route::delete('animal-health-logs/{animalHealthLog}', [AnimalHealthLogController::class, 'destroy']);
@@ -137,7 +138,7 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('breeding-records/{breedingRecord}', [BreedingRecordController::class, 'destroy']);
 
     Route::get('animals/{animal}/production-records', [AnimalProductionRecordController::class, 'index']);
-    Route::post('animals/{animal}/production-records', [AnimalProductionRecordController::class, 'store']);
+    Route::post('animals/{animal}/production-records', [AnimalProductionRecordController::class, 'store'])->middleware('idempotent');
     Route::get('animal-production-records/{animalProductionRecord}', [AnimalProductionRecordController::class, 'show']);
     Route::patch('animal-production-records/{animalProductionRecord}', [AnimalProductionRecordController::class, 'update']);
     Route::delete('animal-production-records/{animalProductionRecord}', [AnimalProductionRecordController::class, 'destroy']);
@@ -156,13 +157,13 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('worker-profiles/{workerProfile}', [WorkerProfileController::class, 'destroy']);
 
     Route::get('worker-profiles/{workerProfile}/attendances', [AttendanceController::class, 'index']);
-    Route::post('worker-profiles/{workerProfile}/check-in', [AttendanceController::class, 'checkIn']);
-    Route::post('worker-profiles/{workerProfile}/check-out', [AttendanceController::class, 'checkOut']);
+    Route::post('worker-profiles/{workerProfile}/check-in', [AttendanceController::class, 'checkIn'])->middleware('idempotent');
+    Route::post('worker-profiles/{workerProfile}/check-out', [AttendanceController::class, 'checkOut'])->middleware('idempotent');
     Route::get('attendances/{attendance}', [AttendanceController::class, 'show']);
     Route::post('attendances/{attendance}/approve', [AttendanceController::class, 'approve']);
 
     Route::get('farms/{farm}/tasks', [DailyTaskController::class, 'index']);
-    Route::post('farms/{farm}/tasks', [DailyTaskController::class, 'store']);
+    Route::post('farms/{farm}/tasks', [DailyTaskController::class, 'store'])->middleware('idempotent');
     Route::get('tasks/{dailyTask}', [DailyTaskController::class, 'show']);
     Route::patch('tasks/{dailyTask}', [DailyTaskController::class, 'update']);
     Route::patch('tasks/{dailyTask}/status', [DailyTaskController::class, 'updateStatus']);
@@ -263,6 +264,9 @@ Route::middleware('auth:api')->group(function () {
     Route::post('documents', [DocumentController::class, 'store']);
     Route::get('documents/{document}', [DocumentController::class, 'show']);
     Route::delete('documents/{document}', [DocumentController::class, 'destroy']);
+
+    // 15. Offline Mode
+    Route::get('farms/{farm}/sync', [SyncController::class, 'show']);
 
     // 16. Traceability & Chain of Custody
     Route::get('farms/{farm}/trace-batches', [TraceBatchController::class, 'index']);
