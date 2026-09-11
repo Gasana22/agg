@@ -31,6 +31,8 @@ use App\Http\Controllers\Api\Procurement\ProcurementReportController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderItemController;
 use App\Http\Controllers\Api\Procurement\SupplierController;
+use App\Http\Controllers\Api\Reports\AdminDashboardController;
+use App\Http\Controllers\Api\Reports\FarmDashboardController;
 use App\Http\Controllers\Api\Traceability\TraceabilityController;
 use App\Http\Controllers\Api\Traceability\TraceBatchController;
 use App\Http\Controllers\Api\Traceability\TraceEventController;
@@ -241,7 +243,8 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('asset-maintenance-logs/{assetMaintenanceLog}', [AssetMaintenanceLogController::class, 'destroy']);
 
     // 11. Reports & Analytics
-    // Route::prefix('reports')->group(function () { ... });
+    Route::get('farms/{farm}/dashboard', [FarmDashboardController::class, 'show']);
+    Route::get('admin/dashboard', [AdminDashboardController::class, 'show']);
 
     // 16. Traceability & Chain of Custody
     Route::get('farms/{farm}/trace-batches', [TraceBatchController::class, 'index']);
