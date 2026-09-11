@@ -16,6 +16,11 @@ class DailyTask extends Model
         'due_date',
         'status',
         'completed_at',
+        'cost',
+        'gps_lat',
+        'gps_lng',
+        'photo_path',
+        'inputs_used',
     ];
 
     protected function casts(): array
@@ -24,6 +29,9 @@ class DailyTask extends Model
             'due_date' => 'date',
             'status' => TaskStatus::class,
             'completed_at' => 'datetime',
+            'cost' => 'decimal:2',
+            'gps_lat' => 'decimal:7',
+            'gps_lng' => 'decimal:7',
         ];
     }
 

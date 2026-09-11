@@ -71,8 +71,14 @@ class DailyTaskController extends Controller
         $this->authorize('updateStatus', $dailyTask);
 
         $status = $request->validated('status');
+        $data = $request->safe()->except(['photo']);
+
+        if ($request->hasFile('photo')) {
+            $data['photo_path'] = $request->file('photo')->store('daily-task-photos', 'public');
+        }
 
         $dailyTask->update([
+            ...$data,
             'status' => $status,
             'completed_at' => $status === 'completed' ? now() : null,
         ]);
