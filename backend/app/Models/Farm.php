@@ -68,4 +68,14 @@ class Farm extends Model
     {
         return $this->hasMany(DailyTask::class);
     }
+
+    public function crops()
+    {
+        return $this->hasMany(Crop::class);
+    }
+
+    public function cropSeasons()
+    {
+        return $this->hasMany(CropSeason::class);
+    }
 }

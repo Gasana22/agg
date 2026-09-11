@@ -4,31 +4,30 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Plot extends Model
+class Crop extends Model
 {
     protected $fillable = [
-        'section_id',
+        'farm_id',
         'name',
-        'gps_lat',
-        'gps_lng',
+        'variety',
+        'category',
+        'description',
         'is_active',
     ];
 
     protected function casts(): array
     {
         return [
-            'gps_lat' => 'decimal:7',
-            'gps_lng' => 'decimal:7',
             'is_active' => 'boolean',
         ];
     }
 
-    public function section()
+    public function farm()
     {
-        return $this->belongsTo(Section::class);
+        return $this->belongsTo(Farm::class);
     }
 
-    public function cropSeasons()
+    public function seasons()
     {
         return $this->hasMany(CropSeason::class);
     }

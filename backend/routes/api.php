@@ -1,6 +1,12 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CropManagement\CropActivityController;
+use App\Http\Controllers\Api\CropManagement\CropController;
+use App\Http\Controllers\Api\CropManagement\CropHarvestController;
+use App\Http\Controllers\Api\CropManagement\CropMonitoringLogController;
+use App\Http\Controllers\Api\CropManagement\CropSaleController;
+use App\Http\Controllers\Api\CropManagement\CropSeasonController;
 use App\Http\Controllers\Api\FarmStructure\BlockController;
 use App\Http\Controllers\Api\FarmStructure\FarmController;
 use App\Http\Controllers\Api\FarmStructure\FarmMemberController;
@@ -43,7 +49,41 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('farms/{farm}/members/{member}', [FarmMemberController::class, 'destroy']);
 
     // 3. Crop Management
-    // Route::apiResource('crops', CropController::class);
+    Route::get('farms/{farm}/crops', [CropController::class, 'index']);
+    Route::post('farms/{farm}/crops', [CropController::class, 'store']);
+    Route::get('crops/{crop}', [CropController::class, 'show']);
+    Route::patch('crops/{crop}', [CropController::class, 'update']);
+    Route::delete('crops/{crop}', [CropController::class, 'destroy']);
+
+    Route::get('farms/{farm}/crop-seasons', [CropSeasonController::class, 'index']);
+    Route::post('farms/{farm}/crop-seasons', [CropSeasonController::class, 'store']);
+    Route::get('crop-seasons/{cropSeason}', [CropSeasonController::class, 'show']);
+    Route::patch('crop-seasons/{cropSeason}', [CropSeasonController::class, 'update']);
+    Route::delete('crop-seasons/{cropSeason}', [CropSeasonController::class, 'destroy']);
+
+    Route::get('crop-seasons/{cropSeason}/activities', [CropActivityController::class, 'index']);
+    Route::post('crop-seasons/{cropSeason}/activities', [CropActivityController::class, 'store']);
+    Route::get('crop-activities/{cropActivity}', [CropActivityController::class, 'show']);
+    Route::patch('crop-activities/{cropActivity}', [CropActivityController::class, 'update']);
+    Route::delete('crop-activities/{cropActivity}', [CropActivityController::class, 'destroy']);
+
+    Route::get('crop-seasons/{cropSeason}/monitoring-logs', [CropMonitoringLogController::class, 'index']);
+    Route::post('crop-seasons/{cropSeason}/monitoring-logs', [CropMonitoringLogController::class, 'store']);
+    Route::get('crop-monitoring-logs/{cropMonitoringLog}', [CropMonitoringLogController::class, 'show']);
+    Route::patch('crop-monitoring-logs/{cropMonitoringLog}', [CropMonitoringLogController::class, 'update']);
+    Route::delete('crop-monitoring-logs/{cropMonitoringLog}', [CropMonitoringLogController::class, 'destroy']);
+
+    Route::get('crop-seasons/{cropSeason}/harvests', [CropHarvestController::class, 'index']);
+    Route::post('crop-seasons/{cropSeason}/harvests', [CropHarvestController::class, 'store']);
+    Route::get('crop-harvests/{cropHarvest}', [CropHarvestController::class, 'show']);
+    Route::patch('crop-harvests/{cropHarvest}', [CropHarvestController::class, 'update']);
+    Route::delete('crop-harvests/{cropHarvest}', [CropHarvestController::class, 'destroy']);
+
+    Route::get('crop-harvests/{cropHarvest}/sales', [CropSaleController::class, 'index']);
+    Route::post('crop-harvests/{cropHarvest}/sales', [CropSaleController::class, 'store']);
+    Route::get('crop-sales/{cropSale}', [CropSaleController::class, 'show']);
+    Route::patch('crop-sales/{cropSale}', [CropSaleController::class, 'update']);
+    Route::delete('crop-sales/{cropSale}', [CropSaleController::class, 'destroy']);
 
     // 4. Livestock Management
     // Route::apiResource('livestock', LivestockController::class);
