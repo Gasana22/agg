@@ -436,11 +436,11 @@ export default function FinancePage() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Payroll</CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Select value={selectedWorkerId} onValueChange={setSelectedWorkerId}>
-              <SelectTrigger className="h-8 w-52">
+              <SelectTrigger className="h-8 w-full sm:w-52">
                 <SelectValue placeholder="Select a worker" />
               </SelectTrigger>
               <SelectContent>
@@ -454,7 +454,7 @@ export default function FinancePage() {
             {canManageFinance && (
             <Dialog open={payrollOpen} onOpenChange={setPayrollOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" className="gap-2" disabled={!selectedWorkerProfileId}>
+                <Button size="sm" className="w-full gap-2 sm:w-auto" disabled={!selectedWorkerProfileId}>
                   <Plus className="size-4" />
                   Run payroll
                 </Button>
