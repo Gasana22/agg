@@ -22,3 +22,15 @@ export async function getFarmDashboard(farmId: number) {
   const { data } = await api.get<FarmDashboard>(`/farms/${farmId}/dashboard`);
   return data;
 }
+
+export type AdminDashboard = {
+  farms: { total: number; active: number };
+  users: { total: number; by_platform_role: Record<string, number> };
+  trace_batches: Record<string, number>;
+  recent_farms: { id: number; name: string; owner: string | null; created_at: string }[];
+};
+
+export async function getAdminDashboard() {
+  const { data } = await api.get<AdminDashboard>(`/admin/dashboard`);
+  return data;
+}
