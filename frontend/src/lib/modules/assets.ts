@@ -64,6 +64,22 @@ export async function updateAssetStatus(id: number, status: Asset["status"]) {
   return data.data;
 }
 
+export async function updateAsset(
+  id: number,
+  payload: Partial<{
+    name: string;
+    category: string;
+    serial_number: string;
+    purchase_date: string;
+    purchase_cost: number;
+    assigned_to: number | null;
+    notes: string;
+  }>
+) {
+  const { data } = await api.patch<{ data: Asset }>(`/assets/${id}`, payload);
+  return data.data;
+}
+
 // Maintenance logs
 export async function listMaintenanceLogs(assetId: number) {
   const { data } = await api.get<{ data: AssetMaintenanceLog[] }>(`/assets/${assetId}/maintenance-logs`);

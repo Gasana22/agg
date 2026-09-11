@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { isAxiosError } from "axios";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,9 +28,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   getPurchaseOrder,
   updatePurchaseOrderStatus,
+  updatePurchaseOrder,
   deletePurchaseOrderItem,
   createDelivery,
   createPayment,
+  listSuppliers,
   PURCHASE_ORDER_STATUSES,
   PAYMENT_METHODS,
 } from "@/lib/modules/procurement";
@@ -51,6 +53,14 @@ const paymentSchema = z.object({
 });
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 
+const poEditSchema = z.object({
+  supplier_id: z.string().min(1, "Pick a supplier"),
+  order_date: z.string().min(1, "Order date is required"),
+  expected_delivery_date: z.string().optional(),
+  notes: z.string().optional(),
+});
+type PoEditFormValues = z.infer<typeof poEditSchema>;
+
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "warning" | "success" | "destructive"> = {
   ordered: "secondary",
   partially_delivered: "warning",
@@ -67,10 +77,18 @@ export default function PurchaseOrderDetailPage() {
   const [deliveryError, setDeliveryError] = React.useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = React.useState(false);
   const [paymentError, setPaymentError] = React.useState<string | null>(null);
+  const [poEditOpen, setPoEditOpen] = React.useState(false);
+  const [poEditError, setPoEditError] = React.useState<string | null>(null);
 
   const { data: order } = useQuery({
     queryKey: ["purchase-order", orderId],
     queryFn: () => getPurchaseOrder(orderId),
+  });
+
+  const { data: suppliers } = useQuery({
+    queryKey: ["suppliers", order?.farm_id],
+    queryFn: () => listSuppliers(order!.farm_id),
+    enabled: !!order?.farm_id,
   });
 
   const deliveryForm = useForm<DeliveryFormValues>({
@@ -78,6 +96,8 @@ export default function PurchaseOrderDetailPage() {
     defaultValues: { is_complete: "false" },
   });
   const paymentForm = useForm<PaymentFormValues>({ resolver: zodResolver(paymentSchema) });
+  const poEditForm = useForm<PoEditFormValues>({ resolver: zodResolver(poEditSchema) });
+  const [editSupplierId, setEditSupplierId] = React.useState("");
 
   const statusMutation = useMutation({
     mutationFn: (status: string) => updatePurchaseOrderStatus(orderId, status as never),
@@ -85,6 +105,25 @@ export default function PurchaseOrderDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["purchase-order", orderId] });
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
     },
+  });
+
+  const editPoMutation = useMutation({
+    mutationFn: (values: PoEditFormValues) =>
+      updatePurchaseOrder(orderId, {
+        supplier_id: Number(values.supplier_id),
+        order_date: values.order_date,
+        expected_delivery_date: values.expected_delivery_date || null,
+        notes: values.notes || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-order", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      setPoEditOpen(false);
+    },
+    onError: (err) =>
+      setPoEditError(
+        isAxiosError(err) ? err.response?.data?.message ?? "Could not update purchase order." : "Something went wrong."
+      ),
   });
 
   const deleteItemMutation = useMutation({
@@ -157,6 +196,25 @@ export default function PurchaseOrderDetailPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => {
+                setPoEditError(null);
+                setEditSupplierId(String(order.supplier.id));
+                poEditForm.reset({
+                  supplier_id: String(order.supplier.id),
+                  order_date: order.order_date.slice(0, 10),
+                  expected_delivery_date: order.expected_delivery_date?.slice(0, 10) ?? "",
+                  notes: order.notes ?? "",
+                });
+                setPoEditOpen(true);
+              }}
+            >
+              <Pencil className="size-4" />
+              Edit
+            </Button>
           </div>
         )}
       </div>
@@ -419,6 +477,73 @@ export default function PurchaseOrderDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={poEditOpen} onOpenChange={setPoEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit purchase order</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={poEditForm.handleSubmit((values) => {
+              setPoEditError(null);
+              editPoMutation.mutate(values);
+            })}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label>Supplier</Label>
+              <Select
+                value={editSupplierId}
+                onValueChange={(v) => {
+                  setEditSupplierId(v);
+                  poEditForm.setValue("supplier_id", v);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a supplier" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(suppliers ?? []).map((supplier) => (
+                    <SelectItem key={supplier.id} value={String(supplier.id)}>
+                      {supplier.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {poEditForm.formState.errors.supplier_id && (
+                <p className="text-xs text-destructive">{poEditForm.formState.errors.supplier_id.message}</p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-order_date">Order date</Label>
+                <Input id="edit-order_date" type="date" {...poEditForm.register("order_date")} />
+                {poEditForm.formState.errors.order_date && (
+                  <p className="text-xs text-destructive">{poEditForm.formState.errors.order_date.message}</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-expected_delivery_date">Expected delivery date</Label>
+                <Input
+                  id="edit-expected_delivery_date"
+                  type="date"
+                  {...poEditForm.register("expected_delivery_date")}
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-po-notes">Notes</Label>
+              <Textarea id="edit-po-notes" rows={2} {...poEditForm.register("notes")} />
+            </div>
+            {poEditError && <p className="text-sm text-destructive">{poEditError}</p>}
+            <DialogFooter>
+              <Button type="submit" disabled={editPoMutation.isPending}>
+                {editPoMutation.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

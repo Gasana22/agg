@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { isAxiosError } from "axios";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   listExpenses,
   createExpense,
+  updateExpense,
   listPayrollPayments,
   createPayrollPayment,
   payPayrollPayment,
@@ -33,6 +34,7 @@ import {
   getFinanceExpensesBreakdown,
   getFinanceProfitAndLoss,
   EXPENSE_CATEGORIES,
+  type Expense,
 } from "@/lib/modules/finance";
 import { listWorkerProfiles } from "@/lib/modules/worker-management";
 import { useFarm } from "@/lib/farm-context";
@@ -82,6 +84,9 @@ export default function FinancePage() {
 
   const [expenseOpen, setExpenseOpen] = React.useState(false);
   const [expenseError, setExpenseError] = React.useState<string | null>(null);
+  const [editingExpense, setEditingExpense] = React.useState<Expense | null>(null);
+  const [expenseEditError, setExpenseEditError] = React.useState<string | null>(null);
+  const [editCategory, setEditCategory] = React.useState("");
   const [payrollOpen, setPayrollOpen] = React.useState(false);
   const [payrollError, setPayrollError] = React.useState<string | null>(null);
   const [selectedWorkerId, setSelectedWorkerId] = React.useState<string>("");
@@ -126,6 +131,7 @@ export default function FinancePage() {
 
   const expenseForm = useForm<ExpenseFormValues>({ resolver: zodResolver(expenseSchema) });
   const payrollForm = useForm<PayrollFormValues>({ resolver: zodResolver(payrollSchema) });
+  const expenseEditForm = useForm<ExpenseFormValues>({ resolver: zodResolver(expenseSchema) });
 
   const createExpenseMutation = useMutation({
     mutationFn: (values: ExpenseFormValues) =>
@@ -145,6 +151,26 @@ export default function FinancePage() {
     onError: (err) =>
       setExpenseError(
         isAxiosError(err) ? err.response?.data?.message ?? "Could not add expense." : "Something went wrong."
+      ),
+  });
+
+  const editExpenseMutation = useMutation({
+    mutationFn: (values: ExpenseFormValues) =>
+      updateExpense(editingExpense!.id, {
+        category: editCategory || undefined,
+        description: values.description,
+        amount: values.amount ? Number(values.amount) : undefined,
+        date: values.date,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["expenses", currentFarmId] });
+      queryClient.invalidateQueries({ queryKey: ["finance-expenses-breakdown", currentFarmId] });
+      queryClient.invalidateQueries({ queryKey: ["finance-profit-loss", currentFarmId] });
+      setEditingExpense(null);
+    },
+    onError: (err) =>
+      setExpenseEditError(
+        isAxiosError(err) ? err.response?.data?.message ?? "Could not update expense." : "Something went wrong."
       ),
   });
 
@@ -361,6 +387,7 @@ export default function FinancePage() {
                   <TableHead>Amount</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Recorded by</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -373,6 +400,25 @@ export default function FinancePage() {
                       {new Date(expense.date).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{expense.recorder.name}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingExpense(expense);
+                          expenseEditForm.reset({
+                            category: expense.category,
+                            description: expense.description,
+                            amount: expense.amount,
+                            date: expense.date.slice(0, 10),
+                          });
+                          setEditCategory(expense.category);
+                          setExpenseEditError(null);
+                        }}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -504,6 +550,85 @@ export default function FinancePage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!editingExpense}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingExpense(null);
+            setExpenseEditError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit expense</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={expenseEditForm.handleSubmit((values) => {
+              setExpenseEditError(null);
+              editExpenseMutation.mutate(values);
+            })}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label>Category</Label>
+              <Select
+                value={editCategory}
+                onValueChange={(v) => {
+                  setEditCategory(v);
+                  expenseEditForm.setValue("category", v);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXPENSE_CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {formatRole(category)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {expenseEditForm.formState.errors.category && (
+                <p className="text-xs text-destructive">{expenseEditForm.formState.errors.category.message}</p>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-expense-description">Description</Label>
+              <Input id="edit-expense-description" {...expenseEditForm.register("description")} />
+              {expenseEditForm.formState.errors.description && (
+                <p className="text-xs text-destructive">
+                  {expenseEditForm.formState.errors.description.message}
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-expense-amount">Amount</Label>
+                <Input id="edit-expense-amount" type="number" step="any" {...expenseEditForm.register("amount")} />
+                {expenseEditForm.formState.errors.amount && (
+                  <p className="text-xs text-destructive">{expenseEditForm.formState.errors.amount.message}</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-expense-date">Date</Label>
+                <Input id="edit-expense-date" type="date" {...expenseEditForm.register("date")} />
+                {expenseEditForm.formState.errors.date && (
+                  <p className="text-xs text-destructive">{expenseEditForm.formState.errors.date.message}</p>
+                )}
+              </div>
+            </div>
+            {expenseEditError && <p className="text-sm text-destructive">{expenseEditError}</p>}
+            <DialogFooter>
+              <Button type="submit" disabled={editExpenseMutation.isPending}>
+                {editExpenseMutation.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

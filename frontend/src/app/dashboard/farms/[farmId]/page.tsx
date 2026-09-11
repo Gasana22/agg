@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { isAxiosError } from "axios";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,8 +31,11 @@ import {
   removeMember,
   listBlocks,
   createBlock,
+  updateBlock,
   deleteBlock,
+  updateFarm,
   FARM_ROLES,
+  type Block,
 } from "@/lib/modules/farm-structure";
 import { useFarm } from "@/lib/farm-context";
 import { formatRole } from "@/lib/utils";
@@ -50,6 +53,15 @@ const blockSchema = z.object({
 });
 type BlockFormValues = z.infer<typeof blockSchema>;
 
+const farmEditSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  district: z.string().optional(),
+  village: z.string().optional(),
+  gps_lat: z.string().optional(),
+  gps_lng: z.string().optional(),
+});
+type FarmEditFormValues = z.infer<typeof farmEditSchema>;
+
 export default function FarmDetailPage() {
   const params = useParams<{ farmId: string }>();
   const farmId = Number(params.farmId);
@@ -61,6 +73,10 @@ export default function FarmDetailPage() {
   const [blockDialogOpen, setBlockDialogOpen] = React.useState(false);
   const [memberError, setMemberError] = React.useState<string | null>(null);
   const [blockError, setBlockError] = React.useState<string | null>(null);
+  const [farmEditOpen, setFarmEditOpen] = React.useState(false);
+  const [farmEditError, setFarmEditError] = React.useState<string | null>(null);
+  const [editingBlock, setEditingBlock] = React.useState<Block | null>(null);
+  const [blockEditError, setBlockEditError] = React.useState<string | null>(null);
 
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ["farm-members", farmId],
@@ -74,6 +90,8 @@ export default function FarmDetailPage() {
 
   const memberForm = useForm<MemberFormValues>({ resolver: zodResolver(memberSchema) });
   const blockForm = useForm<BlockFormValues>({ resolver: zodResolver(blockSchema) });
+  const farmEditForm = useForm<FarmEditFormValues>({ resolver: zodResolver(farmEditSchema) });
+  const blockEditForm = useForm<BlockFormValues>({ resolver: zodResolver(blockSchema) });
 
   const addMemberMutation = useMutation({
     mutationFn: (values: MemberFormValues) => addMember(farmId, values),
@@ -125,13 +143,120 @@ export default function FarmDetailPage() {
     },
   });
 
+  const editFarmMutation = useMutation({
+    mutationFn: (values: FarmEditFormValues) =>
+      updateFarm(farmId, {
+        name: values.name,
+        district: values.district || undefined,
+        village: values.village || undefined,
+        gps_lat: values.gps_lat ? Number(values.gps_lat) : undefined,
+        gps_lng: values.gps_lng ? Number(values.gps_lng) : undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["farms"] });
+      setFarmEditOpen(false);
+    },
+    onError: (err) =>
+      setFarmEditError(
+        isAxiosError(err) ? err.response?.data?.message ?? "Could not update farm." : "Something went wrong."
+      ),
+  });
+
+  const editBlockMutation = useMutation({
+    mutationFn: (values: BlockFormValues) =>
+      updateBlock(editingBlock!.id, {
+        name: values.name,
+        gps_lat: values.gps_lat ? Number(values.gps_lat) : undefined,
+        gps_lng: values.gps_lng ? Number(values.gps_lng) : undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["blocks", farmId] });
+      setEditingBlock(null);
+    },
+    onError: (err) =>
+      setBlockEditError(
+        isAxiosError(err) ? err.response?.data?.message ?? "Could not update block." : "Something went wrong."
+      ),
+  });
+
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">{farm?.name ?? "Farm"}</h1>
-        <p className="text-sm text-muted-foreground">
-          {[farm?.village, farm?.district].filter(Boolean).join(", ") || "No location set"}
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">{farm?.name ?? "Farm"}</h1>
+          <p className="text-sm text-muted-foreground">
+            {[farm?.village, farm?.district].filter(Boolean).join(", ") || "No location set"}
+          </p>
+        </div>
+        <Dialog
+          open={farmEditOpen}
+          onOpenChange={(open) => {
+            setFarmEditOpen(open);
+            if (open && farm) {
+              farmEditForm.reset({
+                name: farm.name,
+                district: farm.district ?? "",
+                village: farm.village ?? "",
+                gps_lat: farm.gps_lat ?? "",
+                gps_lng: farm.gps_lng ?? "",
+              });
+              setFarmEditError(null);
+            }
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button size="sm" variant="outline" className="gap-2" disabled={!farm}>
+              <Pencil className="size-4" />
+              Edit farm
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit farm</DialogTitle>
+            </DialogHeader>
+            <form
+              onSubmit={farmEditForm.handleSubmit((values) => {
+                setFarmEditError(null);
+                editFarmMutation.mutate(values);
+              })}
+              className="flex flex-col gap-4"
+            >
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-farm-name">Name</Label>
+                <Input id="edit-farm-name" {...farmEditForm.register("name")} />
+                {farmEditForm.formState.errors.name && (
+                  <p className="text-xs text-destructive">{farmEditForm.formState.errors.name.message}</p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="edit-farm-district">District</Label>
+                  <Input id="edit-farm-district" {...farmEditForm.register("district")} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="edit-farm-village">Village</Label>
+                  <Input id="edit-farm-village" {...farmEditForm.register("village")} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="edit-farm-lat">GPS latitude</Label>
+                  <Input id="edit-farm-lat" type="number" step="any" {...farmEditForm.register("gps_lat")} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="edit-farm-lng">GPS longitude</Label>
+                  <Input id="edit-farm-lng" type="number" step="any" {...farmEditForm.register("gps_lng")} />
+                </div>
+              </div>
+              {farmEditError && <p className="text-sm text-destructive">{farmEditError}</p>}
+              <DialogFooter>
+                <Button type="submit" disabled={editFarmMutation.isPending}>
+                  {editFarmMutation.isPending ? "Saving…" : "Save changes"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
@@ -332,7 +457,22 @@ export default function FarmDetailPage() {
                     <TableCell className="text-muted-foreground">
                       {block.gps_lat && block.gps_lng ? `${block.gps_lat}, ${block.gps_lng}` : "—"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingBlock(block);
+                          blockEditForm.reset({
+                            name: block.name,
+                            gps_lat: block.gps_lat ?? "",
+                            gps_lng: block.gps_lng ?? "",
+                          });
+                          setBlockEditError(null);
+                        }}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -348,6 +488,53 @@ export default function FarmDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!editingBlock}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingBlock(null);
+            setBlockEditError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit block{editingBlock ? ` — ${editingBlock.name}` : ""}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={blockEditForm.handleSubmit((values) => {
+              setBlockEditError(null);
+              editBlockMutation.mutate(values);
+            })}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-block-name">Name</Label>
+              <Input id="edit-block-name" {...blockEditForm.register("name")} />
+              {blockEditForm.formState.errors.name && (
+                <p className="text-xs text-destructive">{blockEditForm.formState.errors.name.message}</p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-block-lat">GPS latitude</Label>
+                <Input id="edit-block-lat" type="number" step="any" {...blockEditForm.register("gps_lat")} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-block-lng">GPS longitude</Label>
+                <Input id="edit-block-lng" type="number" step="any" {...blockEditForm.register("gps_lng")} />
+              </div>
+            </div>
+            {blockEditError && <p className="text-sm text-destructive">{blockEditError}</p>}
+            <DialogFooter>
+              <Button type="submit" disabled={editBlockMutation.isPending}>
+                {editBlockMutation.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

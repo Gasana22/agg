@@ -48,6 +48,21 @@ export async function createInventoryItem(
   return data.data;
 }
 
+export async function updateInventoryItem(
+  id: number,
+  payload: Partial<{
+    name: string;
+    category: string;
+    unit: string;
+    reorder_level: number;
+    notes: string;
+    is_active: boolean;
+  }>
+) {
+  const { data } = await api.patch<{ data: InventoryItem }>(`/inventory-items/${id}`, payload);
+  return data.data;
+}
+
 export async function getLowStockItems(farmId: number) {
   const { data } = await api.get<{ data: InventoryItem[] }>(`/farms/${farmId}/inventory/low-stock`);
   return data.data;

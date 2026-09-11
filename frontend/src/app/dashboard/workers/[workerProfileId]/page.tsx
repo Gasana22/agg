@@ -3,21 +3,44 @@
 import * as React from "react";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { isAxiosError } from "axios";
-import { Camera, Check, X } from "lucide-react";
+import { Camera, Check, X, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/lib/auth-context";
 import {
   getWorkerProfile,
+  updateWorkerProfile,
   listAttendances,
   checkIn,
   checkOut,
   approveAttendance,
 } from "@/lib/modules/worker-management";
+import { listMembers } from "@/lib/modules/farm-structure";
+
+const editSchema = z.object({
+  employee_id: z.string().optional(),
+  hire_date: z.string().optional(),
+  daily_rate: z.string().optional(),
+});
+type EditFormValues = z.infer<typeof editSchema>;
 
 function getGeolocation(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
@@ -37,11 +60,22 @@ export default function WorkerDetailPage() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [pendingAction, setPendingAction] = React.useState<"check-in" | "check-out" | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [editError, setEditError] = React.useState<string | null>(null);
+  const [editSupervisorId, setEditSupervisorId] = React.useState("");
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["worker-profile", workerProfileId],
     queryFn: () => getWorkerProfile(workerProfileId),
   });
+
+  const { data: members } = useQuery({
+    queryKey: ["farm-members", profile?.farm_id],
+    queryFn: () => listMembers(profile!.farm_id),
+    enabled: !!profile,
+  });
+
+  const editForm = useForm<EditFormValues>({ resolver: zodResolver(editSchema) });
 
   const { data: attendances, isLoading: attendancesLoading } = useQuery({
     queryKey: ["attendances", workerProfileId],
@@ -74,6 +108,25 @@ export default function WorkerDetailPage() {
     mutationFn: ({ id, status }: { id: number; status: "approved" | "rejected" }) =>
       approveAttendance(id, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendances", workerProfileId] }),
+  });
+
+  const editMutation = useMutation({
+    mutationFn: (values: EditFormValues) =>
+      updateWorkerProfile(workerProfileId, {
+        employee_id: values.employee_id || undefined,
+        hire_date: values.hire_date || undefined,
+        daily_rate: values.daily_rate ? Number(values.daily_rate) : undefined,
+        supervisor_id: editSupervisorId ? Number(editSupervisorId) : null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["worker-profile", workerProfileId] });
+      queryClient.invalidateQueries({ queryKey: ["worker-profiles"] });
+      setEditOpen(false);
+    },
+    onError: (err) =>
+      setEditError(
+        isAxiosError(err) ? err.response?.data?.message ?? "Could not update profile." : "Something went wrong."
+      ),
   });
 
   const triggerAction = (action: "check-in" | "check-out") => {
@@ -118,8 +171,84 @@ export default function WorkerDetailPage() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Profile</CardTitle>
+          <Dialog
+            open={editOpen}
+            onOpenChange={(open) => {
+              setEditOpen(open);
+              if (open) {
+                editForm.reset({
+                  employee_id: profile.employee_id ?? "",
+                  hire_date: profile.hire_date ?? "",
+                  daily_rate: profile.daily_rate ?? "",
+                });
+                setEditSupervisorId(profile.supervisor ? String(profile.supervisor.id) : "");
+                setEditError(null);
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" className="gap-2">
+                <Pencil className="size-4" />
+                Edit profile
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit worker profile</DialogTitle>
+              </DialogHeader>
+              <form
+                onSubmit={editForm.handleSubmit((values) => {
+                  setEditError(null);
+                  editMutation.mutate(values);
+                })}
+                className="flex flex-col gap-4"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="edit-employee-id">Employee ID</Label>
+                    <Input id="edit-employee-id" {...editForm.register("employee_id")} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="edit-hire-date">Hire date</Label>
+                    <Input id="edit-hire-date" type="date" {...editForm.register("hire_date")} />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="edit-daily-rate">Daily rate</Label>
+                  <Input id="edit-daily-rate" type="number" step="any" {...editForm.register("daily_rate")} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label>Supervisor</Label>
+                  <Select
+                    value={editSupervisorId || "none"}
+                    onValueChange={(v) => setEditSupervisorId(v === "none" ? "" : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {(members ?? [])
+                        .filter((m) => m.id !== profile.user.id)
+                        .map((member) => (
+                          <SelectItem key={member.id} value={String(member.id)}>
+                            {member.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {editError && <p className="text-sm text-destructive">{editError}</p>}
+                <DialogFooter>
+                  <Button type="submit" disabled={editMutation.isPending}>
+                    {editMutation.isPending ? "Saving…" : "Save changes"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 pb-6 text-sm sm:grid-cols-4">
           <div>

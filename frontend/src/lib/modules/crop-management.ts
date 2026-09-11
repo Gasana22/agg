@@ -117,6 +117,14 @@ export async function createCrop(
   return data.data;
 }
 
+export async function updateCrop(
+  id: number,
+  payload: Partial<{ name: string; variety: string; category: string; description: string }>
+) {
+  const { data } = await api.patch<{ data: Crop }>(`/crops/${id}`, payload);
+  return data.data;
+}
+
 // Crop seasons
 export async function listCropSeasons(farmId: number) {
   const { data } = await api.get<{ data: CropSeason[] }>(`/farms/${farmId}/crop-seasons`);
@@ -145,6 +153,21 @@ export async function createCropSeason(
 
 export async function updateCropSeasonStatus(id: number, status: CropSeason["status"]) {
   const { data } = await api.patch<{ data: CropSeason }>(`/crop-seasons/${id}`, { status });
+  return data.data;
+}
+
+export async function updateCropSeason(
+  id: number,
+  payload: Partial<{
+    season_name: string;
+    planned_planting_date: string;
+    actual_planting_date: string;
+    budget: number;
+    expected_yield: number;
+    expected_yield_unit: string;
+  }>
+) {
+  const { data } = await api.patch<{ data: CropSeason }>(`/crop-seasons/${id}`, payload);
   return data.data;
 }
 

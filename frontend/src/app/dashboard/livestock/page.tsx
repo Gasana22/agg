@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { isAxiosError } from "axios";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,11 +31,21 @@ import {
   listBreedingRecords,
   createBreedingRecord,
   updateBreedingRecordStatus,
+  updateBreedingRecord,
   ANIMAL_SOURCES,
   BREEDING_STATUSES,
+  type BreedingRecord,
 } from "@/lib/modules/livestock";
 import { useFarm } from "@/lib/farm-context";
 import { formatRole } from "@/lib/utils";
+
+const breedingEditSchema = z.object({
+  expected_due_date: z.string().optional(),
+  actual_birth_date: z.string().optional(),
+  offspring_count: z.string().optional(),
+  notes: z.string().optional(),
+});
+type BreedingEditFormValues = z.infer<typeof breedingEditSchema>;
 
 const animalSchema = z.object({
   tag_number: z.string().min(1, "Tag number is required"),
@@ -74,6 +84,8 @@ export default function LivestockPage() {
   const [breedingOpen, setBreedingOpen] = React.useState(false);
   const [animalError, setAnimalError] = React.useState<string | null>(null);
   const [breedingError, setBreedingError] = React.useState<string | null>(null);
+  const [editingBreeding, setEditingBreeding] = React.useState<BreedingRecord | null>(null);
+  const [breedingEditError, setBreedingEditError] = React.useState<string | null>(null);
 
   const { data: animals, isLoading: animalsLoading } = useQuery({
     queryKey: ["animals", currentFarmId],
@@ -89,6 +101,7 @@ export default function LivestockPage() {
 
   const animalForm = useForm<AnimalFormValues>({ resolver: zodResolver(animalSchema) });
   const breedingForm = useForm<BreedingFormValues>({ resolver: zodResolver(breedingSchema) });
+  const breedingEditForm = useForm<BreedingEditFormValues>({ resolver: zodResolver(breedingEditSchema) });
 
   const createAnimalMutation = useMutation({
     mutationFn: (values: AnimalFormValues) =>
@@ -140,6 +153,24 @@ export default function LivestockPage() {
     mutationFn: ({ id, status }: { id: number; status: string }) =>
       updateBreedingRecordStatus(id, { status: status as never }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["breeding-records", currentFarmId] }),
+  });
+
+  const editBreedingMutation = useMutation({
+    mutationFn: (values: BreedingEditFormValues) =>
+      updateBreedingRecord(editingBreeding!.id, {
+        expected_due_date: values.expected_due_date || undefined,
+        actual_birth_date: values.actual_birth_date || undefined,
+        offspring_count: values.offspring_count ? Number(values.offspring_count) : undefined,
+        notes: values.notes || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["breeding-records", currentFarmId] });
+      setEditingBreeding(null);
+    },
+    onError: (err) =>
+      setBreedingEditError(
+        isAxiosError(err) ? err.response?.data?.message ?? "Could not update record." : "Something went wrong."
+      ),
   });
 
   return (
@@ -440,6 +471,7 @@ export default function LivestockPage() {
                   <TableHead>Expected due</TableHead>
                   <TableHead>Offspring</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -471,6 +503,24 @@ export default function LivestockPage() {
                         </SelectContent>
                       </Select>
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingBreeding(record);
+                          breedingEditForm.reset({
+                            expected_due_date: record.expected_due_date ?? "",
+                            actual_birth_date: record.actual_birth_date ?? "",
+                            offspring_count: record.offspring_count != null ? String(record.offspring_count) : "",
+                            notes: record.notes ?? "",
+                          });
+                          setBreedingEditError(null);
+                        }}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -478,6 +528,56 @@ export default function LivestockPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!editingBreeding}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingBreeding(null);
+            setBreedingEditError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Edit breeding record{editingBreeding ? ` — ${editingBreeding.dam.tag_number}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={breedingEditForm.handleSubmit((values) => {
+              setBreedingEditError(null);
+              editBreedingMutation.mutate(values);
+            })}
+            className="flex flex-col gap-4"
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-expected-due">Expected due date</Label>
+                <Input id="edit-expected-due" type="date" {...breedingEditForm.register("expected_due_date")} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-actual-birth">Actual birth date</Label>
+                <Input id="edit-actual-birth" type="date" {...breedingEditForm.register("actual_birth_date")} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-offspring-count">Offspring count</Label>
+              <Input id="edit-offspring-count" type="number" {...breedingEditForm.register("offspring_count")} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-breeding-notes">Notes</Label>
+              <Textarea id="edit-breeding-notes" rows={2} {...breedingEditForm.register("notes")} />
+            </div>
+            {breedingEditError && <p className="text-sm text-destructive">{breedingEditError}</p>}
+            <DialogFooter>
+              <Button type="submit" disabled={editBreedingMutation.isPending}>
+                {editBreedingMutation.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

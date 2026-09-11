@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { isAxiosError } from "axios";
-import { Plus, AlertTriangle } from "lucide-react";
+import { Plus, AlertTriangle, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { listInventoryItems, createInventoryItem, getLowStockItems } from "@/lib/modules/inventory";
+import {
+  listInventoryItems,
+  createInventoryItem,
+  updateInventoryItem,
+  getLowStockItems,
+  type InventoryItem,
+} from "@/lib/modules/inventory";
 import { useFarm } from "@/lib/farm-context";
 
 const itemSchema = z.object({
@@ -41,6 +47,8 @@ export default function InventoryPage() {
   const queryClient = useQueryClient();
   const [itemOpen, setItemOpen] = React.useState(false);
   const [itemError, setItemError] = React.useState<string | null>(null);
+  const [editingItem, setEditingItem] = React.useState<InventoryItem | null>(null);
+  const [itemEditError, setItemEditError] = React.useState<string | null>(null);
 
   const { data: items, isLoading: itemsLoading } = useQuery({
     queryKey: ["inventory-items", currentFarmId],
@@ -55,6 +63,7 @@ export default function InventoryPage() {
   });
 
   const itemForm = useForm<ItemFormValues>({ resolver: zodResolver(itemSchema) });
+  const itemEditForm = useForm<ItemFormValues>({ resolver: zodResolver(itemSchema) });
 
   const createItemMutation = useMutation({
     mutationFn: (values: ItemFormValues) =>
@@ -74,6 +83,26 @@ export default function InventoryPage() {
     onError: (err) =>
       setItemError(
         isAxiosError(err) ? err.response?.data?.message ?? "Could not add item." : "Something went wrong."
+      ),
+  });
+
+  const editItemMutation = useMutation({
+    mutationFn: (values: ItemFormValues) =>
+      updateInventoryItem(editingItem!.id, {
+        name: values.name,
+        category: values.category || undefined,
+        unit: values.unit,
+        reorder_level: values.reorder_level ? Number(values.reorder_level) : undefined,
+        notes: values.notes || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory-items", currentFarmId] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-low-stock", currentFarmId] });
+      setEditingItem(null);
+    },
+    onError: (err) =>
+      setItemEditError(
+        isAxiosError(err) ? err.response?.data?.message ?? "Could not update item." : "Something went wrong."
       ),
   });
 
@@ -182,6 +211,7 @@ export default function InventoryPage() {
                   <TableHead>Quantity</TableHead>
                   <TableHead>Reorder level</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -204,6 +234,25 @@ export default function InventoryPage() {
                         <Badge variant="success">OK</Badge>
                       )}
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingItem(item);
+                          setItemEditError(null);
+                          itemEditForm.reset({
+                            name: item.name,
+                            category: item.category ?? "",
+                            unit: item.unit,
+                            reorder_level: item.reorder_level ?? "",
+                            notes: item.notes ?? "",
+                          });
+                        }}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -211,6 +260,69 @@ export default function InventoryPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!editingItem}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingItem(null);
+            setItemEditError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit inventory item</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={itemEditForm.handleSubmit((values) => {
+              setItemEditError(null);
+              editItemMutation.mutate(values);
+            })}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-item-name">Name</Label>
+              <Input id="edit-item-name" {...itemEditForm.register("name")} />
+              {itemEditForm.formState.errors.name && (
+                <p className="text-xs text-destructive">{itemEditForm.formState.errors.name.message}</p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-item-category">Category</Label>
+                <Input id="edit-item-category" {...itemEditForm.register("category")} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-item-unit">Unit</Label>
+                <Input id="edit-item-unit" {...itemEditForm.register("unit")} />
+                {itemEditForm.formState.errors.unit && (
+                  <p className="text-xs text-destructive">{itemEditForm.formState.errors.unit.message}</p>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-reorder_level">Reorder level</Label>
+              <Input
+                id="edit-reorder_level"
+                type="number"
+                step="any"
+                {...itemEditForm.register("reorder_level")}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-item-notes">Notes</Label>
+              <Textarea id="edit-item-notes" rows={2} {...itemEditForm.register("notes")} />
+            </div>
+            {itemEditError && <p className="text-sm text-destructive">{itemEditError}</p>}
+            <DialogFooter>
+              <Button type="submit" disabled={editItemMutation.isPending}>
+                {editItemMutation.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

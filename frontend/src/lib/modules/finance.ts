@@ -71,6 +71,14 @@ export async function createExpense(
   return data.data;
 }
 
+export async function updateExpense(
+  id: number,
+  payload: Partial<{ category: string; description: string; amount: number; date: string }>
+) {
+  const { data } = await api.patch<{ data: Expense }>(`/expenses/${id}`, payload);
+  return data.data;
+}
+
 export async function deleteExpense(id: number) {
   await api.delete(`/expenses/${id}`);
 }

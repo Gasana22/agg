@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { isAxiosError } from "axios";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   getAnimal,
   updateAnimalStatus,
+  updateAnimal,
   listHealthLogs,
   createHealthLog,
   listProductionRecords,
@@ -35,9 +36,21 @@ import {
   listAnimalSales,
   createAnimalSale,
   ANIMAL_STATUSES,
+  ANIMAL_SOURCES,
   ANIMAL_HEALTH_LOG_TYPES,
 } from "@/lib/modules/livestock";
 import { formatRole } from "@/lib/utils";
+
+const animalEditSchema = z.object({
+  name: z.string().optional(),
+  breed: z.string().optional(),
+  sex: z.string().optional(),
+  birth_date: z.string().optional(),
+  source: z.string().optional(),
+  acquired_date: z.string().optional(),
+  notes: z.string().optional(),
+});
+type AnimalEditFormValues = z.infer<typeof animalEditSchema>;
 
 const healthLogSchema = z.object({
   type: z.string().min(1, "Pick a type"),
@@ -84,6 +97,10 @@ export default function AnimalDetailPage() {
   const [healthError, setHealthError] = React.useState<string | null>(null);
   const [productionError, setProductionError] = React.useState<string | null>(null);
   const [saleError, setSaleError] = React.useState<string | null>(null);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [editError, setEditError] = React.useState<string | null>(null);
+  const [editSex, setEditSex] = React.useState("");
+  const [editSource, setEditSource] = React.useState("");
 
   const { data: animal } = useQuery({
     queryKey: ["animal", animalId],
@@ -108,6 +125,7 @@ export default function AnimalDetailPage() {
   const healthForm = useForm<HealthLogFormValues>({ resolver: zodResolver(healthLogSchema) });
   const productionForm = useForm<ProductionFormValues>({ resolver: zodResolver(productionSchema) });
   const saleForm = useForm<SaleFormValues>({ resolver: zodResolver(saleSchema) });
+  const animalEditForm = useForm<AnimalEditFormValues>({ resolver: zodResolver(animalEditSchema) });
 
   const statusMutation = useMutation({
     mutationFn: (status: string) => updateAnimalStatus(animalId, { status: status as never }),
@@ -178,6 +196,28 @@ export default function AnimalDetailPage() {
       ),
   });
 
+  const editAnimalMutation = useMutation({
+    mutationFn: (values: AnimalEditFormValues) =>
+      updateAnimal(animalId, {
+        name: values.name || undefined,
+        breed: values.breed || undefined,
+        sex: (editSex as "male" | "female") || undefined,
+        birth_date: values.birth_date || undefined,
+        source: (editSource as "born_on_farm" | "purchased") || undefined,
+        acquired_date: values.acquired_date || undefined,
+        notes: values.notes || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["animal", animalId] });
+      queryClient.invalidateQueries({ queryKey: ["animals"] });
+      setEditOpen(false);
+    },
+    onError: (err) =>
+      setEditError(
+        isAxiosError(err) ? err.response?.data?.message ?? "Could not update animal." : "Something went wrong."
+      ),
+  });
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -204,9 +244,110 @@ export default function AnimalDetailPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={() => {
+                animalEditForm.reset({
+                  name: animal.name ?? "",
+                  breed: animal.breed ?? "",
+                  birth_date: animal.birth_date ?? "",
+                  acquired_date: animal.acquired_date ?? "",
+                  notes: animal.notes ?? "",
+                });
+                setEditSex(animal.sex ?? "");
+                setEditSource(animal.source ?? "");
+                setEditError(null);
+                setEditOpen(true);
+              }}
+            >
+              <Pencil className="size-4" />
+              Edit
+            </Button>
           </div>
         )}
       </div>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit animal</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={animalEditForm.handleSubmit((values) => {
+              setEditError(null);
+              editAnimalMutation.mutate(values);
+            })}
+            className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto"
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-animal-name">Name</Label>
+                <Input id="edit-animal-name" {...animalEditForm.register("name")} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-animal-breed">Breed</Label>
+                <Input id="edit-animal-breed" {...animalEditForm.register("breed")} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label>Sex</Label>
+                <Select value={editSex || "unset"} onValueChange={(v) => setEditSex(v === "unset" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select sex" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unset">Unknown</SelectItem>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-animal-birth-date">Birth date</Label>
+                <Input id="edit-animal-birth-date" type="date" {...animalEditForm.register("birth_date")} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label>Source</Label>
+                <Select
+                  value={editSource || "unset"}
+                  onValueChange={(v) => setEditSource(v === "unset" ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unset">Unset</SelectItem>
+                    {ANIMAL_SOURCES.map((source) => (
+                      <SelectItem key={source} value={source}>
+                        {formatRole(source)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-animal-acquired-date">Acquired date</Label>
+                <Input id="edit-animal-acquired-date" type="date" {...animalEditForm.register("acquired_date")} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-animal-notes">Notes</Label>
+              <Textarea id="edit-animal-notes" rows={2} {...animalEditForm.register("notes")} />
+            </div>
+            {editError && <p className="text-sm text-destructive">{editError}</p>}
+            <DialogFooter>
+              <Button type="submit" disabled={editAnimalMutation.isPending}>
+                {editAnimalMutation.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

@@ -90,6 +90,22 @@ export async function createSupplier(
   return data.data;
 }
 
+export async function updateSupplier(
+  id: number,
+  payload: Partial<{
+    name: string;
+    category: string;
+    phone: string;
+    email: string;
+    address: string;
+    notes: string;
+    is_active: boolean;
+  }>
+) {
+  const { data } = await api.patch<{ data: Supplier }>(`/suppliers/${id}`, payload);
+  return data.data;
+}
+
 // Purchase orders
 export async function listPurchaseOrders(farmId: number) {
   const { data } = await api.get<{ data: PurchaseOrder[] }>(`/farms/${farmId}/purchase-orders`);
@@ -117,6 +133,19 @@ export async function createPurchaseOrder(
 
 export async function updatePurchaseOrderStatus(id: number, status: PurchaseOrder["status"]) {
   const { data } = await api.patch<{ data: PurchaseOrder }>(`/purchase-orders/${id}`, { status });
+  return data.data;
+}
+
+export async function updatePurchaseOrder(
+  id: number,
+  payload: Partial<{
+    supplier_id: number;
+    order_date: string;
+    expected_delivery_date: string | null;
+    notes: string;
+  }>
+) {
+  const { data } = await api.patch<{ data: PurchaseOrder }>(`/purchase-orders/${id}`, payload);
   return data.data;
 }
 

@@ -119,6 +119,25 @@ export async function updateAnimalStatus(
   return data.data;
 }
 
+export async function updateAnimal(
+  id: number,
+  payload: Partial<{
+    tag_number: string;
+    name: string;
+    breed: string;
+    sex: "male" | "female";
+    birth_date: string;
+    dam_id: number | null;
+    sire_id: number | null;
+    source: "born_on_farm" | "purchased";
+    acquired_date: string;
+    notes: string;
+  }>
+) {
+  const { data } = await api.patch<{ data: Animal }>(`/animals/${id}`, payload);
+  return data.data;
+}
+
 // Health logs
 export async function listHealthLogs(animalId: number) {
   const { data } = await api.get<{ data: AnimalHealthLog[] }>(`/animals/${animalId}/health-logs`);
@@ -163,6 +182,19 @@ export async function updateBreedingRecordStatus(
     actual_birth_date?: string;
     offspring_count?: number;
   }
+) {
+  const { data } = await api.patch<{ data: BreedingRecord }>(`/breeding-records/${id}`, payload);
+  return data.data;
+}
+
+export async function updateBreedingRecord(
+  id: number,
+  payload: Partial<{
+    expected_due_date: string;
+    actual_birth_date: string;
+    offspring_count: number;
+    notes: string;
+  }>
 ) {
   const { data } = await api.patch<{ data: BreedingRecord }>(`/breeding-records/${id}`, payload);
   return data.data;

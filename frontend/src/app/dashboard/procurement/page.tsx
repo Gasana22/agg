@@ -7,7 +7,7 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { isAxiosError } from "axios";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,9 +28,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   listSuppliers,
   createSupplier,
+  updateSupplier,
   listPurchaseOrders,
   createPurchaseOrder,
   getProcurementSummary,
+  type Supplier,
 } from "@/lib/modules/procurement";
 import { useFarm } from "@/lib/farm-context";
 import { formatRole } from "@/lib/utils";
@@ -86,6 +88,8 @@ export default function ProcurementPage() {
   const [supplierError, setSupplierError] = React.useState<string | null>(null);
   const [poOpen, setPoOpen] = React.useState(false);
   const [poError, setPoError] = React.useState<string | null>(null);
+  const [editingSupplier, setEditingSupplier] = React.useState<Supplier | null>(null);
+  const [supplierEditError, setSupplierEditError] = React.useState<string | null>(null);
 
   const [from, setFrom] = React.useState(startOfMonth());
   const [to, setTo] = React.useState(today());
@@ -111,6 +115,7 @@ export default function ProcurementPage() {
   });
 
   const supplierForm = useForm<SupplierFormValues>({ resolver: zodResolver(supplierSchema) });
+  const supplierEditForm = useForm<SupplierFormValues>({ resolver: zodResolver(supplierSchema) });
   const poForm = useForm<PoFormValues>({
     resolver: zodResolver(poSchema),
     defaultValues: {
@@ -129,6 +134,26 @@ export default function ProcurementPage() {
     onError: (err) =>
       setSupplierError(
         isAxiosError(err) ? err.response?.data?.message ?? "Could not add supplier." : "Something went wrong."
+      ),
+  });
+
+  const editSupplierMutation = useMutation({
+    mutationFn: (values: SupplierFormValues) =>
+      updateSupplier(editingSupplier!.id, {
+        name: values.name,
+        category: values.category || undefined,
+        phone: values.phone || undefined,
+        email: values.email || undefined,
+        address: values.address || undefined,
+        notes: values.notes || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suppliers", currentFarmId] });
+      setEditingSupplier(null);
+    },
+    onError: (err) =>
+      setSupplierEditError(
+        isAxiosError(err) ? err.response?.data?.message ?? "Could not update supplier." : "Something went wrong."
       ),
   });
 
@@ -303,6 +328,7 @@ export default function ProcurementPage() {
                   <TableHead>Phone</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -316,6 +342,26 @@ export default function ProcurementPage() {
                       <Badge variant={supplier.is_active ? "success" : "secondary"}>
                         {supplier.is_active ? "Active" : "Inactive"}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingSupplier(supplier);
+                          setSupplierEditError(null);
+                          supplierEditForm.reset({
+                            name: supplier.name,
+                            category: supplier.category ?? "",
+                            phone: supplier.phone ?? "",
+                            email: supplier.email ?? "",
+                            address: supplier.address ?? "",
+                            notes: supplier.notes ?? "",
+                          });
+                        }}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -486,6 +532,67 @@ export default function ProcurementPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!editingSupplier}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingSupplier(null);
+            setSupplierEditError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit supplier</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={supplierEditForm.handleSubmit((values) => {
+              setSupplierEditError(null);
+              editSupplierMutation.mutate(values);
+            })}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-supplier-name">Name</Label>
+              <Input id="edit-supplier-name" {...supplierEditForm.register("name")} />
+              {supplierEditForm.formState.errors.name && (
+                <p className="text-xs text-destructive">{supplierEditForm.formState.errors.name.message}</p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-supplier-category">Category</Label>
+                <Input id="edit-supplier-category" {...supplierEditForm.register("category")} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-supplier-phone">Phone</Label>
+                <Input id="edit-supplier-phone" {...supplierEditForm.register("phone")} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-supplier-email">Email</Label>
+                <Input id="edit-supplier-email" type="email" {...supplierEditForm.register("email")} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-supplier-address">Address</Label>
+                <Input id="edit-supplier-address" {...supplierEditForm.register("address")} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-supplier-notes">Notes</Label>
+              <Textarea id="edit-supplier-notes" rows={2} {...supplierEditForm.register("notes")} />
+            </div>
+            {supplierEditError && <p className="text-sm text-destructive">{supplierEditError}</p>}
+            <DialogFooter>
+              <Button type="submit" disabled={editSupplierMutation.isPending}>
+                {editSupplierMutation.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

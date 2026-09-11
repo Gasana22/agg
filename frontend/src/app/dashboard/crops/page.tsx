@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { isAxiosError } from "axios";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,14 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { listCrops, createCrop, listCropSeasons, createCropSeason } from "@/lib/modules/crop-management";
+import {
+  listCrops,
+  createCrop,
+  updateCrop,
+  listCropSeasons,
+  createCropSeason,
+  type Crop,
+} from "@/lib/modules/crop-management";
 import { useFarm } from "@/lib/farm-context";
 import { formatRole } from "@/lib/utils";
 
@@ -63,6 +70,8 @@ export default function CropsPage() {
   const [seasonOpen, setSeasonOpen] = React.useState(false);
   const [cropError, setCropError] = React.useState<string | null>(null);
   const [seasonError, setSeasonError] = React.useState<string | null>(null);
+  const [editingCrop, setEditingCrop] = React.useState<Crop | null>(null);
+  const [cropEditError, setCropEditError] = React.useState<string | null>(null);
 
   const { data: crops, isLoading: cropsLoading } = useQuery({
     queryKey: ["crops", currentFarmId],
@@ -78,6 +87,7 @@ export default function CropsPage() {
 
   const cropForm = useForm<CropFormValues>({ resolver: zodResolver(cropSchema) });
   const seasonForm = useForm<SeasonFormValues>({ resolver: zodResolver(seasonSchema) });
+  const cropEditForm = useForm<CropFormValues>({ resolver: zodResolver(cropSchema) });
 
   const createCropMutation = useMutation({
     mutationFn: (values: CropFormValues) => createCrop(currentFarmId!, values),
@@ -111,6 +121,24 @@ export default function CropsPage() {
     onError: (err) =>
       setSeasonError(
         isAxiosError(err) ? err.response?.data?.message ?? "Could not create season." : "Something went wrong."
+      ),
+  });
+
+  const editCropMutation = useMutation({
+    mutationFn: (values: CropFormValues) =>
+      updateCrop(editingCrop!.id, {
+        name: values.name,
+        variety: values.variety || undefined,
+        category: values.category || undefined,
+        description: values.description || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crops", currentFarmId] });
+      setEditingCrop(null);
+    },
+    onError: (err) =>
+      setCropEditError(
+        isAxiosError(err) ? err.response?.data?.message ?? "Could not update crop." : "Something went wrong."
       ),
   });
 
@@ -181,11 +209,28 @@ export default function CropsPage() {
           ) : (
             <div className="flex flex-wrap gap-2">
               {crops.map((crop) => (
-                <Badge key={crop.id} variant="outline" className="px-3 py-1.5 text-sm">
-                  {crop.name}
-                  {crop.variety && <span className="text-muted-foreground">· {crop.variety}</span>}
-                  <span className="ml-1 text-muted-foreground">({crop.seasons_count ?? 0})</span>
-                </Badge>
+                <button
+                  key={crop.id}
+                  type="button"
+                  onClick={() => {
+                    setEditingCrop(crop);
+                    cropEditForm.reset({
+                      name: crop.name,
+                      variety: crop.variety ?? "",
+                      category: crop.category ?? "",
+                      description: crop.description ?? "",
+                    });
+                    setCropEditError(null);
+                  }}
+                  className="group"
+                >
+                  <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-sm group-hover:bg-accent">
+                    {crop.name}
+                    {crop.variety && <span className="text-muted-foreground">· {crop.variety}</span>}
+                    <span className="text-muted-foreground">({crop.seasons_count ?? 0})</span>
+                    <Pencil className="size-3 text-muted-foreground" />
+                  </Badge>
+                </button>
               ))}
             </div>
           )}
@@ -311,6 +356,57 @@ export default function CropsPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!editingCrop}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingCrop(null);
+            setCropEditError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit crop</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={cropEditForm.handleSubmit((values) => {
+              setCropEditError(null);
+              editCropMutation.mutate(values);
+            })}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-crop-name">Name</Label>
+              <Input id="edit-crop-name" {...cropEditForm.register("name")} />
+              {cropEditForm.formState.errors.name && (
+                <p className="text-xs text-destructive">{cropEditForm.formState.errors.name.message}</p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-variety">Variety</Label>
+                <Input id="edit-variety" {...cropEditForm.register("variety")} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-category">Category</Label>
+                <Input id="edit-category" {...cropEditForm.register("category")} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea id="edit-description" rows={2} {...cropEditForm.register("description")} />
+            </div>
+            {cropEditError && <p className="text-sm text-destructive">{cropEditError}</p>}
+            <DialogFooter>
+              <Button type="submit" disabled={editCropMutation.isPending}>
+                {editCropMutation.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

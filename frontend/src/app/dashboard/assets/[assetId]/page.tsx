@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { isAxiosError } from "axios";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,11 +28,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   getAsset,
   updateAssetStatus,
+  updateAsset,
   listMaintenanceLogs,
   createMaintenanceLog,
   ASSET_STATUSES,
   MAINTENANCE_LOG_TYPES,
 } from "@/lib/modules/assets";
+import { listMembers } from "@/lib/modules/farm-structure";
 import { formatRole } from "@/lib/utils";
 
 const logSchema = z.object({
@@ -45,6 +47,16 @@ const logSchema = z.object({
   notes: z.string().optional(),
 });
 type LogFormValues = z.infer<typeof logSchema>;
+
+const assetEditSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  category: z.string().optional(),
+  serial_number: z.string().optional(),
+  purchase_date: z.string().optional(),
+  purchase_cost: z.string().optional(),
+  notes: z.string().optional(),
+});
+type AssetEditFormValues = z.infer<typeof assetEditSchema>;
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "warning" | "success" | "destructive"> = {
   active: "success",
@@ -59,10 +71,19 @@ export default function AssetDetailPage() {
 
   const [logOpen, setLogOpen] = React.useState(false);
   const [logError, setLogError] = React.useState<string | null>(null);
+  const [assetEditOpen, setAssetEditOpen] = React.useState(false);
+  const [assetEditError, setAssetEditError] = React.useState<string | null>(null);
+  const [editAssignedTo, setEditAssignedTo] = React.useState<string>("");
 
   const { data: asset } = useQuery({
     queryKey: ["asset", assetId],
     queryFn: () => getAsset(assetId),
+  });
+
+  const { data: members } = useQuery({
+    queryKey: ["farm-members", asset?.farm_id],
+    queryFn: () => listMembers(asset!.farm_id),
+    enabled: !!asset?.farm_id,
   });
 
   const { data: logs, isLoading: logsLoading } = useQuery({
@@ -71,6 +92,7 @@ export default function AssetDetailPage() {
   });
 
   const logForm = useForm<LogFormValues>({ resolver: zodResolver(logSchema) });
+  const assetEditForm = useForm<AssetEditFormValues>({ resolver: zodResolver(assetEditSchema) });
 
   const statusMutation = useMutation({
     mutationFn: (status: string) => updateAssetStatus(assetId, status as never),
@@ -78,6 +100,28 @@ export default function AssetDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["asset", assetId] });
       queryClient.invalidateQueries({ queryKey: ["assets"] });
     },
+  });
+
+  const editAssetMutation = useMutation({
+    mutationFn: (values: AssetEditFormValues) =>
+      updateAsset(assetId, {
+        name: values.name,
+        category: values.category || undefined,
+        serial_number: values.serial_number || undefined,
+        purchase_date: values.purchase_date || undefined,
+        purchase_cost: values.purchase_cost ? Number(values.purchase_cost) : undefined,
+        assigned_to: editAssignedTo ? Number(editAssignedTo) : null,
+        notes: values.notes || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["asset", assetId] });
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      setAssetEditOpen(false);
+    },
+    onError: (err) =>
+      setAssetEditError(
+        isAxiosError(err) ? err.response?.data?.message ?? "Could not update asset." : "Something went wrong."
+      ),
   });
 
   const createLogMutation = useMutation({
@@ -128,6 +172,27 @@ export default function AssetDetailPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => {
+                setAssetEditError(null);
+                setEditAssignedTo(asset.assignee ? String(asset.assignee.id) : "");
+                assetEditForm.reset({
+                  name: asset.name,
+                  category: asset.category ?? "",
+                  serial_number: asset.serial_number ?? "",
+                  purchase_date: asset.purchase_date?.slice(0, 10) ?? "",
+                  purchase_cost: asset.purchase_cost ?? "",
+                  notes: asset.notes ?? "",
+                });
+                setAssetEditOpen(true);
+              }}
+            >
+              <Pencil className="size-4" />
+              Edit
+            </Button>
           </div>
         )}
       </div>
@@ -252,6 +317,75 @@ export default function AssetDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={assetEditOpen} onOpenChange={setAssetEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit asset</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={assetEditForm.handleSubmit((values) => {
+              setAssetEditError(null);
+              editAssetMutation.mutate(values);
+            })}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-asset-name">Name</Label>
+              <Input id="edit-asset-name" {...assetEditForm.register("name")} />
+              {assetEditForm.formState.errors.name && (
+                <p className="text-xs text-destructive">{assetEditForm.formState.errors.name.message}</p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-asset-category">Category</Label>
+                <Input id="edit-asset-category" {...assetEditForm.register("category")} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-asset-serial">Serial number</Label>
+                <Input id="edit-asset-serial" {...assetEditForm.register("serial_number")} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-purchase_date">Purchase date</Label>
+                <Input id="edit-purchase_date" type="date" {...assetEditForm.register("purchase_date")} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-purchase_cost">Purchase cost</Label>
+                <Input id="edit-purchase_cost" type="number" step="any" {...assetEditForm.register("purchase_cost")} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Assigned to</Label>
+              <Select value={editAssignedTo || "unassigned"} onValueChange={(v) => setEditAssignedTo(v === "unassigned" ? "" : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {(members ?? []).map((member) => (
+                    <SelectItem key={member.id} value={String(member.id)}>
+                      {member.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-asset-notes">Notes</Label>
+              <Textarea id="edit-asset-notes" rows={2} {...assetEditForm.register("notes")} />
+            </div>
+            {assetEditError && <p className="text-sm text-destructive">{assetEditError}</p>}
+            <DialogFooter>
+              <Button type="submit" disabled={editAssetMutation.isPending}>
+                {editAssetMutation.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

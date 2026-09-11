@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { isAxiosError } from "axios";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   getCropSeason,
   updateCropSeasonStatus,
+  updateCropSeason,
   listCropActivities,
   createCropActivity,
   listCropMonitoringLogs,
@@ -76,6 +77,16 @@ const saleSchema = z.object({
 });
 type SaleFormValues = z.infer<typeof saleSchema>;
 
+const seasonEditSchema = z.object({
+  season_name: z.string().min(1, "Season name is required"),
+  planned_planting_date: z.string().optional(),
+  actual_planting_date: z.string().optional(),
+  budget: z.string().optional(),
+  expected_yield: z.string().optional(),
+  expected_yield_unit: z.string().optional(),
+});
+type SeasonEditFormValues = z.infer<typeof seasonEditSchema>;
+
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "warning" | "success"> = {
   planning: "secondary",
   nursery: "secondary",
@@ -98,6 +109,8 @@ export default function CropSeasonDetailPage() {
   const [monitoringError, setMonitoringError] = React.useState<string | null>(null);
   const [harvestError, setHarvestError] = React.useState<string | null>(null);
   const [saleError, setSaleError] = React.useState<string | null>(null);
+  const [seasonEditOpen, setSeasonEditOpen] = React.useState(false);
+  const [seasonEditError, setSeasonEditError] = React.useState<string | null>(null);
 
   const { data: season } = useQuery({
     queryKey: ["crop-season", seasonId],
@@ -123,6 +136,7 @@ export default function CropSeasonDetailPage() {
   const monitoringForm = useForm<MonitoringFormValues>({ resolver: zodResolver(monitoringSchema) });
   const harvestForm = useForm<HarvestFormValues>({ resolver: zodResolver(harvestSchema) });
   const saleForm = useForm<SaleFormValues>({ resolver: zodResolver(saleSchema) });
+  const seasonEditForm = useForm<SeasonEditFormValues>({ resolver: zodResolver(seasonEditSchema) });
 
   const statusMutation = useMutation({
     mutationFn: (status: string) => updateCropSeasonStatus(seasonId, status as never),
@@ -212,6 +226,27 @@ export default function CropSeasonDetailPage() {
       ),
   });
 
+  const editSeasonMutation = useMutation({
+    mutationFn: (values: SeasonEditFormValues) =>
+      updateCropSeason(seasonId, {
+        season_name: values.season_name,
+        planned_planting_date: values.planned_planting_date || undefined,
+        actual_planting_date: values.actual_planting_date || undefined,
+        budget: values.budget ? Number(values.budget) : undefined,
+        expected_yield: values.expected_yield ? Number(values.expected_yield) : undefined,
+        expected_yield_unit: values.expected_yield_unit || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crop-season", seasonId] });
+      queryClient.invalidateQueries({ queryKey: ["crop-seasons"] });
+      setSeasonEditOpen(false);
+    },
+    onError: (err) =>
+      setSeasonEditError(
+        isAxiosError(err) ? err.response?.data?.message ?? "Could not update season." : "Something went wrong."
+      ),
+  });
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -237,9 +272,84 @@ export default function CropSeasonDetailPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={() => {
+                seasonEditForm.reset({
+                  season_name: season.season_name,
+                  planned_planting_date: season.planned_planting_date ?? "",
+                  actual_planting_date: season.actual_planting_date ?? "",
+                  budget: season.budget ?? "",
+                  expected_yield: season.expected_yield ?? "",
+                  expected_yield_unit: season.expected_yield_unit ?? "",
+                });
+                setSeasonEditError(null);
+                setSeasonEditOpen(true);
+              }}
+            >
+              <Pencil className="size-4" />
+              Edit
+            </Button>
           </div>
         )}
       </div>
+
+      <Dialog open={seasonEditOpen} onOpenChange={setSeasonEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit season</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={seasonEditForm.handleSubmit((values) => {
+              setSeasonEditError(null);
+              editSeasonMutation.mutate(values);
+            })}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-season-name">Season name</Label>
+              <Input id="edit-season-name" {...seasonEditForm.register("season_name")} />
+              {seasonEditForm.formState.errors.season_name && (
+                <p className="text-xs text-destructive">
+                  {seasonEditForm.formState.errors.season_name.message}
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-planned-date">Planned planting date</Label>
+                <Input id="edit-planned-date" type="date" {...seasonEditForm.register("planned_planting_date")} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-actual-date">Actual planting date</Label>
+                <Input id="edit-actual-date" type="date" {...seasonEditForm.register("actual_planting_date")} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-budget">Budget</Label>
+                <Input id="edit-budget" type="number" step="any" {...seasonEditForm.register("budget")} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-expected-yield">Expected yield</Label>
+                <Input id="edit-expected-yield" type="number" step="any" {...seasonEditForm.register("expected_yield")} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="edit-expected-yield-unit">Unit</Label>
+                <Input id="edit-expected-yield-unit" {...seasonEditForm.register("expected_yield_unit")} />
+              </div>
+            </div>
+            {seasonEditError && <p className="text-sm text-destructive">{seasonEditError}</p>}
+            <DialogFooter>
+              <Button type="submit" disabled={editSeasonMutation.isPending}>
+                {editSeasonMutation.isPending ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

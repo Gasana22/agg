@@ -49,7 +49,10 @@ export async function createFarm(payload: {
   return data.data;
 }
 
-export async function updateFarm(id: number, payload: Partial<Farm>) {
+export async function updateFarm(
+  id: number,
+  payload: Partial<Omit<Farm, "gps_lat" | "gps_lng">> & { gps_lat?: number; gps_lng?: number }
+) {
   const { data } = await api.patch<{ data: Farm }>(`/farms/${id}`, payload);
   return data.data;
 }
@@ -92,7 +95,10 @@ export async function createBlock(
   return data.data;
 }
 
-export async function updateBlock(blockId: number, payload: Partial<Block>) {
+export async function updateBlock(
+  blockId: number,
+  payload: Partial<Omit<Block, "gps_lat" | "gps_lng">> & { gps_lat?: number; gps_lng?: number }
+) {
   const { data } = await api.patch<{ data: Block }>(`/blocks/${blockId}`, payload);
   return data.data;
 }
