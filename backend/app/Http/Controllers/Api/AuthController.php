@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Password;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
@@ -63,6 +66,37 @@ class AuthController extends Controller
         $token = Auth::guard('api')->refresh();
 
         return $this->respondWithToken($token, Auth::guard('api')->user());
+    }
+
+    /**
+     * Sends a reset-password email via Laravel's built-in password broker.
+     * The email exists check already happened in ForgotPasswordRequest, so
+     * every response here is success — there's no separate "not found"
+     * branch to accidentally leak account existence through.
+     */
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    {
+        Password::sendResetLink($request->only('email'));
+
+        return response()->json([
+            'message' => 'If that email is registered, a password reset link has been sent.',
+        ]);
+    }
+
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    {
+        $status = Password::reset(
+            $request->validated(),
+            function (User $user, string $password) {
+                $user->forceFill(['password' => bcrypt($password)])->save();
+            }
+        );
+
+        if ($status !== Password::PASSWORD_RESET) {
+            return response()->json(['message' => __($status)], 422);
+        }
+
+        return response()->json(['message' => 'Password reset successfully.']);
     }
 
     protected function respondWithToken(string $token, User $user): JsonResponse
