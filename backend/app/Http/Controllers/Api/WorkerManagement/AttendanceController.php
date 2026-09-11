@@ -12,6 +12,7 @@ use App\Http\Resources\AttendanceResource;
 use App\Models\Attendance;
 use App\Models\Notification;
 use App\Models\WorkerProfile;
+use App\Support\Geo;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -45,6 +46,8 @@ class AttendanceController extends Controller
                 'date' => 'You have already checked in today.',
             ]);
         }
+
+        $this->guardGeofence($workerProfile, (float) $request->validated('gps_lat'), (float) $request->validated('gps_lng'));
 
         $photoPath = $request->file('photo')->store('attendance-photos', 'public');
 
@@ -105,6 +108,34 @@ class AttendanceController extends Controller
         ]);
 
         return new AttendanceResource($attendance->load('approver'));
+    }
+
+    /**
+     * Rejects a check-in whose GPS point is too far from the farm's own
+     * reference point. Only enforced when the farm has one set — there is
+     * nothing to geofence against otherwise.
+     */
+    private function guardGeofence(WorkerProfile $workerProfile, float $lat, float $lng): void
+    {
+        $farm = $workerProfile->farm;
+
+        if ($farm->gps_lat === null || $farm->gps_lng === null) {
+            return;
+        }
+
+        $distance = Geo::distanceInMeters((float) $farm->gps_lat, (float) $farm->gps_lng, $lat, $lng);
+        $radius = config('attendance.geofence_radius_meters');
+
+        if ($distance > $radius) {
+            throw ValidationException::withMessages([
+                'gps_lat' => sprintf(
+                    'You are %.0fm from %s, outside the %dm check-in radius.',
+                    $distance,
+                    $farm->name,
+                    $radius,
+                ),
+            ]);
+        }
     }
 
     /**

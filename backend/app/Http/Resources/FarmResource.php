@@ -19,6 +19,7 @@ class FarmResource extends JsonResource
             'village' => $this->village,
             'gps_lat' => $this->gps_lat,
             'gps_lng' => $this->gps_lng,
+            'boundary' => $this->boundary,
             'is_active' => $this->is_active,
             'owner' => $this->whenLoaded('owner', fn () => [
                 'id' => $this->owner->id,

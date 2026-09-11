@@ -30,6 +30,9 @@ class UpdateBlockRequest extends FormRequest
             ],
             'gps_lat' => ['nullable', 'numeric', 'between:-90,90'],
             'gps_lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'boundary' => ['nullable', 'array', 'min:3'],
+            'boundary.*.lat' => ['required_with:boundary', 'numeric', 'between:-90,90'],
+            'boundary.*.lng' => ['required_with:boundary', 'numeric', 'between:-180,180'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

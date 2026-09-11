@@ -11,6 +11,7 @@ class Block extends Model
         'name',
         'gps_lat',
         'gps_lng',
+        'boundary',
         'is_active',
     ];
 
@@ -19,6 +20,7 @@ class Block extends Model
         return [
             'gps_lat' => 'decimal:7',
             'gps_lng' => 'decimal:7',
+            'boundary' => 'array',
             'is_active' => 'boolean',
         ];
     }

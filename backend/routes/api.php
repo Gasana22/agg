@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\LivestockManagement\AnimalHealthLogController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalProductionRecordController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalSaleController;
 use App\Http\Controllers\Api\LivestockManagement\BreedingRecordController;
+use App\Http\Controllers\Api\Maps\FarmMapController;
 use App\Http\Controllers\Api\Notifications\NotificationController;
 use App\Http\Controllers\Api\Procurement\DeliveryController;
 use App\Http\Controllers\Api\Procurement\PaymentController;
@@ -246,6 +247,9 @@ Route::middleware('auth:api')->group(function () {
     // 11. Reports & Analytics
     Route::get('farms/{farm}/dashboard', [FarmDashboardController::class, 'show']);
     Route::get('admin/dashboard', [AdminDashboardController::class, 'show']);
+
+    // 12. Maps & GIS
+    Route::get('farms/{farm}/map', [FarmMapController::class, 'show']);
 
     // 13. Notifications
     Route::get('notifications', [NotificationController::class, 'index']);

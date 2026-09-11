@@ -18,6 +18,7 @@ class BlockResource extends JsonResource
             'name' => $this->name,
             'gps_lat' => $this->gps_lat,
             'gps_lng' => $this->gps_lng,
+            'boundary' => $this->boundary,
             'is_active' => $this->is_active,
             'sections_count' => $this->whenCounted('sections'),
             'created_at' => $this->created_at,
