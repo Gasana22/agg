@@ -12,6 +12,9 @@ use App\Http\Controllers\Api\FarmStructure\FarmController;
 use App\Http\Controllers\Api\FarmStructure\FarmMemberController;
 use App\Http\Controllers\Api\FarmStructure\PlotController;
 use App\Http\Controllers\Api\FarmStructure\SectionController;
+use App\Http\Controllers\Api\Finance\ExpenseController;
+use App\Http\Controllers\Api\Finance\FinanceReportController;
+use App\Http\Controllers\Api\Finance\PayrollPaymentController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalHealthLogController;
 use App\Http\Controllers\Api\LivestockManagement\AnimalProductionRecordController;
@@ -145,7 +148,20 @@ Route::middleware('auth:api')->group(function () {
     // Route::apiResource('activities', ActivityController::class);
 
     // 7. Finance
-    // Route::prefix('finance')->group(function () { ... });
+    Route::get('farms/{farm}/expenses', [ExpenseController::class, 'index']);
+    Route::post('farms/{farm}/expenses', [ExpenseController::class, 'store']);
+    Route::get('expenses/{expense}', [ExpenseController::class, 'show']);
+    Route::patch('expenses/{expense}', [ExpenseController::class, 'update']);
+    Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy']);
+
+    Route::get('worker-profiles/{workerProfile}/payroll-payments', [PayrollPaymentController::class, 'index']);
+    Route::post('worker-profiles/{workerProfile}/payroll-payments', [PayrollPaymentController::class, 'store']);
+    Route::get('payroll-payments/{payrollPayment}', [PayrollPaymentController::class, 'show']);
+    Route::post('payroll-payments/{payrollPayment}/pay', [PayrollPaymentController::class, 'pay']);
+
+    Route::get('farms/{farm}/finance/income', [FinanceReportController::class, 'income']);
+    Route::get('farms/{farm}/finance/expenses', [FinanceReportController::class, 'expenses']);
+    Route::get('farms/{farm}/finance/profit-and-loss', [FinanceReportController::class, 'profitAndLoss']);
 
     // 8. Procurement
     // Route::apiResource('purchase-orders', PurchaseOrderController::class);

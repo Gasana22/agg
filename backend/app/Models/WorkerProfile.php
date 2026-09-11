@@ -44,4 +44,9 @@ class WorkerProfile extends Model
     {
         return $this->hasMany(Attendance::class);
     }
+
+    public function payrollPayments()
+    {
+        return $this->hasMany(PayrollPayment::class);
+    }
 }
