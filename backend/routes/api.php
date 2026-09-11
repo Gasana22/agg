@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CropManagement\CropHarvestController;
 use App\Http\Controllers\Api\CropManagement\CropMonitoringLogController;
 use App\Http\Controllers\Api\CropManagement\CropSaleController;
 use App\Http\Controllers\Api\CropManagement\CropSeasonController;
+use App\Http\Controllers\Api\Documents\DocumentController;
 use App\Http\Controllers\Api\FarmStructure\BlockController;
 use App\Http\Controllers\Api\FarmStructure\FarmController;
 use App\Http\Controllers\Api\FarmStructure\FarmMemberController;
@@ -256,6 +257,12 @@ Route::middleware('auth:api')->group(function () {
     Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::patch('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+
+    // 14. Media & Documents
+    Route::get('documents', [DocumentController::class, 'index']);
+    Route::post('documents', [DocumentController::class, 'store']);
+    Route::get('documents/{document}', [DocumentController::class, 'show']);
+    Route::delete('documents/{document}', [DocumentController::class, 'destroy']);
 
     // 16. Traceability & Chain of Custody
     Route::get('farms/{farm}/trace-batches', [TraceBatchController::class, 'index']);
