@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Sprout,
@@ -25,6 +26,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useFarm } from "@/lib/farm-context";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getUnreadNotificationCount } from "@/lib/modules/notifications";
 import { formatRole } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -48,6 +50,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, platformRoles, loading, logout } = useAuth();
   const { farms, currentFarmId, setCurrentFarmId } = useFarm();
   const router = useRouter();
+
+  const { data: unreadCount } = useQuery({
+    queryKey: ["notifications-unread-count"],
+    queryFn: () => getUnreadNotificationCount(),
+    enabled: !!user,
+  });
 
   React.useEffect(() => {
     if (!loading && !user) {
@@ -99,6 +107,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <Icon className="size-4" />
               {label}
+              {href === "/dashboard/notifications" && !!unreadCount && unreadCount > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="ml-auto flex size-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground"
+                >
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
