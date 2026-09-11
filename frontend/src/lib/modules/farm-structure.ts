@@ -23,6 +23,29 @@ export type Block = {
   updated_at: string;
 };
 
+export type Section = {
+  id: number;
+  block_id: number;
+  name: string;
+  gps_lat: string | null;
+  gps_lng: string | null;
+  is_active: boolean;
+  plots_count?: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Plot = {
+  id: number;
+  section_id: number;
+  name: string;
+  gps_lat: string | null;
+  gps_lng: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export const FARM_ROLES = [
   "farm_owner",
   "farm_manager",
@@ -105,4 +128,64 @@ export async function updateBlock(
 
 export async function deleteBlock(blockId: number) {
   await api.delete(`/blocks/${blockId}`);
+}
+
+export async function getBlock(blockId: number) {
+  const { data } = await api.get<{ data: Block }>(`/blocks/${blockId}`);
+  return data.data;
+}
+
+export async function listSections(blockId: number) {
+  const { data } = await api.get<{ data: Section[] }>(`/blocks/${blockId}/sections`);
+  return data.data;
+}
+
+export async function createSection(
+  blockId: number,
+  payload: { name: string; gps_lat?: number; gps_lng?: number }
+) {
+  const { data } = await api.post<{ data: Section }>(`/blocks/${blockId}/sections`, payload);
+  return data.data;
+}
+
+export async function updateSection(
+  sectionId: number,
+  payload: Partial<Omit<Section, "gps_lat" | "gps_lng">> & { gps_lat?: number; gps_lng?: number }
+) {
+  const { data } = await api.patch<{ data: Section }>(`/sections/${sectionId}`, payload);
+  return data.data;
+}
+
+export async function deleteSection(sectionId: number) {
+  await api.delete(`/sections/${sectionId}`);
+}
+
+export async function getSection(sectionId: number) {
+  const { data } = await api.get<{ data: Section }>(`/sections/${sectionId}`);
+  return data.data;
+}
+
+export async function listPlots(sectionId: number) {
+  const { data } = await api.get<{ data: Plot[] }>(`/sections/${sectionId}/plots`);
+  return data.data;
+}
+
+export async function createPlot(
+  sectionId: number,
+  payload: { name: string; gps_lat?: number; gps_lng?: number }
+) {
+  const { data } = await api.post<{ data: Plot }>(`/sections/${sectionId}/plots`, payload);
+  return data.data;
+}
+
+export async function updatePlot(
+  plotId: number,
+  payload: Partial<Omit<Plot, "gps_lat" | "gps_lng">> & { gps_lat?: number; gps_lng?: number }
+) {
+  const { data } = await api.patch<{ data: Plot }>(`/plots/${plotId}`, payload);
+  return data.data;
+}
+
+export async function deletePlot(plotId: number) {
+  await api.delete(`/plots/${plotId}`);
 }
