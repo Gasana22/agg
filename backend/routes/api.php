@@ -3,8 +3,12 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FarmStructure\BlockController;
 use App\Http\Controllers\Api\FarmStructure\FarmController;
+use App\Http\Controllers\Api\FarmStructure\FarmMemberController;
 use App\Http\Controllers\Api\FarmStructure\PlotController;
 use App\Http\Controllers\Api\FarmStructure\SectionController;
+use App\Http\Controllers\Api\WorkerManagement\AttendanceController;
+use App\Http\Controllers\Api\WorkerManagement\DailyTaskController;
+use App\Http\Controllers\Api\WorkerManagement\WorkerProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -31,6 +35,13 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('blocks.sections', SectionController::class)->shallow();
     Route::apiResource('sections.plots', PlotController::class)->shallow();
 
+    // Farm membership: who works this farm, and as what role. Prerequisite
+    // for worker profiles below.
+    Route::get('farms/{farm}/members', [FarmMemberController::class, 'index']);
+    Route::post('farms/{farm}/members', [FarmMemberController::class, 'store']);
+    Route::patch('farms/{farm}/members/{member}', [FarmMemberController::class, 'update']);
+    Route::delete('farms/{farm}/members/{member}', [FarmMemberController::class, 'destroy']);
+
     // 3. Crop Management
     // Route::apiResource('crops', CropController::class);
 
@@ -38,7 +49,24 @@ Route::middleware('auth:api')->group(function () {
     // Route::apiResource('livestock', LivestockController::class);
 
     // 5. Worker Management
-    // Route::apiResource('workers', WorkerController::class);
+    Route::get('farms/{farm}/worker-profiles', [WorkerProfileController::class, 'index']);
+    Route::post('farms/{farm}/worker-profiles', [WorkerProfileController::class, 'store']);
+    Route::get('worker-profiles/{workerProfile}', [WorkerProfileController::class, 'show']);
+    Route::patch('worker-profiles/{workerProfile}', [WorkerProfileController::class, 'update']);
+    Route::delete('worker-profiles/{workerProfile}', [WorkerProfileController::class, 'destroy']);
+
+    Route::get('worker-profiles/{workerProfile}/attendances', [AttendanceController::class, 'index']);
+    Route::post('worker-profiles/{workerProfile}/check-in', [AttendanceController::class, 'checkIn']);
+    Route::post('worker-profiles/{workerProfile}/check-out', [AttendanceController::class, 'checkOut']);
+    Route::get('attendances/{attendance}', [AttendanceController::class, 'show']);
+    Route::post('attendances/{attendance}/approve', [AttendanceController::class, 'approve']);
+
+    Route::get('farms/{farm}/tasks', [DailyTaskController::class, 'index']);
+    Route::post('farms/{farm}/tasks', [DailyTaskController::class, 'store']);
+    Route::get('tasks/{dailyTask}', [DailyTaskController::class, 'show']);
+    Route::patch('tasks/{dailyTask}', [DailyTaskController::class, 'update']);
+    Route::patch('tasks/{dailyTask}/status', [DailyTaskController::class, 'updateStatus']);
+    Route::delete('tasks/{dailyTask}', [DailyTaskController::class, 'destroy']);
 
     // 6. Activity Tracking
     // Route::apiResource('activities', ActivityController::class);

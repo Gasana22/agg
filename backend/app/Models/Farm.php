@@ -58,4 +58,14 @@ class Farm extends Model
     {
         return $this->hasMany(Block::class);
     }
+
+    public function workerProfiles()
+    {
+        return $this->hasMany(WorkerProfile::class);
+    }
+
+    public function dailyTasks()
+    {
+        return $this->hasMany(DailyTask::class);
+    }
 }
