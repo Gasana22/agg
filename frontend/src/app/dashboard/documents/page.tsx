@@ -338,6 +338,7 @@ export default function DocumentsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label={`Delete ${doc.original_filename}`}
                           onClick={async () => {
                             if (
                               await confirm({

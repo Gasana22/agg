@@ -311,6 +311,7 @@ export default function SectionDetailPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            aria-label={`Edit plot ${plot.name}`}
                             onClick={() => {
                               setEditingPlot(plot);
                               plotEditForm.reset({
@@ -326,6 +327,7 @@ export default function SectionDetailPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            aria-label={`Delete plot ${plot.name}`}
                             onClick={async () => {
                               if (
                                 await confirm({

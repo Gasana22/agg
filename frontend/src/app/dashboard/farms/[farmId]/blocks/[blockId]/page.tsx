@@ -306,6 +306,7 @@ export default function BlockDetailPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            aria-label={`Edit section ${section.name}`}
                             onClick={() => {
                               setEditingSection(section);
                               sectionEditForm.reset({
@@ -321,6 +322,7 @@ export default function BlockDetailPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            aria-label={`Delete section ${section.name}`}
                             onClick={async () => {
                               if (
                                 await confirm({

@@ -369,6 +369,7 @@ export default function WorkerDetailPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            aria-label="Approve attendance"
                             onClick={() => approveMutation.mutate({ id: att.id, status: "approved" })}
                           >
                             <Check className="size-4 text-emerald-600" />
@@ -376,6 +377,7 @@ export default function WorkerDetailPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            aria-label="Reject attendance"
                             onClick={() => approveMutation.mutate({ id: att.id, status: "rejected" })}
                           >
                             <X className="size-4 text-destructive" />

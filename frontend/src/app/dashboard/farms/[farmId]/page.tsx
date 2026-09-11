@@ -398,6 +398,7 @@ export default function FarmDetailPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label={`Remove ${member.name}`}
                           onClick={async () => {
                             if (
                               await confirm({
@@ -507,6 +508,7 @@ export default function FarmDetailPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            aria-label={`Edit block ${block.name}`}
                             onClick={() => {
                               setEditingBlock(block);
                               blockEditForm.reset({
@@ -522,6 +524,7 @@ export default function FarmDetailPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            aria-label={`Delete block ${block.name}`}
                             onClick={async () => {
                               if (
                                 await confirm({

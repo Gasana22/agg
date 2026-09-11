@@ -521,6 +521,7 @@ export default function LivestockPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label={`Edit breeding record for ${record.dam.tag_number}`}
                           onClick={() => {
                             setEditingBreeding(record);
                             breedingEditForm.reset({

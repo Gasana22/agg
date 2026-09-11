@@ -264,6 +264,7 @@ export default function PoultryPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label={`Edit flock ${flock.flock_code}`}
                           onClick={() => {
                             setEditingFlock(flock);
                             flockEditForm.reset({

@@ -244,6 +244,7 @@ export default function ActivitiesPage() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              aria-label={`Delete ${task.title}`}
                               onClick={async () => {
                                 if (
                                   await confirm({

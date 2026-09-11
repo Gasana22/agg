@@ -278,6 +278,7 @@ export default function PurchaseOrderDetailPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label={`Remove ${item.item_name}`}
                           onClick={async () => {
                             if (
                               await confirm({

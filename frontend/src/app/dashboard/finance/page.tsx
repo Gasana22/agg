@@ -411,6 +411,7 @@ export default function FinancePage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label={`Edit ${formatRole(expense.category)} expense`}
                           onClick={() => {
                             setEditingExpense(expense);
                             expenseEditForm.reset({

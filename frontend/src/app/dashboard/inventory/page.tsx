@@ -243,6 +243,7 @@ export default function InventoryPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label={`Edit ${item.name}`}
                           onClick={() => {
                             setEditingItem(item);
                             setItemEditError(null);

@@ -352,6 +352,7 @@ export default function ProcurementPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label={`Edit supplier ${supplier.name}`}
                           onClick={() => {
                             setEditingSupplier(supplier);
                             setSupplierEditError(null);
@@ -476,6 +477,7 @@ export default function ProcurementPage() {
                           type="button"
                           variant="ghost"
                           size="icon"
+                          aria-label={`Remove line ${index + 1}`}
                           disabled={fields.length === 1}
                           onClick={() => remove(index)}
                         >

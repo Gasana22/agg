@@ -213,6 +213,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <ConfirmProvider>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
+      >
+        Skip to content
+      </a>
       <div className="flex flex-1 flex-col md:flex-row">
         <header className="flex items-center gap-3 border-b bg-card px-4 py-3 md:hidden">
           <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
@@ -231,7 +237,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <aside className="hidden w-64 shrink-0 flex-col border-r bg-card md:flex">
           <NavContent {...navContentProps} />
         </aside>
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto p-4 md:p-6 focus:outline-none">
+          {children}
+        </main>
       </div>
     </ConfirmProvider>
   );
