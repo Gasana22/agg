@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 
 class PurchaseOrderController extends Controller
 {
-    private const WITH = ['supplier', 'items', 'payments', 'deliveries.receiver', 'creator'];
+    private const WITH = ['supplier', 'items', 'payments.recorder', 'deliveries.receiver', 'creator'];
 
     public function index(Farm $farm): AnonymousResourceCollection
     {
