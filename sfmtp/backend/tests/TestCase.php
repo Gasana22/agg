@@ -5,6 +5,7 @@ namespace Tests;
 use App\Modules\Access\Domain\Models\FarmRole;
 use App\Modules\Identity\Application\TokenService;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Platform\Application\PlatformPermissions;
 use App\Modules\Tenancy\Application\FarmService;
 use App\Modules\Tenancy\Domain\Enums\FarmStatus;
 use App\Modules\Tenancy\Domain\Models\Farm;
@@ -61,7 +62,7 @@ abstract class TestCase extends BaseTestCase
         $user ??= $this->member();
 
         $this->inFarm($farm, function () use ($farm, $user, $roleKey) {
-            $membership = FarmUser::create(['farm_id' => $farm->id, 'user_id' => $user->id, 'status' => 'active', 'joined_at' => now()]);
+            $membership = $this->app->make(FarmService::class)->addMember($farm, $user);
             DB::table('farm_user_roles')->insert([
                 'farm_id' => $farm->id,
                 'farm_user_id' => $membership->id,
@@ -71,6 +72,17 @@ abstract class TestCase extends BaseTestCase
         });
 
         return in_array($roleKey, config('sfmtp.security.mfa_required_farm_roles'), true) ? $this->withMfa($user) : $user;
+    }
+
+    /** A platform staff member holding the given platform roles, MFA enrolled. */
+    protected function platformAdmin(array $roles = ['super_admin']): User
+    {
+        $user = $this->withMfa($this->member(['user_type' => 'platform_admin']));
+        foreach ($roles as $role) {
+            $this->app->make(PlatformPermissions::class)->assign($user, $role);
+        }
+
+        return $user;
     }
 
     protected function inFarm(Farm $farm, callable $callback): mixed

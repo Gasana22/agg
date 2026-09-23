@@ -60,8 +60,8 @@ class AuditLogger
         if ($entity instanceof Farm) {
             return $entity->id;
         }
-        if ($entity instanceof Model && $entity->getAttribute('farm_id')) {
-            return $entity->getAttribute('farm_id');
+        if ($entity instanceof Model && ($entity->getAttributes()['farm_id'] ?? null)) {
+            return $entity->getAttributes()['farm_id'];
         }
 
         return $this->context->hasFarm() ? $this->context->farmId() : null;

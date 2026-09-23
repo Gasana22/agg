@@ -54,7 +54,7 @@ class CrossTenantIsolationTest extends TestCase
     {
         return array_values(array_filter(
             Router::getRoutes()->getRoutes(),
-            fn (Route $r) => str_contains($r->uri(), '{farm}'),
+            fn (Route $r) => str_starts_with($r->uri(), 'api/v1/farms/{farm}'),
         ));
     }
 

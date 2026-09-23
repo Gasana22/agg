@@ -18,9 +18,31 @@ class FarmPermissions
     /** @return array<string,PermissionScope> for the current request's member */
     public function current(): array
     {
+        if ($this->context->isSupportSession()) {
+            return $this->context->remember('permissions', fn () => self::supportReadOnly());
+        }
+
         $membership = $this->context->membership();
 
         return $membership === null ? [] : $this->context->remember('permissions', fn () => $this->for($membership));
+    }
+
+    /**
+     * Owner-granted support sessions (ADR-0005): every non-money `*.view`
+     * permission. Writes are refused before this is ever consulted.
+     *
+     * @return array<string,PermissionScope>
+     */
+    public static function supportReadOnly(): array
+    {
+        $grants = [];
+        foreach (PermissionRegistry::all() as $key => $def) {
+            if (str_ends_with($key, '.view') && ! $def['money']) {
+                $grants[$key] = PermissionScope::All;
+            }
+        }
+
+        return $grants;
     }
 
     public function allows(string $permission): bool

@@ -24,6 +24,9 @@ class TenantContext
 
     private bool $bypass = false;
 
+    /** Set during an owner-granted, read-only support session (ADR-0005). */
+    private ?string $supportGrantId = null;
+
     /** Per-context memo (e.g. the member's effective permissions). */
     private array $memo = [];
 
@@ -31,16 +34,35 @@ class TenantContext
     {
         $this->farm = $farm;
         $this->membership = $membership;
+        $this->supportGrantId = null;
         $this->memo = [];
         $this->syncDatabase();
+    }
+
+    /** Enter a farm as platform support under a read-only grant. */
+    public function enterSupport(Farm $farm, string $grantId): void
+    {
+        $this->enter($farm);
+        $this->supportGrantId = $grantId;
     }
 
     public function leave(): void
     {
         $this->farm = null;
         $this->membership = null;
+        $this->supportGrantId = null;
         $this->memo = [];
         $this->syncDatabase();
+    }
+
+    public function isSupportSession(): bool
+    {
+        return $this->supportGrantId !== null;
+    }
+
+    public function supportGrantId(): ?string
+    {
+        return $this->supportGrantId;
     }
 
     /**
@@ -49,7 +71,7 @@ class TenantContext
      */
     public function run(Farm $farm, Closure $callback, ?FarmUser $membership = null): mixed
     {
-        [$prevFarm, $prevMembership, $prevMemo] = [$this->farm, $this->membership, $this->memo];
+        [$prevFarm, $prevMembership, $prevMemo, $prevGrant] = [$this->farm, $this->membership, $this->memo, $this->supportGrantId];
         $this->enter($farm, $membership);
 
         try {
@@ -58,6 +80,7 @@ class TenantContext
             $this->farm = $prevFarm;
             $this->membership = $prevMembership;
             $this->memo = $prevMemo;
+            $this->supportGrantId = $prevGrant;
             $this->syncDatabase();
         }
     }

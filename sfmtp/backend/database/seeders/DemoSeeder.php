@@ -5,10 +5,10 @@ namespace Database\Seeders;
 use App\Modules\Access\Domain\Models\FarmRole;
 use App\Modules\Identity\Domain\Enums\UserType;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Platform\Application\PlatformPermissions;
 use App\Modules\Tenancy\Application\FarmService;
 use App\Modules\Tenancy\Domain\Enums\FarmStatus;
 use App\Modules\Tenancy\Domain\Models\Farm;
-use App\Modules\Tenancy\Domain\Models\FarmUser;
 use App\Modules\Tenancy\TenantContext;
 use App\Modules\Traceability\Application\Recorder;
 use App\Modules\Traceability\Domain\Enums\BatchKind;
@@ -19,7 +19,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Demo organization "AGG Farms" (docs/10 "Seeded demo scenario").
  * Local and testing only. Every account's password is `Password123!`.
- * Owners, accountants and the platform admin must enrol MFA on first login.
+ * Owners, accountants and platform staff must enrol MFA on first login.
+ * Platform staff: admin@ (super admin), support@ and billing@sfmtp.test.
  */
 class DemoSeeder extends Seeder
 {
@@ -32,7 +33,10 @@ class DemoSeeder extends Seeder
             ['name' => $name, 'user_type' => $type, 'password' => self::PASSWORD, 'status' => 'active', 'email_verified_at' => now()],
         );
 
-        $user('admin@sfmtp.test', 'Platform Admin', UserType::PlatformAdmin);
+        $platform = app(PlatformPermissions::class);
+        $platform->assign($user('admin@sfmtp.test', 'Platform Admin', UserType::PlatformAdmin), 'super_admin');
+        $platform->assign($user('support@sfmtp.test', 'Sam Support', UserType::PlatformAdmin), 'support');
+        $platform->assign($user('billing@sfmtp.test', 'Beatrice Billing', UserType::PlatformAdmin), 'billing');
         $owner = $user('owner@aggfarms.test', 'Grace Owner');
 
         if (Farm::where('name', 'AGG Mixed Farm')->exists()) {
@@ -56,14 +60,9 @@ class DemoSeeder extends Seeder
             'field_worker' => ['worker@aggfarms.test', 'Wilson Worker'],
         ];
 
-        $context->run($mixed, function () use ($staff, $user, $mixed) {
+        $context->run($mixed, function () use ($staff, $user, $mixed, $farms) {
             foreach ($staff as $roleKey => [$email, $name]) {
-                $member = FarmUser::create([
-                    'farm_id' => $mixed->id,
-                    'user_id' => $user($email, $name)->id,
-                    'status' => 'active',
-                    'joined_at' => now(),
-                ]);
+                $member = $farms->addMember($mixed, $user($email, $name));
                 DB::table('farm_user_roles')->insert([
                     'farm_id' => $mixed->id,
                     'farm_user_id' => $member->id,

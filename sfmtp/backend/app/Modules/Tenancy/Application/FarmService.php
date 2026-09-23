@@ -4,9 +4,11 @@ namespace App\Modules\Tenancy\Application;
 
 use App\Modules\Identity\Domain\Enums\UserType;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\Contracts\SubscriptionGate;
 use App\Modules\Tenancy\Domain\Enums\FarmStatus;
 use App\Modules\Tenancy\Domain\Enums\MembershipStatus;
 use App\Modules\Tenancy\Domain\Events\FarmCreated;
+use App\Modules\Tenancy\Domain\Events\OrganizationCreated;
 use App\Modules\Tenancy\Domain\Models\Farm;
 use App\Modules\Tenancy\Domain\Models\FarmUser;
 use App\Modules\Tenancy\Domain\Models\Organization;
@@ -17,7 +19,10 @@ use Illuminate\Support\Str;
 
 class FarmService
 {
-    public function __construct(private readonly TenantContext $context) {}
+    public function __construct(
+        private readonly TenantContext $context,
+        private readonly SubscriptionGate $subscriptions,
+    ) {}
 
     /**
      * Create a farm owned by $owner. The farm starts `pending` until a
@@ -30,10 +35,17 @@ class FarmService
         }
 
         return DB::transaction(function () use ($owner, $attributes) {
-            $organization = Organization::firstOrCreate(
-                ['owner_user_id' => $owner->id],
-                ['name' => $attributes['organization_name'] ?? $owner->name, 'status' => 'active'],
-            );
+            $organization = Organization::where('owner_user_id', $owner->id)->first();
+            if ($organization === null) {
+                $organization = Organization::create([
+                    'owner_user_id' => $owner->id,
+                    'name' => $attributes['organization_name'] ?? $owner->name,
+                    'status' => 'active',
+                ]);
+                OrganizationCreated::dispatch($organization);   // Billing starts the trial
+            }
+
+            $this->subscriptions->assertCanAddFarm($organization);
 
             $farm = Farm::create([
                 'organization_id' => $organization->id,
@@ -63,6 +75,28 @@ class FarmService
 
             return $farm->refresh();
         });
+    }
+
+    /**
+     * Add an active member (roles are assigned by the Access module).
+     * Checks the plan's user limit first.
+     */
+    public function addMember(Farm $farm, User $user, ?string $invitedBy = null): FarmUser
+    {
+        $existing = FarmUser::where('farm_id', $farm->id)->where('user_id', $user->id)->first();
+        if ($existing !== null) {
+            throw ApiException::conflict('duplicate', 'This person is already a member of the farm.');
+        }
+
+        $this->subscriptions->assertCanAddMember($farm, $user->id);
+
+        return FarmUser::create([
+            'farm_id' => $farm->id,
+            'user_id' => $user->id,
+            'status' => MembershipStatus::Active,
+            'invited_by' => $invitedBy,
+            'joined_at' => now(),
+        ]);
     }
 
     public function update(Farm $farm, array $attributes): Farm

@@ -89,7 +89,7 @@ class DashboardTest extends TestCase
 
     public function test_admin_dashboard_counts_farms_without_touching_farm_data(): void
     {
-        $admin = $this->withMfa($this->member(['user_type' => 'platform_admin']));
+        $admin = $this->platformAdmin();
         $this->farm()->forceFill(['status' => 'pending'])->save();
 
         $data = $this->asUser($admin)->getJson('/api/v1/admin/dashboard')->assertOk()->json('data');
@@ -97,7 +97,20 @@ class DashboardTest extends TestCase
 
         $this->assertSame(2, $kpis['farms.registered']['value']);
         $this->assertSame(1, $kpis['farms.pending']['value']);
-        $this->assertSame('ok', $kpis['health.db']['value']);
-        $this->assertSame(1, $data['widgets'][0]['data']['total']);
+        $this->assertSame('ok', $kpis['health.database']['value']);
+        $this->assertSame(2, $kpis['subs.trialing']['value']);
+        $this->assertSame(1, collect($data['widgets'])->firstWhere('key', 'farm_approvals')['data']['total']);
+    }
+
+    public function test_admin_dashboard_is_trimmed_to_the_platform_role(): void
+    {
+        $billing = $this->asUser($this->platformAdmin(['billing']))->getJson('/api/v1/admin/dashboard')->assertOk()->json('data');
+        $this->assertContains('platform.mrr', array_column($billing['kpis'], 'key'));
+        $this->assertNotContains('health.database', array_column($billing['kpis'], 'key'));
+
+        $support = $this->asUser($this->platformAdmin(['support']))->getJson('/api/v1/admin/dashboard')->assertOk()->json('data');
+        $this->assertContains('tickets.open', array_column($support['kpis'], 'key'));
+        $this->assertNotContains('approve_farm', array_column($support['quick_actions'], 'key'));
+        $this->assertNotContains('manage_plans', array_column($support['quick_actions'], 'key'));
     }
 }

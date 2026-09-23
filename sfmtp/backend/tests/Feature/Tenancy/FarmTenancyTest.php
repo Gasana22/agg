@@ -56,7 +56,7 @@ class FarmTenancyTest extends TestCase
 
     public function test_only_member_accounts_can_create_or_join_farms(): void
     {
-        $admin = $this->withMfa($this->member(['user_type' => 'platform_admin']));
+        $admin = $this->platformAdmin();
         $this->assertProblem($this->asUser($admin)->postJson('/api/v1/farms', ['name' => 'Nope']), 403, 'member_account_required');
 
         $farm = $this->farm();

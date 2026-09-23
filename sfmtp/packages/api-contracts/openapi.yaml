@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SFMTP API
-  version: 1.0.0-phase1
+  version: 1.1.0-phase2
   description: |
     Smart Farm Management & Traceability Platform REST API.
 
@@ -33,7 +33,13 @@ tags:
   - name: Audit
     description: Append-only record of user actions.
   - name: Admin
-    description: Platform administration (no farm operational data).
+    description: Platform administration (no farm operational data). Admin operations list the platform capability they need as x-capability.
+  - name: Billing
+    description: Plans, subscriptions and the owner's billing page.
+  - name: Catalog
+    description: Global reference catalogues (crops, breeds, units, …).
+  - name: Support
+    description: Support tickets and owner-granted, read-only support access.
 
 paths:
   /auth/login:
@@ -898,7 +904,8 @@ paths:
     get:
       tags: [Admin]
       operationId: getAdminDashboard
-      summary: Platform dashboard (platform admins only)
+      summary: Platform dashboard (platform admins only; trimmed to the caller's capabilities)
+      x-capability: dashboard.view
       responses:
         '200':
           description: Platform KPIs; never farm operational data
@@ -909,6 +916,793 @@ paths:
                 properties:
                   data: { $ref: '#/components/schemas/Dashboard' }
         '403': { $ref: '#/components/responses/Problem' }
+
+  /admin/farms:
+    get:
+      tags: [Admin]
+      operationId: adminListFarms
+      summary: List farms (metadata only)
+      x-capability: farms.view
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+        - { name: 'filter[status]', in: query, schema: { type: string, enum: [pending, active, suspended, closed] } }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Farms
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/AdminFarm' } }
+        '403': { $ref: '#/components/responses/Problem' }
+
+  /admin/farms/{farm}:
+    get:
+      tags: [Admin]
+      operationId: adminGetFarm
+      summary: Farm metadata with status history
+      x-capability: farms.view
+      parameters: [{ $ref: '#/components/parameters/Farm' }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminFarm' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /admin/farms/{farm}/approve:
+    post:
+      tags: [Admin]
+      operationId: adminApproveFarm
+      summary: Approve a pending farm
+      x-capability: farms.approve
+      parameters: [{ $ref: '#/components/parameters/Farm' }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminFarm' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /admin/farms/{farm}/suspend:
+    post:
+      tags: [Admin]
+      operationId: adminSuspendFarm
+      summary: Suspend a farm (billing staff only for non_payment)
+      x-capability: farms.suspend
+      parameters: [{ $ref: '#/components/parameters/Farm' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason_code]
+              properties:
+                reason_code: { type: string, enum: [non_payment, policy_violation, security, owner_request, other] }
+                note: { type: string, maxLength: 1000 }
+      responses:
+        '200': { $ref: '#/components/responses/AdminFarm' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /admin/farms/{farm}/unsuspend:
+    post:
+      tags: [Admin]
+      operationId: adminUnsuspendFarm
+      summary: Lift a suspension (back to active, or pending if never approved)
+      x-capability: farms.suspend
+      parameters: [{ $ref: '#/components/parameters/Farm' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: { type: string, maxLength: 1000 }
+      responses:
+        '200': { $ref: '#/components/responses/AdminFarm' }
+        '403': { $ref: '#/components/responses/Problem' }
+
+  /admin/farms/{farm}/reset-owner-password:
+    post:
+      tags: [Admin]
+      operationId: adminResetOwnerPassword
+      summary: Email the farm owner a password-reset link
+      x-capability: farms.reset_owner_password
+      parameters: [{ $ref: '#/components/parameters/Farm' }]
+      responses:
+        '202': { description: Link sent. The admin never sees or sets the password. }
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      operationId: adminListUsers
+      summary: List user accounts
+      x-capability: users.view
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+        - { name: 'filter[user_type]', in: query, schema: { type: string, enum: [platform_admin, member, party] } }
+        - { name: 'filter[status]', in: query, schema: { type: string, enum: [active, disabled] } }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/AdminUser' } }
+    post:
+      tags: [Admin]
+      operationId: adminInviteStaff
+      summary: Invite a platform staff member (they set a password via email)
+      x-capability: users.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, platform_roles]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                platform_roles: { type: array, items: { $ref: '#/components/schemas/PlatformRole' } }
+      responses:
+        '201':
+          description: Invited
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AdminUser' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /admin/users/{user}:
+    patch:
+      tags: [Admin]
+      operationId: adminUpdateUser
+      summary: Enable/disable an account or change a staff member's platform roles
+      x-capability: users.manage
+      parameters:
+        - { name: user, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [active, disabled] }
+                platform_roles: { type: array, items: { $ref: '#/components/schemas/PlatformRole' } }
+      responses:
+        '200':
+          description: Updated (disabling signs the user out everywhere)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AdminUser' }
+        '403': { $ref: '#/components/responses/Problem' }
+
+  /admin/settings:
+    get:
+      tags: [Admin]
+      operationId: adminGetSettings
+      summary: Platform settings with defaults
+      x-capability: settings.manage
+      responses:
+        '200': { $ref: '#/components/responses/Settings' }
+    put:
+      tags: [Admin]
+      operationId: adminUpdateSettings
+      summary: Update platform settings (validated per key)
+      x-capability: settings.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [settings]
+              properties:
+                settings: { type: object, additionalProperties: true }
+      responses:
+        '200': { $ref: '#/components/responses/Settings' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /admin/integrations:
+    get:
+      tags: [Admin]
+      operationId: adminListIntegrations
+      summary: Integration providers (secrets masked)
+      x-capability: integrations.manage
+      responses:
+        '200':
+          description: Providers, and the allowed providers per kind in meta
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Integration' } }
+                  meta:
+                    type: object
+                    properties:
+                      providers: { type: object, additionalProperties: { type: array, items: { type: string } } }
+    post:
+      tags: [Admin]
+      operationId: adminCreateIntegration
+      summary: Configure a provider
+      x-capability: integrations.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, provider, name]
+              properties:
+                kind: { $ref: '#/components/schemas/IntegrationKind' }
+                provider: { type: string }
+                name: { type: string }
+                config: { type: object, additionalProperties: { type: [string, 'null'] } }
+                is_enabled: { type: boolean }
+                is_default: { type: boolean }
+      responses:
+        '201': { $ref: '#/components/responses/Integration' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /admin/integrations/{integration}:
+    parameters:
+      - { name: integration, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      tags: [Admin]
+      operationId: adminUpdateIntegration
+      summary: Update a provider (masked values keep the stored secret; null removes a key)
+      x-capability: integrations.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                config: { type: object, additionalProperties: { type: [string, 'null'] } }
+                is_enabled: { type: boolean }
+                is_default: { type: boolean }
+      responses:
+        '200': { $ref: '#/components/responses/Integration' }
+    delete:
+      tags: [Admin]
+      operationId: adminDeleteIntegration
+      summary: Remove a provider configuration
+      x-capability: integrations.manage
+      responses:
+        '204': { description: Removed }
+
+  /admin/system/health:
+    get:
+      tags: [Admin]
+      operationId: adminSystemHealth
+      summary: Database, cache, queue and storage health
+      x-capability: system.view
+      responses:
+        '200':
+          description: Health checks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      checks:
+                        type: object
+                        additionalProperties:
+                          type: object
+                          properties:
+                            status: { type: string, enum: [ok, down] }
+                            latency_ms: { type: number }
+                            detail: {}
+                      versions: { type: object, additionalProperties: { type: string } }
+                      checked_at: { type: string, format: date-time }
+
+  /admin/system/audit-logs:
+    get:
+      tags: [Admin]
+      operationId: adminPlatformAuditLogs
+      summary: Platform audit trail (staff actions, sign-ins, billing)
+      x-capability: system.view
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+        - { name: 'filter[action]', in: query, schema: { type: string }, description: Prefix match }
+        - { name: 'filter[user_id]', in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Entries, newest first
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/AuditLog' } }
+
+  /admin/system/failed-jobs:
+    get:
+      tags: [Admin]
+      operationId: adminFailedJobs
+      summary: Recent failed queue jobs
+      x-capability: system.view
+      responses:
+        '200':
+          description: Up to 100 failed jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        queue: { type: string }
+                        job: { type: [string, 'null'] }
+                        error: { type: string }
+                        failed_at: { type: string, format: date-time }
+
+  /admin/system/backups:
+    get:
+      tags: [Admin]
+      operationId: adminBackups
+      summary: Recent backup runs
+      x-capability: system.view
+      responses:
+        '200':
+          description: Backup runs, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/BackupRun' } }
+
+  /admin/plans:
+    get:
+      tags: [Billing]
+      operationId: adminListPlans
+      summary: All plans, including inactive and non-public
+      x-capability: plans.manage
+      responses:
+        '200': { $ref: '#/components/responses/PlanList' }
+    post:
+      tags: [Billing]
+      operationId: adminCreatePlan
+      summary: Create a plan
+      x-capability: plans.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlanInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Plan' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /admin/plans/{plan}:
+    patch:
+      tags: [Billing]
+      operationId: adminUpdatePlan
+      summary: Update a plan (codes are permanent; deactivate instead of deleting)
+      x-capability: plans.manage
+      parameters:
+        - { name: plan, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlanInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Plan' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /admin/subscriptions:
+    get:
+      tags: [Billing]
+      operationId: adminListSubscriptions
+      summary: Subscriptions, soonest period end first
+      x-capability: subscriptions.view
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+        - { name: 'filter[status]', in: query, schema: { $ref: '#/components/schemas/SubscriptionStatus' } }
+        - { name: 'filter[expiring_within_days]', in: query, schema: { type: integer, minimum: 0 } }
+        - { name: q, in: query, schema: { type: string }, description: Organization name }
+      responses:
+        '200':
+          description: Subscriptions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Subscription' } }
+
+  /admin/subscriptions/{subscription}:
+    get:
+      tags: [Billing]
+      operationId: adminGetSubscription
+      summary: Subscription with usage, payments and history
+      x-capability: subscriptions.view
+      parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+      responses:
+        '200': { $ref: '#/components/responses/Subscription' }
+
+  /admin/subscriptions/{subscription}/payments:
+    post:
+      tags: [Billing]
+      operationId: adminRecordPayment
+      summary: Record a manual payment (a successful one starts or extends a paid period)
+      x-capability: subscriptions.manage
+      parameters:
+        - $ref: '#/components/parameters/SubscriptionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, currency, provider, provider_ref]
+              properties:
+                amount: { type: number, minimum: 0 }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                provider: { type: string, enum: [manual, bank_transfer, mobile_money, cash] }
+                provider_ref: { type: string, maxLength: 120 }
+                status: { type: string, enum: [succeeded, failed], default: succeeded }
+                paid_at: { type: string, format: date-time }
+                notes: { type: string, maxLength: 500 }
+      responses:
+        '201': { $ref: '#/components/responses/Subscription' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /admin/subscriptions/{subscription}/change-plan:
+    post:
+      tags: [Billing]
+      operationId: adminChangePlan
+      summary: Move a subscription to another plan (any active plan)
+      x-capability: subscriptions.manage
+      parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+      requestBody: { $ref: '#/components/requestBodies/ChangePlan' }
+      responses:
+        '200': { $ref: '#/components/responses/Subscription' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /admin/subscriptions/{subscription}/cancel:
+    post:
+      tags: [Billing]
+      operationId: adminCancelSubscription
+      summary: Cancel now or at the end of the period
+      x-capability: subscriptions.manage
+      parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [at_period_end, reason]
+              properties:
+                at_period_end: { type: boolean }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200': { $ref: '#/components/responses/Subscription' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /admin/subscriptions/{subscription}/extend:
+    post:
+      tags: [Billing]
+      operationId: adminExtendSubscription
+      summary: Extend a trial or paid period by N days
+      x-capability: subscriptions.manage
+      parameters: [{ $ref: '#/components/parameters/SubscriptionId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [days, reason]
+              properties:
+                days: { type: integer, minimum: 1, maximum: 90 }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200': { $ref: '#/components/responses/Subscription' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /billing/plans:
+    get:
+      tags: [Billing]
+      operationId: listPublicPlans
+      summary: Plans an owner can choose
+      responses:
+        '200': { $ref: '#/components/responses/PlanList' }
+
+  /billing/subscription:
+    get:
+      tags: [Billing]
+      operationId: getMySubscription
+      summary: The signed-in owner's subscription (works while farms are suspended)
+      responses:
+        '200': { $ref: '#/components/responses/Subscription' }
+        '403': { $ref: '#/components/responses/Problem' }
+
+  /billing/subscription/change-plan:
+    post:
+      tags: [Billing]
+      operationId: changeMyPlan
+      summary: Switch to another public plan within current usage
+      requestBody: { $ref: '#/components/requestBodies/ChangePlan' }
+      responses:
+        '200': { $ref: '#/components/responses/Subscription' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /billing/subscription/cancel:
+    post:
+      tags: [Billing]
+      operationId: cancelMySubscription
+      summary: Cancel at the end of the current period
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200': { $ref: '#/components/responses/Subscription' }
+
+  /billing/subscription/resume:
+    post:
+      tags: [Billing]
+      operationId: resumeMySubscription
+      summary: Withdraw a scheduled cancellation
+      responses:
+        '200': { $ref: '#/components/responses/Subscription' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /catalog/{catalog}:
+    get:
+      tags: [Catalog]
+      operationId: listCatalog
+      summary: Active entries of a global catalogue
+      parameters:
+        - $ref: '#/components/parameters/Catalog'
+        - { name: q, in: query, schema: { type: string } }
+        - { name: 'filter[parent_id]', in: query, schema: { type: string, format: uuid }, description: 'Crop for varieties; species for breeds' }
+      responses:
+        '200': { $ref: '#/components/responses/CatalogList' }
+
+  /admin/catalog/{catalog}:
+    parameters:
+      - $ref: '#/components/parameters/Catalog'
+    get:
+      tags: [Catalog]
+      operationId: adminListCatalog
+      summary: All entries, including inactive
+      x-capability: catalog.manage
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: 'filter[parent_id]', in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200': { $ref: '#/components/responses/CatalogList' }
+    post:
+      tags: [Catalog]
+      operationId: adminCreateCatalogEntry
+      summary: Add an entry (fields depend on the catalogue)
+      x-capability: catalog.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CatalogEntry' }
+      responses:
+        '201': { $ref: '#/components/responses/CatalogEntry' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /admin/catalog/{catalog}/{id}:
+    patch:
+      tags: [Catalog]
+      operationId: adminUpdateCatalogEntry
+      summary: Update an entry (codes and unit factors are permanent; set is_active false to retire)
+      x-capability: catalog.manage
+      parameters:
+        - $ref: '#/components/parameters/Catalog'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CatalogEntry' }
+      responses:
+        '200': { $ref: '#/components/responses/CatalogEntry' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /support/tickets:
+    get:
+      tags: [Support]
+      operationId: listMyTickets
+      summary: My tickets, plus all tickets of organizations I own
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200': { $ref: '#/components/responses/TicketPage' }
+    post:
+      tags: [Support]
+      operationId: openTicket
+      summary: Open a support ticket
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, body]
+              properties:
+                subject: { type: string, maxLength: 200 }
+                body: { type: string, maxLength: 10000 }
+                farm_id: { type: [string, 'null'], format: uuid }
+                priority: { $ref: '#/components/schemas/TicketPriority' }
+      responses:
+        '201': { $ref: '#/components/responses/Ticket' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /support/tickets/{ticket}:
+    get:
+      tags: [Support]
+      operationId: getMyTicket
+      summary: A ticket and its public conversation
+      parameters: [{ $ref: '#/components/parameters/Ticket' }]
+      responses:
+        '200': { $ref: '#/components/responses/Ticket' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /support/tickets/{ticket}/messages:
+    post:
+      tags: [Support]
+      operationId: replyToMyTicket
+      summary: Reply (re-opens the ticket)
+      parameters: [{ $ref: '#/components/parameters/Ticket' }]
+      requestBody: { $ref: '#/components/requestBodies/Message' }
+      responses:
+        '201': { $ref: '#/components/responses/Ticket' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /support/tickets/{ticket}/access-grants:
+    post:
+      tags: [Support]
+      operationId: grantSupportAccess
+      summary: Owner grants platform support read-only access to the ticket's farm (ADR-0005)
+      parameters: [{ $ref: '#/components/parameters/Ticket' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hours]
+              properties:
+                hours: { type: integer, minimum: 1, maximum: 72 }
+      responses:
+        '201':
+          description: Grant created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      type: { type: string, const: support_access_grant }
+                      farm_id: { type: string, format: uuid }
+                      expires_at: { type: string, format: date-time }
+                      active: { type: boolean }
+        '403': { $ref: '#/components/responses/Problem' }
+
+  /support/tickets/{ticket}/access-grants/{grant}:
+    delete:
+      tags: [Support]
+      operationId: revokeSupportAccess
+      summary: Owner revokes a grant
+      parameters:
+        - $ref: '#/components/parameters/Ticket'
+        - { name: grant, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Revoked }
+
+  /admin/support/tickets:
+    get:
+      tags: [Support]
+      operationId: adminListTickets
+      summary: Support queue
+      x-capability: support.view
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+        - { name: 'filter[status]', in: query, schema: { $ref: '#/components/schemas/TicketStatus' } }
+        - { name: 'filter[assigned_to]', in: query, schema: { type: string, enum: [me, none] } }
+        - { name: q, in: query, schema: { type: string }, description: Subject or exact reference }
+      responses:
+        '200': { $ref: '#/components/responses/TicketPage' }
+
+  /admin/support/tickets/{ticket}:
+    parameters:
+      - $ref: '#/components/parameters/Ticket'
+    get:
+      tags: [Support]
+      operationId: adminGetTicket
+      summary: Ticket with internal notes
+      x-capability: support.view
+      responses:
+        '200': { $ref: '#/components/responses/Ticket' }
+    patch:
+      tags: [Support]
+      operationId: adminUpdateTicket
+      summary: Change status, priority or assignee (resolving ends support access)
+      x-capability: support.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { $ref: '#/components/schemas/TicketStatus' }
+                priority: { $ref: '#/components/schemas/TicketPriority' }
+                assigned_to: { type: [string, 'null'], format: uuid }
+      responses:
+        '200': { $ref: '#/components/responses/Ticket' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /admin/support/tickets/{ticket}/messages:
+    post:
+      tags: [Support]
+      operationId: adminReplyToTicket
+      summary: Staff reply or internal note
+      x-capability: support.manage
+      parameters: [{ $ref: '#/components/parameters/Ticket' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, maxLength: 10000 }
+                is_internal: { type: boolean, default: false }
+      responses:
+        '201': { $ref: '#/components/responses/Ticket' }
 
 components:
   securitySchemes:
@@ -951,12 +1745,143 @@ components:
       description: 'Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true.'
       schema: { type: string, pattern: '^[A-Za-z0-9\-_]{8,128}$' }
 
+    SubscriptionId:
+      name: subscription
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Ticket:
+      name: ticket
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Catalog:
+      name: catalog
+      in: path
+      required: true
+      schema: { type: string, enum: [crops, crop-varieties, animal-species, animal-breeds, units, inventory-categories, activity-types] }
+
+  requestBodies:
+    ChangePlan:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [plan_code]
+            properties:
+              plan_code: { type: string }
+    Message:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [body]
+            properties:
+              body: { type: string, maxLength: 10000 }
+
   responses:
     Problem:
       description: RFC 9457 problem details
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
+
+    AdminFarm:
+      description: Farm metadata
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: '#/components/schemas/AdminFarm' }
+    Settings:
+      description: Settings
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    key: { type: string }
+                    label: { type: string }
+                    value: {}
+                    default: {}
+    Integration:
+      description: Integration provider
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: '#/components/schemas/Integration' }
+    Plan:
+      description: Plan
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: '#/components/schemas/Plan' }
+    PlanList:
+      description: Plans
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { type: array, items: { $ref: '#/components/schemas/Plan' } }
+    Subscription:
+      description: Subscription
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: '#/components/schemas/Subscription' }
+              meta:
+                type: object
+                properties:
+                  payment_id: { type: string, format: uuid }
+    CatalogList:
+      description: Catalogue entries
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { type: array, items: { $ref: '#/components/schemas/CatalogEntry' } }
+    CatalogEntry:
+      description: Catalogue entry
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: '#/components/schemas/CatalogEntry' }
+    Ticket:
+      description: Support ticket
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: { $ref: '#/components/schemas/Ticket' }
+    TicketPage:
+      description: Support tickets
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/CursorPage'
+              - type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Ticket' } }
 
   schemas:
     Problem:
@@ -1045,7 +1970,7 @@ components:
       type: object
       required: [type, id, name, dashboards]
       properties:
-        type: { type: string, enum: [platform, farm, supplier, customer] }
+        type: { type: string, enum: [platform, farm, support, supplier, customer] }
         id: { type: string }
         name: { type: string }
         code: { type: string }
@@ -1064,6 +1989,24 @@ components:
         dashboards:
           type: array
           items: { type: string, enum: [admin, owner, manager, agronomist, livestock, store, accountant, worker] }
+        subscription:
+          description: Farm workspaces only
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                status: { $ref: '#/components/schemas/SubscriptionStatus' }
+                current_period_end: { type: string, format: date }
+                grace_until: { type: [string, 'null'], format: date }
+                cancel_at_period_end: { type: boolean }
+        support_access:
+          description: Active owner-granted support access (owners' farm workspaces and support workspaces)
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                grant_id: { type: string, format: uuid }
+                expires_at: { type: string, format: date-time }
 
     FarmInput:
       type: object
@@ -1357,3 +2300,290 @@ components:
         edges:
           type: array
           items: { $ref: '#/components/schemas/GraphEdge' }
+
+    PlatformRole:
+      type: string
+      enum: [super_admin, support, billing]
+
+    Money:
+      type: object
+      properties:
+        amount: { type: string, description: decimal string }
+        currency: { type: string }
+
+    AdminFarm:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: admin_farm }
+        code: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [pending, active, suspended, closed] }
+        suspension_reason: { type: [string, 'null'] }
+        district: { type: [string, 'null'] }
+        country: { type: string }
+        size_ha: { type: [string, 'null'] }
+        organization:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: [string, 'null'] }
+        owner:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                id: { type: string }
+                name: { type: string }
+                email: { type: string }
+        member_count: { type: integer }
+        subscription:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                id: { type: string }
+                status: { $ref: '#/components/schemas/SubscriptionStatus' }
+                plan: { type: string }
+                current_period_end: { type: string, format: date }
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              from_status: { type: string }
+              to_status: { type: string }
+              reason_code: { type: [string, 'null'] }
+              note: { type: [string, 'null'] }
+              changed_by: { type: [string, 'null'] }
+              at: { type: string, format: date-time }
+        approved_at: { type: [string, 'null'], format: date-time }
+        suspended_at: { type: [string, 'null'], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    AdminUser:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: admin_user }
+        name: { type: string }
+        email: { type: string }
+        user_type: { type: string, enum: [platform_admin, member, party] }
+        status: { type: string, enum: [active, disabled] }
+        mfa_enabled: { type: boolean }
+        platform_roles: { type: array, items: { $ref: '#/components/schemas/PlatformRole' } }
+        farm_count: { type: integer }
+        last_login_at: { type: [string, 'null'], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    IntegrationKind:
+      type: string
+      enum: [sms, email, maps, weather, payment, push, accounting]
+
+    Integration:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: integration }
+        kind: { $ref: '#/components/schemas/IntegrationKind' }
+        provider: { type: string }
+        name: { type: string }
+        config:
+          type: object
+          additionalProperties: { type: string }
+          description: Keys containing key/secret/token/password/credential are masked as ••••last4
+        is_enabled: { type: boolean }
+        is_default: { type: boolean }
+        updated_at: { type: string, format: date-time }
+
+    BackupRun:
+      type: object
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [success, failed] }
+        started_at: { type: [string, 'null'], format: date-time }
+        finished_at: { type: string, format: date-time }
+        size_bytes: { type: [integer, 'null'] }
+        location: { type: [string, 'null'] }
+        checksum: { type: [string, 'null'] }
+        message: { type: [string, 'null'] }
+
+    PlanInput:
+      type: object
+      properties:
+        code: { type: string, pattern: '^[a-z0-9_]+$', description: Create only }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        price: { type: number, minimum: 0 }
+        currency: { type: string }
+        billing_period: { type: string, enum: [monthly, yearly] }
+        trial_days: { type: [integer, 'null'] }
+        max_farms: { type: [integer, 'null'], description: null = unlimited }
+        max_users: { type: [integer, 'null'] }
+        max_storage_mb: { type: [integer, 'null'] }
+        features: { type: array, items: { type: string } }
+        is_active: { type: boolean }
+        is_public: { type: boolean }
+        sort_order: { type: integer }
+
+    Plan:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: plan }
+        code: { type: string }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        price: { $ref: '#/components/schemas/Money' }
+        billing_period: { type: string, enum: [monthly, yearly] }
+        trial_days: { type: [integer, 'null'] }
+        limits:
+          type: object
+          properties:
+            farms: { type: [integer, 'null'] }
+            users: { type: [integer, 'null'] }
+            storage_mb: { type: [integer, 'null'] }
+        features: { type: array, items: { type: string } }
+        is_active: { type: boolean }
+        is_public: { type: boolean }
+        sort_order: { type: integer }
+
+    SubscriptionStatus:
+      type: string
+      enum: [trialing, active, grace, suspended, cancelled]
+
+    UsageItem:
+      type: object
+      properties:
+        used: { type: [integer, 'null'] }
+        limit: { type: [integer, 'null'] }
+
+    Subscription:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: subscription }
+        organization:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            owner:
+              oneOf:
+                - type: 'null'
+                - type: object
+                  properties:
+                    id: { type: string }
+                    name: { type: string }
+                    email: { type: string }
+        plan: { $ref: '#/components/schemas/Plan' }
+        status: { $ref: '#/components/schemas/SubscriptionStatus' }
+        current_period_start: { type: string, format: date }
+        current_period_end: { type: string, format: date }
+        grace_until: { type: [string, 'null'], format: date }
+        cancel_at_period_end: { type: boolean }
+        cancelled_at: { type: [string, 'null'], format: date-time }
+        usage:
+          type: object
+          properties:
+            farms: { $ref: '#/components/schemas/UsageItem' }
+            users: { $ref: '#/components/schemas/UsageItem' }
+            storage_mb: { $ref: '#/components/schemas/UsageItem' }
+        payments:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              amount: { $ref: '#/components/schemas/Money' }
+              provider: { type: string }
+              provider_ref: { type: string }
+              status: { type: string, enum: [pending, succeeded, failed, refunded] }
+              period_start: { type: [string, 'null'], format: date }
+              period_end: { type: [string, 'null'], format: date }
+              paid_at: { type: [string, 'null'], format: date-time }
+              notes: { type: [string, 'null'] }
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              event: { type: string }
+              from_status: { type: [string, 'null'] }
+              to_status: { type: string }
+              details: { type: [object, 'null'] }
+              changed_by: { type: [string, 'null'] }
+              at: { type: string, format: date-time }
+        version: { type: integer }
+        updated_at: { type: string, format: date-time }
+
+    CatalogEntry:
+      type: object
+      description: Common fields plus catalogue-specific ones (scientific_name, category, crop_id, maturity_days, species_id, purpose, dimension, to_base, kind, module)
+      additionalProperties: true
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string }
+        code: { type: string }
+        name: { type: string }
+        is_active: { type: boolean }
+
+    TicketStatus:
+      type: string
+      enum: [open, pending, resolved, closed]
+    TicketPriority:
+      type: string
+      enum: [low, normal, high, urgent]
+
+    Ticket:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: support_ticket }
+        reference: { type: string }
+        subject: { type: string }
+        status: { $ref: '#/components/schemas/TicketStatus' }
+        priority: { $ref: '#/components/schemas/TicketPriority' }
+        organization: { type: object, properties: { id: { type: string }, name: { type: string } } }
+        farm:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                id: { type: string }
+                name: { type: string }
+                code: { type: string }
+        opened_by: { type: object, properties: { id: { type: string }, name: { type: string } } }
+        assigned_to:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                id: { type: string }
+                name: { type: string }
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              author:
+                type: object
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+                  is_staff: { type: boolean }
+              body: { type: string }
+              is_internal: { type: boolean }
+              created_at: { type: string, format: date-time }
+        access_grants:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              expires_at: { type: string, format: date-time }
+              revoked_at: { type: [string, 'null'], format: date-time }
+              active: { type: boolean }
+        last_activity_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }

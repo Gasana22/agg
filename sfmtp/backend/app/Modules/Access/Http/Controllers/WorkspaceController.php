@@ -4,6 +4,7 @@ namespace App\Modules\Access\Http\Controllers;
 
 use App\Modules\Access\Application\Dashboards;
 use App\Modules\Access\Application\FarmPermissions;
+use App\Modules\Access\Contracts\WorkspaceContributor;
 use App\Modules\Identity\Contracts\MfaRequirement;
 use App\Modules\Tenancy\Domain\Enums\FarmStatus;
 use App\Modules\Tenancy\Domain\Enums\MembershipStatus;
@@ -28,15 +29,6 @@ class WorkspaceController
     {
         $user = $request->user();
         $workspaces = [];
-
-        if ($user->isPlatformAdmin()) {
-            $workspaces[] = [
-                'type' => 'platform',
-                'id' => 'platform',
-                'name' => 'SFMTP Administration',
-                'dashboards' => ['admin'],
-            ];
-        }
 
         $memberships = FarmUser::with('farm')
             ->where('user_id', $user->id)
@@ -65,6 +57,11 @@ class WorkspaceController
                 'permissions' => array_map(fn ($scope) => $scope->value, $grants),
                 'dashboards' => Dashboards::available($grants),
             ];
+        }
+
+        foreach (app()->tagged('sfmtp.workspace-contributors') as $contributor) {
+            /** @var WorkspaceContributor $contributor */
+            $workspaces = $contributor->contribute($user, $workspaces);
         }
 
         return new JsonResponse([

@@ -91,7 +91,7 @@ class RoleBoundaryTest extends TestCase
 
     public function test_system_admin_has_no_way_into_farm_data(): void
     {
-        $admin = $this->withMfa($this->member(['user_type' => 'platform_admin']));
+        $admin = $this->platformAdmin();
 
         foreach (['', '/traceability/batches', '/members', '/dashboards/owner', '/audit-logs'] as $path) {
             $this->assertSame(404, $this->asUser($admin)->getJson($this->url($path))->status(), $path);
