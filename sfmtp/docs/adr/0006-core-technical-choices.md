@@ -13,6 +13,6 @@
 | Backend structure | Modular monolith (Laravel modules) | One deployable, clear module boundaries, can be split later | Microservices (premature for team size and phase plan) |
 | Repo | Monorepo `backend/ web/ mobile/ packages/ infra/` + OpenAPI-generated clients | Contract stays in sync across three apps | Separate repos per app |
 | Mobile local DB | Drift (SQLite) + SQLCipher | Typed queries, migrations, encryption | Hive / Isar (weaker relational querying) |
-| Maps | Adapter over Google Maps / Mapbox; PostGIS on server | Provider choice is configurable (requirement §36) | Direct SDK coupling |
+| Maps | Adapter over Google Maps / Mapbox; GeoJSON on server ([ADR-0009](0009-geojson-geometry.md)), PostGIS optional later | Provider choice is configurable (requirement §36) | Direct SDK coupling |
 | Passwords | Argon2id | Current best practice | bcrypt (acceptable fallback) |
 | Password resets by admin | Admin can only trigger a reset link to the owner; never set or see passwords | Farm data belongs to the owner; an admin who could set a password could log in as the owner | Admin sets a temporary password |

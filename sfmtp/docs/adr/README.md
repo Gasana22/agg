@@ -13,6 +13,7 @@ consequences.
 | [0006](0006-core-technical-choices.md) | Core technical choices (UUIDv7, BFF tokens, PostgreSQL RLS, double-entry ledger, monorepo) | Accepted |
 | [0007](0007-web-session-handling.md) | Web session handling: BFF cookies, CSRF, refresh-race handling | Accepted |
 | [0008](0008-subscription-lifecycle.md) | Subscription lifecycle and how billing gates farm access | Accepted |
+| [0009](0009-geojson-geometry.md) | Farm geometry as GeoJSON, measured in the application | Accepted |
 
 ## Product-owner decisions (2026-09-23)
 

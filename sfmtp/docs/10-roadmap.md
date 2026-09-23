@@ -58,6 +58,32 @@ Everything in the Phase 2 row below, with these notes:
   and billing journeys were checked end to end in a browser. CI is green,
   including the Docker image builds.
 
+### Phase 3 — delivered
+
+Everything in the Phase 3 row below, with these notes:
+
+- **Geometry is GeoJSON, not PostGIS** ([ADR-0009](adr/0009-geojson-geometry.md)),
+  so the same code runs on PostgreSQL and MySQL. Area, centroid and bounding
+  box are computed on save; "outside its parent" and "overlaps another plot"
+  are warnings, not failures.
+- **Hierarchy:** block → section → plot, and a plot may also sit directly
+  under the farm, for small farms. Locations (stores, houses, water points…)
+  are pins, areas or both. Structure is archived, never deleted, and codes
+  are never reused.
+- **Invitations** are emailed one-time links (7 days). The invitee signs up,
+  or signs in with the invited email. The plan's user limit is checked when
+  inviting and again when accepting; pending invitations do not hold seats.
+- **Field workers** have `structure.view` with scope `assigned`. Until tasks
+  exist (Phase 6) they see no plots.
+- **Approval thresholds** are stored and editable now; finance and inventory
+  enforce them from Phases 7–8.
+- **Test gate met:** 163 API tests on PostgreSQL (160 on MySQL, plus 3 that
+  need PostgreSQL features) and 31 web unit tests. They include the
+  role guard-rails, the composite keys that reject cross-farm plot
+  references (structure and trace tables), and the cross-tenant sweep over
+  every new route. The owner, manager and invitee journeys were checked end
+  to end in a browser.
+
 ## Phase plan
 
 | Phase | Scope | Key deliverables | Exit criteria (test gate) |

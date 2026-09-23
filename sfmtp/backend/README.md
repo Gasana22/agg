@@ -8,14 +8,15 @@ own routes, migrations, domain, application services and HTTP layer
 |---|---|
 | `Identity` | Users, JWT access tokens, rotating refresh tokens, TOTP MFA, devices, password reset |
 | `Tenancy` | Organizations, farms (tenants), memberships, `TenantContext`, `BelongsToFarm` scope |
-| `Access` | Permission registry, role templates, guard-rails, farm permissions, workspaces |
+| `Access` | Permission registry, role templates, custom roles and guard-rails, invitations and member management, workspaces |
 | `Audit` | Append-only audit log |
 | `Billing` | Plans, subscriptions, lifecycle, payments, plan limits (`SubscriptionGate`), owner billing API |
 | `Platform` | Platform roles and capabilities, farm administration, accounts and staff, settings, integrations, system pages |
 | `Catalog` | Global catalogues (crops, varieties, species, breeds, units, inventory categories, activity types) |
+| `FarmStructure` | Blocks, sections, plots and locations with GeoJSON boundaries, soil profiles, geometry warnings (ADR-0009) |
 | `Support` | Tickets, internal notes, owner-granted read-only support access |
 | `Traceability` | Batch graph, hash-chained events, recorder, journeys, chain verification |
-| `Reporting` | Server-driven role dashboards and the admin dashboard |
+| `Reporting` | Server-driven role dashboards, "My farms" overview, the admin dashboard |
 
 Shared plumbing is in `app/Support` (problem+json errors, request IDs,
 idempotency keys, engine-specific DDL for triggers and row-level security).
@@ -43,6 +44,11 @@ is `Password123!`:
 | `billing@sfmtp.test` | Platform billing staff (MFA enrolment required) |
 | `owner@aggfarms.test` | Owner of AGG Mixed Farm and AGG Crop Farm (MFA enrolment required) |
 | `manager@`, `agronomist@`, `livestock@`, `store@`, `accountant@`, `worker@aggfarms.test` | One role each on AGG Mixed Farm |
+
+Both farms have a mapped layout: paddocks and livestock buildings on the mixed
+farm near Kakiri, and two blocks of three plots (with a soil test on B-3, the
+origin of the demo maize batches) on the crop farm near Seeta. Invitation
+emails go to the log with `MAIL_MAILER=log`.
 
 ## Test
 

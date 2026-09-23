@@ -26,6 +26,20 @@ The typed API client (`src/lib/api/schema.d.ts`) is generated from
 npm run api:types
 ```
 
+## Maps
+
+The farm map (`/farms/{id}/structure`) uses Leaflet with any XYZ tile server.
+`NEXT_PUBLIC_MAP_TILE_URL` and `NEXT_PUBLIC_MAP_ATTRIBUTION` choose it; the
+default is OpenStreetMap. Respect the provider's usage policy in production:
+set a commercial or self-hosted tile URL. `NEXT_PUBLIC_*` values are fixed at
+build time (`--build-arg` in the Docker image).
+
+## Public pages
+
+`/login`, the password reset pages and `/invite/{token}` work signed out. The
+BFF forwards `invitations/*` API calls without a session, so the invitation
+page can read the invitation and accept it by creating an account.
+
 ## Develop
 
 ```bash

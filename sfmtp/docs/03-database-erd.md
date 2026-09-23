@@ -18,7 +18,7 @@ PostgreSQL 16 (with PostGIS) is the primary engine. The MySQL notes are in
 | Quantities | `numeric(14,3)` plus `unit_id` → `units` | Kg, litres, heads, bags… |
 | Enums | `text` + `CHECK (col IN (…))`, mirrored by PHP backed enums | Portable across Postgres and MySQL |
 | Status history | State changes are written to `<entity>_status_history` or trace events, not just overwritten | Auditability |
-| Geo | `geography(Point,4326)` for GPS points, `geography(Polygon,4326)` for boundaries, plus `gps_accuracy_m` | Maps and geo-traceability |
+| Geo | GPS points as `latitude` / `longitude` decimals plus `gps_accuracy_m`; boundaries as GeoJSON with derived area, centroid and bounding box ([ADR-0009](adr/0009-geojson-geometry.md)). The diagrams below still say `geography` for brevity | Maps and geo-traceability on both engines |
 | Large append-only tables | Range-partitioned by month: `trace_events`, `audit_logs`, `worker_gps`, `notifications`, `system_logs` | Performance and retention |
 
 Diagrams show the key columns and relationships only. The complete column
@@ -274,9 +274,16 @@ Constraints
   one `is_owner = true` per farm.
 - A trigger rejects `farm_users` rows whose user has
   `user_type = 'platform_admin'` ([02 §5](02-tenant-isolation.md#5-system-administrator-boundary)).
-- `farm_plots.boundary` must lie inside its block's boundary. This is checked
-  by the service, with PostGIS `ST_Within` as a warning rather than a hard
-  failure, because GPS data is imprecise.
+- `farm_plots.boundary` should lie inside its section's boundary, and plots
+  should not overlap. The service checks both and returns warnings, not
+  failures, because GPS data is imprecise ([ADR-0009](adr/0009-geojson-geometry.md)).
+- `farm_sections.block_id`, `farm_plots.section_id` (nullable: a plot can sit
+  directly under the farm) and `farm_locations.plot_id` are composite
+  `(farm_id, …)` foreign keys. Structure rows are archived (`deleted_at`),
+  and `code` is unique per farm including archived rows.
+- `farm_invitations` holds a SHA-256 hash of the emailed token, the invited
+  email, expiry (7 days) and accepted / revoked markers;
+  `farm_invitation_roles` links it to `farm_roles` by composite key.
 
 ## 4. Crops
 

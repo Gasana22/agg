@@ -49,7 +49,7 @@ Legend: **F** full (create/edit/archive) · **A** approve · **C** create/record
 | Module / capability | Owner | Manager | Agronomist | Livestock Mgr | Store Mgr | Accountant | Field Worker |
 |---|---|---|---|---|---|---|---|
 | Farm profile & settings | F | V | V | V | V | V | — |
-| Farm structure (blocks, sections, plots) | F | F | V (edit soil data) | V | V | V | V s |
+| Farm structure (blocks, sections, plots) | F | F (incl. soil data) | V (edit soil data) | V | V | V | V s |
 | Users, roles & permissions | F | invite workers only | — | — | — | — | — |
 | Subscription & billing | F | — | — | — | — | — | — |
 | Crop plans & cycles | F A $ | F | F | — | — | V $ | — |
@@ -103,6 +103,11 @@ roles:
 | A role with `worker.self` (Field Worker) can never be granted `finance.*`, `finance.values.view`, `inventory.values.view`, `payroll.*` | Validation when editing roles |
 | Nobody can hard-delete traceability or audit records | No permission exists for it. The DB rejects it ([07](07-traceability-and-audit.md)) |
 | Approvals: whoever creates a record above the threshold cannot also approve it (four-eyes), unless they are the owner | Checked in the approval policy |
+| The owner's membership cannot be suspended, re-roled or removed, and the owner role cannot be given to anyone else | `guard_rail_owner` / `guard_rail_owner_role` in `Memberships` and `RoleService` |
+| Nobody changes their own membership (roles or status) | `guard_rail_self` |
+| A member with only `members.invite_workers` (the Farm Manager) can invite into field-worker roles only, i.e. roles holding `worker.self` | Checked on invite, resend and withdraw |
+| Built-in roles cannot be deleted; a custom role cannot be deleted while members or pending invitations use it | `system_role` / `role_in_use` |
+| Copying a role never copies owner-only permissions | `RoleService::createRole` |
 
 ## 5. Platform and portal permissions
 

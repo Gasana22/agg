@@ -14,7 +14,8 @@ REST API.
 | 0 — Design | ✅ Done ([docs](docs/)) |
 | 1 — Architecture & foundation | ✅ Done: identity + MFA, multi-tenancy, permissions, audit log, traceability core, dashboards framework, web shell, CI |
 | 2 — Platform administration | ✅ Done: platform roles, farm approval/suspension, plans & subscriptions with limits and lifecycle, owner billing page, global catalogues, integrations, settings, system health, support tickets with owner-granted read-only access |
-| 3 — Farm management | Next |
+| 3 — Farm management | ✅ Done: farm map with blocks / sections / plots / locations and soil tests, member invitations, member management, custom roles and the role editor, farm policies, "My farms" |
+| 4 — Crop management | Next |
 
 ## Repository layout
 
