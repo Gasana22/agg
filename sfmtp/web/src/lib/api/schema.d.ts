@@ -546,10 +546,687 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Platform dashboard (platform admins only) */
+        /** Platform dashboard (platform admins only; trimmed to the caller's capabilities) */
         get: operations["getAdminDashboard"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/farms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List farms (metadata only) */
+        get: operations["adminListFarms"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/farms/{farm}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Farm metadata with status history */
+        get: operations["adminGetFarm"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/farms/{farm}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a pending farm */
+        post: operations["adminApproveFarm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/farms/{farm}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suspend a farm (billing staff only for non_payment) */
+        post: operations["adminSuspendFarm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/farms/{farm}/unsuspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lift a suspension (back to active, or pending if never approved) */
+        post: operations["adminUnsuspendFarm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/farms/{farm}/reset-owner-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Email the farm owner a password-reset link */
+        post: operations["adminResetOwnerPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List user accounts */
+        get: operations["adminListUsers"];
+        put?: never;
+        /** Invite a platform staff member (they set a password via email) */
+        post: operations["adminInviteStaff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{user}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Enable/disable an account or change a staff member's platform roles */
+        patch: operations["adminUpdateUser"];
+        trace?: never;
+    };
+    "/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Platform settings with defaults */
+        get: operations["adminGetSettings"];
+        /** Update platform settings (validated per key) */
+        put: operations["adminUpdateSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Integration providers (secrets masked) */
+        get: operations["adminListIntegrations"];
+        put?: never;
+        /** Configure a provider */
+        post: operations["adminCreateIntegration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integrations/{integration}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                integration: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a provider configuration */
+        delete: operations["adminDeleteIntegration"];
+        options?: never;
+        head?: never;
+        /** Update a provider (masked values keep the stored secret; null removes a key) */
+        patch: operations["adminUpdateIntegration"];
+        trace?: never;
+    };
+    "/admin/system/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Database, cache, queue and storage health */
+        get: operations["adminSystemHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/system/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Platform audit trail (staff actions, sign-ins, billing) */
+        get: operations["adminPlatformAuditLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/system/failed-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent failed queue jobs */
+        get: operations["adminFailedJobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/system/backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent backup runs */
+        get: operations["adminBackups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** All plans, including inactive and non-public */
+        get: operations["adminListPlans"];
+        put?: never;
+        /** Create a plan */
+        post: operations["adminCreatePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/plans/{plan}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update a plan (codes are permanent; deactivate instead of deleting) */
+        patch: operations["adminUpdatePlan"];
+        trace?: never;
+    };
+    "/admin/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Subscriptions, soonest period end first */
+        get: operations["adminListSubscriptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/subscriptions/{subscription}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Subscription with usage, payments and history */
+        get: operations["adminGetSubscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/subscriptions/{subscription}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a manual payment (a successful one starts or extends a paid period) */
+        post: operations["adminRecordPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/subscriptions/{subscription}/change-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Move a subscription to another plan (any active plan) */
+        post: operations["adminChangePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/subscriptions/{subscription}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel now or at the end of the period */
+        post: operations["adminCancelSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/subscriptions/{subscription}/extend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Extend a trial or paid period by N days */
+        post: operations["adminExtendSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Plans an owner can choose */
+        get: operations["listPublicPlans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The signed-in owner's subscription (works while farms are suspended) */
+        get: operations["getMySubscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription/change-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Switch to another public plan within current usage */
+        post: operations["changeMyPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel at the end of the current period */
+        post: operations["cancelMySubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw a scheduled cancellation */
+        post: operations["resumeMySubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/catalog/{catalog}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active entries of a global catalogue */
+        get: operations["listCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/catalog/{catalog}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                catalog: components["parameters"]["Catalog"];
+            };
+            cookie?: never;
+        };
+        /** All entries, including inactive */
+        get: operations["adminListCatalog"];
+        put?: never;
+        /** Add an entry (fields depend on the catalogue) */
+        post: operations["adminCreateCatalogEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/catalog/{catalog}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update an entry (codes and unit factors are permanent; set is_active false to retire) */
+        patch: operations["adminUpdateCatalogEntry"];
+        trace?: never;
+    };
+    "/support/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My tickets, plus all tickets of organizations I own */
+        get: operations["listMyTickets"];
+        put?: never;
+        /** Open a support ticket */
+        post: operations["openTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{ticket}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A ticket and its public conversation */
+        get: operations["getMyTicket"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{ticket}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reply (re-opens the ticket) */
+        post: operations["replyToMyTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{ticket}/access-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Owner grants platform support read-only access to the ticket's farm (ADR-0005) */
+        post: operations["grantSupportAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{ticket}/access-grants/{grant}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Owner revokes a grant */
+        delete: operations["revokeSupportAccess"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/support/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Support queue */
+        get: operations["adminListTickets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/support/tickets/{ticket}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket: components["parameters"]["Ticket"];
+            };
+            cookie?: never;
+        };
+        /** Ticket with internal notes */
+        get: operations["adminGetTicket"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change status, priority or assignee (resolving ends support access) */
+        patch: operations["adminUpdateTicket"];
+        trace?: never;
+    };
+    "/admin/support/tickets/{ticket}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Staff reply or internal note */
+        post: operations["adminReplyToTicket"];
         delete?: never;
         options?: never;
         head?: never;
@@ -640,7 +1317,7 @@ export interface components {
         Scope: "all" | "assigned" | "own";
         Workspace: {
             /** @enum {string} */
-            type: "platform" | "farm" | "supplier" | "customer";
+            type: "platform" | "farm" | "support" | "supplier" | "customer";
             id: string;
             name: string;
             code?: string;
@@ -654,6 +1331,22 @@ export interface components {
                 [key: string]: components["schemas"]["Scope"];
             };
             dashboards: ("admin" | "owner" | "manager" | "agronomist" | "livestock" | "store" | "accountant" | "worker")[];
+            /** @description Farm workspaces only */
+            subscription?: null | {
+                status?: components["schemas"]["SubscriptionStatus"];
+                /** Format: date */
+                current_period_end?: string;
+                /** Format: date */
+                grace_until?: string | null;
+                cancel_at_period_end?: boolean;
+            };
+            /** @description Active owner-granted support access (owners' farm workspaces and support workspaces) */
+            support_access?: null | {
+                /** Format: uuid */
+                grant_id?: string;
+                /** Format: date-time */
+                expires_at?: string;
+            };
         };
         FarmInput: {
             name?: string;
@@ -920,6 +1613,281 @@ export interface components {
             nodes?: components["schemas"]["GraphNode"][];
             edges?: components["schemas"]["GraphEdge"][];
         };
+        /** @enum {string} */
+        PlatformRole: "super_admin" | "support" | "billing";
+        Money: {
+            /** @description decimal string */
+            amount?: string;
+            currency?: string;
+        };
+        AdminFarm: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "admin_farm";
+            code?: string;
+            name?: string;
+            /** @enum {string} */
+            status?: "pending" | "active" | "suspended" | "closed";
+            suspension_reason?: string | null;
+            district?: string | null;
+            country?: string;
+            size_ha?: string | null;
+            organization?: {
+                id?: string;
+                name?: string | null;
+            };
+            owner?: null | {
+                id?: string;
+                name?: string;
+                email?: string;
+            };
+            member_count?: number;
+            subscription?: null | {
+                id?: string;
+                status?: components["schemas"]["SubscriptionStatus"];
+                plan?: string;
+                /** Format: date */
+                current_period_end?: string;
+            };
+            history?: {
+                from_status?: string;
+                to_status?: string;
+                reason_code?: string | null;
+                note?: string | null;
+                changed_by?: string | null;
+                /** Format: date-time */
+                at?: string;
+            }[];
+            /** Format: date-time */
+            approved_at?: string | null;
+            /** Format: date-time */
+            suspended_at?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        AdminUser: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "admin_user";
+            name?: string;
+            email?: string;
+            /** @enum {string} */
+            user_type?: "platform_admin" | "member" | "party";
+            /** @enum {string} */
+            status?: "active" | "disabled";
+            mfa_enabled?: boolean;
+            platform_roles?: components["schemas"]["PlatformRole"][];
+            farm_count?: number;
+            /** Format: date-time */
+            last_login_at?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        /** @enum {string} */
+        IntegrationKind: "sms" | "email" | "maps" | "weather" | "payment" | "push" | "accounting";
+        Integration: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "integration";
+            kind?: components["schemas"]["IntegrationKind"];
+            provider?: string;
+            name?: string;
+            /** @description Keys containing key/secret/token/password/credential are masked as ••••last4 */
+            config?: {
+                [key: string]: string;
+            };
+            is_enabled?: boolean;
+            is_default?: boolean;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        BackupRun: {
+            id?: string;
+            /** @enum {string} */
+            status?: "success" | "failed";
+            /** Format: date-time */
+            started_at?: string | null;
+            /** Format: date-time */
+            finished_at?: string;
+            size_bytes?: number | null;
+            location?: string | null;
+            checksum?: string | null;
+            message?: string | null;
+        };
+        PlanInput: {
+            /** @description Create only */
+            code?: string;
+            name?: string;
+            description?: string | null;
+            price?: number;
+            currency?: string;
+            /** @enum {string} */
+            billing_period?: "monthly" | "yearly";
+            trial_days?: number | null;
+            /** @description null = unlimited */
+            max_farms?: number | null;
+            max_users?: number | null;
+            max_storage_mb?: number | null;
+            features?: string[];
+            is_active?: boolean;
+            is_public?: boolean;
+            sort_order?: number;
+        };
+        Plan: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "plan";
+            code?: string;
+            name?: string;
+            description?: string | null;
+            price?: components["schemas"]["Money"];
+            /** @enum {string} */
+            billing_period?: "monthly" | "yearly";
+            trial_days?: number | null;
+            limits?: {
+                farms?: number | null;
+                users?: number | null;
+                storage_mb?: number | null;
+            };
+            features?: string[];
+            is_active?: boolean;
+            is_public?: boolean;
+            sort_order?: number;
+        };
+        /** @enum {string} */
+        SubscriptionStatus: "trialing" | "active" | "grace" | "suspended" | "cancelled";
+        UsageItem: {
+            used?: number | null;
+            limit?: number | null;
+        };
+        Subscription: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "subscription";
+            organization?: {
+                id?: string;
+                name?: string;
+                owner?: null | {
+                    id?: string;
+                    name?: string;
+                    email?: string;
+                };
+            };
+            plan?: components["schemas"]["Plan"];
+            status?: components["schemas"]["SubscriptionStatus"];
+            /** Format: date */
+            current_period_start?: string;
+            /** Format: date */
+            current_period_end?: string;
+            /** Format: date */
+            grace_until?: string | null;
+            cancel_at_period_end?: boolean;
+            /** Format: date-time */
+            cancelled_at?: string | null;
+            usage?: {
+                farms?: components["schemas"]["UsageItem"];
+                users?: components["schemas"]["UsageItem"];
+                storage_mb?: components["schemas"]["UsageItem"];
+            };
+            payments?: {
+                id?: string;
+                amount?: components["schemas"]["Money"];
+                provider?: string;
+                provider_ref?: string;
+                /** @enum {string} */
+                status?: "pending" | "succeeded" | "failed" | "refunded";
+                /** Format: date */
+                period_start?: string | null;
+                /** Format: date */
+                period_end?: string | null;
+                /** Format: date-time */
+                paid_at?: string | null;
+                notes?: string | null;
+            }[];
+            history?: {
+                event?: string;
+                from_status?: string | null;
+                to_status?: string;
+                details?: Record<string, never> | null;
+                changed_by?: string | null;
+                /** Format: date-time */
+                at?: string;
+            }[];
+            version?: number;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        /** @description Common fields plus catalogue-specific ones (scientific_name, category, crop_id, maturity_days, species_id, purpose, dimension, to_base, kind, module) */
+        CatalogEntry: {
+            /** Format: uuid */
+            id?: string;
+            type?: string;
+            code?: string;
+            name?: string;
+            is_active?: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @enum {string} */
+        TicketStatus: "open" | "pending" | "resolved" | "closed";
+        /** @enum {string} */
+        TicketPriority: "low" | "normal" | "high" | "urgent";
+        Ticket: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "support_ticket";
+            reference?: string;
+            subject?: string;
+            status?: components["schemas"]["TicketStatus"];
+            priority?: components["schemas"]["TicketPriority"];
+            organization?: {
+                id?: string;
+                name?: string;
+            };
+            farm?: null | {
+                id?: string;
+                name?: string;
+                code?: string;
+            };
+            opened_by?: {
+                id?: string;
+                name?: string;
+            };
+            assigned_to?: null | {
+                id?: string;
+                name?: string;
+            };
+            messages?: {
+                id?: string;
+                author?: {
+                    id?: string;
+                    name?: string;
+                    is_staff?: boolean;
+                };
+                body?: string;
+                is_internal?: boolean;
+                /** Format: date-time */
+                created_at?: string;
+            }[];
+            access_grants?: {
+                id?: string;
+                /** Format: date-time */
+                expires_at?: string;
+                /** Format: date-time */
+                revoked_at?: string | null;
+                active?: boolean;
+            }[];
+            /** Format: date-time */
+            last_activity_at?: string;
+            /** Format: date-time */
+            created_at?: string;
+        };
     };
     responses: {
         /** @description RFC 9457 problem details */
@@ -929,6 +1897,125 @@ export interface components {
             };
             content: {
                 "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Farm metadata */
+        AdminFarm: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    data?: components["schemas"]["AdminFarm"];
+                };
+            };
+        };
+        /** @description Settings */
+        Settings: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    data?: {
+                        key?: string;
+                        label?: string;
+                        value?: unknown;
+                        default?: unknown;
+                    }[];
+                };
+            };
+        };
+        /** @description Integration provider */
+        Integration: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    data?: components["schemas"]["Integration"];
+                };
+            };
+        };
+        /** @description Plan */
+        Plan: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    data?: components["schemas"]["Plan"];
+                };
+            };
+        };
+        /** @description Plans */
+        PlanList: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    data?: components["schemas"]["Plan"][];
+                };
+            };
+        };
+        /** @description Subscription */
+        Subscription: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    data?: components["schemas"]["Subscription"];
+                    meta?: {
+                        /** Format: uuid */
+                        payment_id?: string;
+                    };
+                };
+            };
+        };
+        /** @description Catalogue entries */
+        CatalogList: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    data?: components["schemas"]["CatalogEntry"][];
+                };
+            };
+        };
+        /** @description Catalogue entry */
+        CatalogEntry: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    data?: components["schemas"]["CatalogEntry"];
+                };
+            };
+        };
+        /** @description Support ticket */
+        Ticket: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    data?: components["schemas"]["Ticket"];
+                };
+            };
+        };
+        /** @description Support tickets */
+        TicketPage: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["CursorPage"] & {
+                    data?: components["schemas"]["Ticket"][];
+                };
             };
         };
     };
@@ -941,8 +2028,26 @@ export interface components {
         PerPage: number;
         /** @description Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true. */
         IdempotencyKey: string;
+        SubscriptionId: string;
+        Ticket: string;
+        Catalog: "crops" | "crop-varieties" | "animal-species" | "animal-breeds" | "units" | "inventory-categories" | "activity-types";
     };
-    requestBodies: never;
+    requestBodies: {
+        ChangePlan: {
+            content: {
+                "application/json": {
+                    plan_code: string;
+                };
+            };
+        };
+        Message: {
+            content: {
+                "application/json": {
+                    body: string;
+                };
+            };
+        };
+    };
     headers: never;
     pathItems: never;
 }
@@ -2044,6 +3149,1010 @@ export interface operations {
                 };
             };
             403: components["responses"]["Problem"];
+        };
+    };
+    adminListFarms: {
+        parameters: {
+            query?: {
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+                "filter[status]"?: "pending" | "active" | "suspended" | "closed";
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Farms */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["AdminFarm"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    adminGetFarm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["AdminFarm"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    adminApproveFarm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["AdminFarm"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    adminSuspendFarm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    reason_code: "non_payment" | "policy_violation" | "security" | "owner_request" | "other";
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["AdminFarm"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    adminUnsuspendFarm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["AdminFarm"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    adminResetOwnerPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link sent. The admin never sees or sets the password. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminListUsers: {
+        parameters: {
+            query?: {
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+                "filter[user_type]"?: "platform_admin" | "member" | "party";
+                "filter[status]"?: "active" | "disabled";
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["AdminUser"][];
+                    };
+                };
+            };
+        };
+    };
+    adminInviteStaff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    /** Format: email */
+                    email: string;
+                    platform_roles: components["schemas"]["PlatformRole"][];
+                };
+            };
+        };
+        responses: {
+            /** @description Invited */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AdminUser"];
+                    };
+                };
+            };
+            422: components["responses"]["Problem"];
+        };
+    };
+    adminUpdateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    status?: "active" | "disabled";
+                    platform_roles?: components["schemas"]["PlatformRole"][];
+                };
+            };
+        };
+        responses: {
+            /** @description Updated (disabling signs the user out everywhere) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AdminUser"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    adminGetSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Settings"];
+        };
+    };
+    adminUpdateSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    settings: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Settings"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    adminListIntegrations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Providers, and the allowed providers per kind in meta */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Integration"][];
+                        meta?: {
+                            providers?: {
+                                [key: string]: string[];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
+    adminCreateIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    kind: components["schemas"]["IntegrationKind"];
+                    provider: string;
+                    name: string;
+                    config?: {
+                        [key: string]: string | null;
+                    };
+                    is_enabled?: boolean;
+                    is_default?: boolean;
+                };
+            };
+        };
+        responses: {
+            201: components["responses"]["Integration"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    adminDeleteIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                integration: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminUpdateIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                integration: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    config?: {
+                        [key: string]: string | null;
+                    };
+                    is_enabled?: boolean;
+                    is_default?: boolean;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Integration"];
+        };
+    };
+    adminSystemHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Health checks */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            checks?: {
+                                [key: string]: {
+                                    /** @enum {string} */
+                                    status?: "ok" | "down";
+                                    latency_ms?: number;
+                                    detail?: unknown;
+                                };
+                            };
+                            versions?: {
+                                [key: string]: string;
+                            };
+                            /** Format: date-time */
+                            checked_at?: string;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    adminPlatformAuditLogs: {
+        parameters: {
+            query?: {
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+                /** @description Prefix match */
+                "filter[action]"?: string;
+                "filter[user_id]"?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Entries, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["AuditLog"][];
+                    };
+                };
+            };
+        };
+    };
+    adminFailedJobs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Up to 100 failed jobs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            id?: string;
+                            queue?: string;
+                            job?: string | null;
+                            error?: string;
+                            /** Format: date-time */
+                            failed_at?: string;
+                        }[];
+                    };
+                };
+            };
+        };
+    };
+    adminBackups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Backup runs, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["BackupRun"][];
+                    };
+                };
+            };
+        };
+    };
+    adminListPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["PlanList"];
+        };
+    };
+    adminCreatePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanInput"];
+            };
+        };
+        responses: {
+            201: components["responses"]["Plan"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    adminUpdatePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanInput"];
+            };
+        };
+        responses: {
+            200: components["responses"]["Plan"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    adminListSubscriptions: {
+        parameters: {
+            query?: {
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+                "filter[status]"?: components["schemas"]["SubscriptionStatus"];
+                "filter[expiring_within_days]"?: number;
+                /** @description Organization name */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subscriptions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["Subscription"][];
+                    };
+                };
+            };
+        };
+    };
+    adminGetSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscription: components["parameters"]["SubscriptionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Subscription"];
+        };
+    };
+    adminRecordPayment: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                subscription: components["parameters"]["SubscriptionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    amount: number;
+                    currency: string;
+                    /** @enum {string} */
+                    provider: "manual" | "bank_transfer" | "mobile_money" | "cash";
+                    provider_ref: string;
+                    /**
+                     * @default succeeded
+                     * @enum {string}
+                     */
+                    status?: "succeeded" | "failed";
+                    /** Format: date-time */
+                    paid_at?: string;
+                    notes?: string;
+                };
+            };
+        };
+        responses: {
+            201: components["responses"]["Subscription"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    adminChangePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscription: components["parameters"]["SubscriptionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["ChangePlan"];
+        responses: {
+            200: components["responses"]["Subscription"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    adminCancelSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscription: components["parameters"]["SubscriptionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    at_period_end: boolean;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Subscription"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    adminExtendSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscription: components["parameters"]["SubscriptionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    days: number;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Subscription"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    listPublicPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["PlanList"];
+        };
+    };
+    getMySubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Subscription"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    changeMyPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["ChangePlan"];
+        responses: {
+            200: components["responses"]["Subscription"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    cancelMySubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Subscription"];
+        };
+    };
+    resumeMySubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Subscription"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    listCatalog: {
+        parameters: {
+            query?: {
+                q?: string;
+                /** @description Crop for varieties; species for breeds */
+                "filter[parent_id]"?: string;
+            };
+            header?: never;
+            path: {
+                catalog: components["parameters"]["Catalog"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["CatalogList"];
+        };
+    };
+    adminListCatalog: {
+        parameters: {
+            query?: {
+                q?: string;
+                "filter[parent_id]"?: string;
+            };
+            header?: never;
+            path: {
+                catalog: components["parameters"]["Catalog"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["CatalogList"];
+        };
+    };
+    adminCreateCatalogEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                catalog: components["parameters"]["Catalog"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogEntry"];
+            };
+        };
+        responses: {
+            201: components["responses"]["CatalogEntry"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    adminUpdateCatalogEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                catalog: components["parameters"]["Catalog"];
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogEntry"];
+            };
+        };
+        responses: {
+            200: components["responses"]["CatalogEntry"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listMyTickets: {
+        parameters: {
+            query?: {
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["TicketPage"];
+        };
+    };
+    openTicket: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    subject: string;
+                    body: string;
+                    /** Format: uuid */
+                    farm_id?: string | null;
+                    priority?: components["schemas"]["TicketPriority"];
+                };
+            };
+        };
+        responses: {
+            201: components["responses"]["Ticket"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getMyTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket: components["parameters"]["Ticket"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Ticket"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    replyToMyTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket: components["parameters"]["Ticket"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["Message"];
+        responses: {
+            201: components["responses"]["Ticket"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    grantSupportAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket: components["parameters"]["Ticket"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    hours: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Grant created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            /** Format: uuid */
+                            id?: string;
+                            /** @constant */
+                            type?: "support_access_grant";
+                            /** Format: uuid */
+                            farm_id?: string;
+                            /** Format: date-time */
+                            expires_at?: string;
+                            active?: boolean;
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    revokeSupportAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket: components["parameters"]["Ticket"];
+                grant: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    adminListTickets: {
+        parameters: {
+            query?: {
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+                "filter[status]"?: components["schemas"]["TicketStatus"];
+                "filter[assigned_to]"?: "me" | "none";
+                /** @description Subject or exact reference */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["TicketPage"];
+        };
+    };
+    adminGetTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket: components["parameters"]["Ticket"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Ticket"];
+        };
+    };
+    adminUpdateTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket: components["parameters"]["Ticket"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    status?: components["schemas"]["TicketStatus"];
+                    priority?: components["schemas"]["TicketPriority"];
+                    /** Format: uuid */
+                    assigned_to?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["Ticket"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    adminReplyToTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket: components["parameters"]["Ticket"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    body: string;
+                    /** @default false */
+                    is_internal?: boolean;
+                };
+            };
+        };
+        responses: {
+            201: components["responses"]["Ticket"];
         };
     };
 }
