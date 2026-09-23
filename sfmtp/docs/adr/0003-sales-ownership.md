@@ -1,6 +1,6 @@
 # ADR-0003 — Sales and pricing ownership
 
-**Status:** Proposed — needs confirmation
+**Status:** Accepted (confirmed by the product owner, 2026-09-23)
 
 ## Context
 The requirements include sales, products and customers, but no role owns

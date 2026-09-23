@@ -1,6 +1,6 @@
 # ADR-0006 — Core technical choices
 
-**Status:** Proposed
+**Status:** Accepted (2026-09-23)
 
 | Decision | Choice | Why | Alternatives rejected |
 |---|---|---|---|

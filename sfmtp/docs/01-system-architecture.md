@@ -86,7 +86,7 @@ Notes
 ```
 sfmtp/
 ├── backend/                 Laravel 12 API
-├── web/                     Next.js 15 + TypeScript + Tailwind + shadcn/ui
+├── web/                     Next.js 16 + TypeScript + Tailwind + shadcn-style components
 ├── mobile/                  Flutter app (Android + iOS)
 ├── packages/
 │   └── api-contracts/       OpenAPI 3.1 spec; source for generated TS + Dart clients
@@ -222,7 +222,7 @@ a farm or a portal.
   `(supplier)`, `(customer)` and `(public)`. Each group has its own layout,
   navigation and dashboard. There is no shared generic dashboard.
 - The navigation is **generated from the permission set** that
-  `GET /me/workspaces/{id}` returns, so a menu item only appears when the
+  `GET /me/workspaces` returns, so a menu item only appears when the
   server grants the permission. The server still enforces every call.
 - React Query for server state, React Hook Form with Zod for forms (Zod schemas
   are generated from OpenAPI), shadcn/ui components, Recharts for charts,

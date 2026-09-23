@@ -106,7 +106,7 @@ the primary, supported engine. For MySQL 8.0+:
 | PostgreSQL feature | MySQL equivalent / impact |
 |---|---|
 | Row-Level Security | **Not available.** Isolation relies on layers 1–5 and 7. Document as a reduced-assurance mode |
-| `uuid` type | `BINARY(16)` via a Laravel cast (UUIDv7, still time-ordered) |
+| `uuid` type | `CHAR(36)` (Laravel's portable `uuid` column; UUIDv7 keeps it time-ordered). `BINARY(16)` is a later optimisation if MySQL becomes a production target |
 | `jsonb` + GIN indexes | `JSON` plus generated columns for indexed keys |
 | Partial / expression indexes | Generated columns plus normal indexes |
 | `CHECK` constraints | Supported (8.0.16+) |

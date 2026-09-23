@@ -1,0 +1,16 @@
+# Docker build context is sfmtp/ (infra/docker/*.Dockerfile)
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+backend/vendor
+backend/storage/logs/*
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/bootstrap/cache/*.php
+backend/.phpunit.cache
+backend/dump.rdb
+web/node_modules
+web/.next
+docs

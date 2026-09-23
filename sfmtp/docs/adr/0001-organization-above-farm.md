@@ -1,6 +1,6 @@
 # ADR-0001 — Organization (billing account) above farm
 
-**Status:** Proposed — needs confirmation
+**Status:** Accepted (confirmed by the product owner, 2026-09-23)
 
 ## Context
 The requirements say *"each farm is a tenant"* and *"farm subscriptions"*.

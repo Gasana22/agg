@@ -7,9 +7,53 @@ end-to-end traceability. It has a responsive web application, an offline-first
 mobile app for Android and iOS, supplier and customer portals, and a versioned
 REST API.
 
-This directory will hold the platform source code. It currently contains the
-**architecture and design documents** (Phase 0). Implementation starts once
-these are agreed.
+## Status
+
+| Phase | State |
+|---|---|
+| 0 — Design | ✅ Done ([docs](docs/)) |
+| 1 — Architecture & foundation | ✅ Done: identity + MFA, multi-tenancy, permissions, audit log, traceability core, dashboards framework, web shell, CI |
+| 2 — Platform administration | Next |
+
+## Repository layout
+
+```
+sfmtp/
+├── backend/                 Laravel 12 API (modular monolith)          → backend/README.md
+├── web/                     Next.js 16 web app + backend-for-frontend  → web/README.md
+├── mobile/                  Flutter app (added in Phase 6)
+├── packages/api-contracts/  OpenAPI 3.1 contract (source of the typed clients)
+├── infra/docker/            Dockerfiles and the local compose stack
+└── docs/                    Architecture and design documents
+```
+
+## Quick start (Docker)
+
+```bash
+cd sfmtp
+cp infra/docker/.env.example infra/docker/.env   # fill APP_KEY and JWT_SECRET
+docker compose -f infra/docker/compose.yaml up --build
+```
+
+Open http://localhost:3000 and sign in with a demo account (password
+`Password123!`), e.g. `agronomist@aggfarms.test`, `manager@aggfarms.test`, or
+`owner@aggfarms.test` (the owner is asked to set up MFA first). The full list is
+in [backend/README.md](backend/README.md).
+
+To run without Docker, follow [backend/README.md](backend/README.md) and
+[web/README.md](web/README.md).
+
+## Quality gates
+
+CI (`.github/workflows/sfmtp-ci.yml`) runs on every change under `sfmtp/`:
+
+- API tests on **PostgreSQL 16** (as a non-superuser, so row-level security is
+  exercised) and on **MySQL 8**, plus code style
+- the cross-tenant sweep: every `/farms/{farm}` route is called as another
+  farm's owner and must answer 404 without changing data
+- OpenAPI lint, and a check that routes, contract and generated web types agree
+- web lint, type-check, unit tests and production build
+- Docker image builds
 
 ## Design documents
 

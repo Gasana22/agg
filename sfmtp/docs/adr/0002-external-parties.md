@@ -1,6 +1,6 @@
 # ADR-0002 — Suppliers and customers as global party accounts
 
-**Status:** Proposed — needs confirmation
+**Status:** Accepted (confirmed by the product owner, 2026-09-23)
 
 ## Context
 Suppliers and customers must see only their own orders and never internal

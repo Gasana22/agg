@@ -17,6 +17,25 @@ adjustments** that follow from the [dependency map](09-module-dependency-map.md)
    because supplier invoices and stock valuation post to it. Phase 8 adds
    the rest of Finance.
 
+## Progress
+
+### Phase 1 — delivered
+
+Everything in the Phase 1 row below, with these notes:
+
+- **Deferred to the phase that first needs it:** PostGIS columns (Phase 3,
+  plots and boundaries; the Docker image already includes the extension), the
+  Dart API client (Phase 6, with the Flutter app), object storage wiring
+  (Phase 6, media), and monthly partitioning of `audit_logs` / `trace_events`
+  (Phase 15).
+- **Row-level security** is on for the traceability tables (the pilot). The
+  other farm tables get it as they are created, and all farm tables by Phase 15.
+- **Test gate met:** 77 API tests (PostgreSQL; 75 run on MySQL, and 2 need
+  PostgreSQL features), including the cross-tenant sweep of every farm route,
+  the role-boundary tests that apply to Phase 1, append-only enforcement and
+  hash-chain tamper detection. The web app has unit tests, and the main role
+  journeys were checked end to end in a browser.
+
 ## Phase plan
 
 | Phase | Scope | Key deliverables | Exit criteria (test gate) |

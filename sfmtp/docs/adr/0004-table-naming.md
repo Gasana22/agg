@@ -1,6 +1,6 @@
 # ADR-0004 — Table naming changes vs the requirements document
 
-**Status:** Proposed
+**Status:** Accepted (2026-09-23)
 
 | Requirements name | Design name | Reason |
 |---|---|---|

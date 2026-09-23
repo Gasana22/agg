@@ -1,0 +1,111 @@
+# Local development stack:  docker compose -f infra/docker/compose.yaml up --build
+# (run from sfmtp/). Web → http://localhost:3000, API → http://localhost:8000,
+# mail → http://localhost:8025, object storage console → http://localhost:9001
+name: sfmtp
+
+x-api-env: &api-env
+  APP_NAME: SFMTP
+  APP_ENV: local
+  APP_DEBUG: "true"
+  APP_KEY: ${APP_KEY:?Set APP_KEY in infra/docker/.env (see .env.example)}
+  APP_URL: http://localhost:8000
+  JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in infra/docker/.env}
+  HASH_DRIVER: argon2id
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_DATABASE: sfmtp
+  DB_USERNAME: sfmtp
+  DB_PASSWORD: ${APP_DB_PASSWORD:-secret}
+  CACHE_STORE: redis
+  QUEUE_CONNECTION: redis
+  SESSION_DRIVER: array
+  REDIS_HOST: redis
+  MAIL_MAILER: smtp
+  MAIL_HOST: mailpit
+  MAIL_PORT: "1025"
+  # Object storage (MinIO below) is wired in with media uploads (Phase 6).
+  FILESYSTEM_DISK: local
+  SFMTP_WEB_URL: http://localhost:3000
+  TRUSTED_PROXIES: "*"
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      APP_DB_USER: sfmtp
+      APP_DB_NAME: sfmtp
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-secret}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/10-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sfmtp"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: sfmtp
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-sfmtp-secret}
+    volumes: [miniodata:/data]
+    ports: ["9000:9000", "9001:9001"]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["8025:8025"]
+
+  migrate:
+    build: { context: ../.., dockerfile: infra/docker/api.Dockerfile }
+    image: sfmtp-api
+    environment: *api-env
+    command: ["sh", "-c", "php artisan migrate --force && php artisan db:seed --force"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    image: sfmtp-api
+    environment: *api-env
+    ports: ["8000:8000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  worker:
+    image: sfmtp-api
+    environment: *api-env
+    command: ["php", "artisan", "queue:work", "--tries=3", "--backoff=10", "--max-time=3600"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  scheduler:
+    image: sfmtp-api
+    environment: *api-env
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  web:
+    build: { context: ../.., dockerfile: infra/docker/web.Dockerfile }
+    environment:
+      SFMTP_API_URL: http://api:8000
+    ports: ["3000:3000"]
+    depends_on:
+      api: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  miniodata:

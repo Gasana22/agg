@@ -8,6 +8,12 @@ return [
     'web_url' => env('SFMTP_WEB_URL', 'http://localhost:3000'),
 
     /*
+    | Proxies (web BFF, load balancer) whose X-Forwarded-* headers are trusted:
+    | comma-separated IPs/CIDRs, or "*". Empty = trust none.
+    */
+    'trusted_proxies' => env('TRUSTED_PROXIES', ''),
+
+    /*
     | Modules loaded by App\Support\Modules\ModuleServiceProvider, in dependency
     | order (see docs/09-module-dependency-map.md).
     */

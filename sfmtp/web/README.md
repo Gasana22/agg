@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SFMTP web (Next.js 16)
 
-## Getting Started
+Responsive web app for every SFMTP workspace (platform admin, farms; supplier
+and customer portals arrive in Phase 12).
 
-First, run the development server:
+## How it talks to the API
+
+The browser never holds tokens. `src/app/api/*` is a backend-for-frontend:
+
+| Route | Does |
+|---|---|
+| `POST /api/auth/login` | Signs in against the API; stores access + refresh tokens in `httpOnly` cookies (or a short-lived pending-MFA cookie) |
+| `POST /api/auth/mfa` | Completes sign-in with an authenticator or recovery code |
+| `POST /api/auth/logout` | Revokes the server session and clears cookies |
+| `/api/proxy/*` | Forwards to `SFMTP_API_URL/api/v1/*` with the bearer token; refreshes an expired session once (deduplicated across parallel requests); refuses cross-site writes |
+
+`src/proxy.ts` only redirects signed-out visitors to `/login`; every API call is
+still authorised by the backend. Navigation and dashboards are built from the
+permissions and widget lists the server returns (`/me/workspaces`,
+`/farms/{farm}/dashboards/{dashboard}`).
+
+The typed API client (`src/lib/api/schema.d.ts`) is generated from
+`../packages/api-contracts/openapi.yaml`:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run api:types
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Develop
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env.local   # SFMTP_API_URL=http://localhost:8000
+npm install
+npm run dev                  # http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Check
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint && npm run typecheck && npm test && npm run build
+```
