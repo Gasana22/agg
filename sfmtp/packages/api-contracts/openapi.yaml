@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SFMTP API
-  version: 1.1.0-phase2
+  version: 1.2.0-phase3
   description: |
     Smart Farm Management & Traceability Platform REST API.
 
@@ -25,7 +25,9 @@ tags:
   - name: Farms
     description: Farm (tenant) profile and lifecycle.
   - name: Access
-    description: Members, roles and the permission registry.
+    description: Members, invitations, roles and the permission registry.
+  - name: Structure
+    description: Blocks, sections, plots and locations with GeoJSON boundaries (ADR-0009).
   - name: Traceability
     description: Batches, append-only events, links and journeys.
   - name: Dashboards
@@ -467,6 +469,256 @@ paths:
         '204': { description: Closed }
         '403': { $ref: '#/components/responses/Problem' }
 
+  /me/farms/overview:
+    get:
+      tags: [Me]
+      operationId: myFarmsOverview
+      summary: My farms, with the headline numbers the member may see in each
+      responses:
+        '200':
+          description: One card per active membership
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/FarmOverview' }
+
+  /farms/{farm}/settings:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Farms]
+      operationId: getFarmSettings
+      summary: Farm settings
+      x-permission: farm.profile.view
+      responses:
+        '200':
+          description: Settings merged over defaults
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/FarmSettings' }
+    patch:
+      tags: [Farms]
+      operationId: updateFarmSettings
+      summary: Change farm settings (partial)
+      x-permission: farm.settings.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FarmSettingsInput' }
+      responses:
+        '200':
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/FarmSettings' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/members/{member}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: member, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      tags: [Access]
+      operationId: updateMember
+      summary: Change a member's roles or status
+      description: The owner's membership and your own cannot be changed (403 guard_rail_owner / guard_rail_self).
+      x-permission: members.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role_ids: { type: array, minItems: 1, maxItems: 10, items: { type: string, format: uuid } }
+                status: { type: string, enum: [active, suspended] }
+      responses:
+        '200':
+          description: Updated member
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Member' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [Access]
+      operationId: removeMember
+      summary: Remove a member from the farm
+      x-permission: members.manage
+      responses:
+        '204': { description: Removed }
+        '403': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/invitations:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Access]
+      operationId: listInvitations
+      summary: List invitations (pending by default)
+      x-permission: members.view
+      parameters:
+        - { name: 'filter[status]', in: query, schema: { type: string, enum: [pending, accepted, revoked, expired] } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Invitations
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Invitation' }
+    post:
+      tags: [Access]
+      operationId: createInvitation
+      summary: Invite someone by email
+      description: |
+        Needs `members.manage`, or `members.invite_workers` when every role is a
+        field-worker role. The plan's user limit is checked now and again on
+        acceptance. The link expires after 7 days.
+      x-permission: members.manage | members.invite_workers
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role_ids]
+              properties:
+                email: { type: string, format: email }
+                role_ids: { type: array, minItems: 1, maxItems: 10, items: { type: string, format: uuid } }
+                message: { type: [string, 'null'], maxLength: 500 }
+      responses:
+        '201':
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Invitation' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/invitations/{invitation}:
+    delete:
+      tags: [Access]
+      operationId: revokeInvitation
+      summary: Withdraw an invitation
+      x-permission: members.manage | members.invite_workers
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - { name: invitation, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Revoked }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/invitations/{invitation}/resend:
+    post:
+      tags: [Access]
+      operationId: resendInvitation
+      summary: Send the invitation again with a fresh link
+      x-permission: members.manage | members.invite_workers
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - { name: invitation, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Resent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Invitation' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /invitations/{token}:
+    get:
+      tags: [Access]
+      operationId: previewInvitation
+      summary: Read an invitation from its emailed link (public)
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/InvitationToken'
+      responses:
+        '200':
+          description: Invitation preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/InvitationPreview' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /invitations/{token}/accept:
+    post:
+      tags: [Access]
+      operationId: acceptInvitation
+      summary: Accept an invitation
+      description: |
+        Signed in (bearer optional) with the invited email, or, when no account
+        exists for it, with `name` and `password` to create one. 409
+        sign_in_required when an account exists; 410 invitation_used /
+        invitation_revoked / invitation_expired.
+      security: [{}, { bearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/InvitationToken'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, minLength: 2, maxLength: 120 }
+                password: { type: string, minLength: 10 }
+                password_confirmation: { type: string }
+      responses:
+        '200':
+          description: Joined with an existing account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/InvitationAcceptance' }
+        '201':
+          description: Account created and joined
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/InvitationAcceptance' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '410': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
   /farms/{farm}/members:
     get:
       tags: [Access]
@@ -510,6 +762,79 @@ paths:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/Role' }
+
+    post:
+      tags: [Access]
+      operationId: createRole
+      summary: Create a custom role
+      description: Starts empty, from `grants`, or from a copy of another role's grants (owner-only permissions are never copied).
+      x-permission: roles.manage
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 100 }
+                description: { type: [string, 'null'], maxLength: 255 }
+                copy_from_role_id: { type: [string, 'null'], format: uuid }
+                grants:
+                  type: object
+                  additionalProperties: { $ref: '#/components/schemas/Scope' }
+      responses:
+        '201':
+          description: Created role
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Role' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/roles/{role}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: role, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      tags: [Access]
+      operationId: updateRole
+      summary: Rename or describe a role
+      x-permission: roles.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, minLength: 2, maxLength: 100 }
+                description: { type: [string, 'null'], maxLength: 255 }
+      responses:
+        '200':
+          description: Updated role
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Role' }
+        '403': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [Access]
+      operationId: deleteRole
+      summary: Delete a custom role nobody holds
+      description: 403 system_role for built-in roles; 409 role_in_use while members or pending invitations use it.
+      x-permission: roles.manage
+      responses:
+        '204': { description: Deleted }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
 
   /farms/{farm}/roles/{role}/permissions:
     put:
@@ -562,6 +887,386 @@ paths:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/PermissionDefinition' }
+
+  /farms/{farm}/structure:
+    get:
+      tags: [Structure]
+      operationId: getFarmStructure
+      summary: The farm layout (flat lists with parent ids) and totals
+      description: Filtered by the member's `structure.view` scope; an `assigned` scope sees only plots on their tasks (Phase 6).
+      x-permission: structure.view
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+      responses:
+        '200':
+          description: Structure
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/FarmStructure' }
+
+  /farms/{farm}/structure/blocks:
+    post:
+      tags: [Structure]
+      operationId: createBlock
+      summary: Create a block
+      x-permission: structure.manage
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StructureBlockInput' }
+      responses:
+        '201':
+          description: Created. `meta.warnings` lists soft geometry problems.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/StructureBlock' }
+                  meta: { $ref: '#/components/schemas/StructureWarnings' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/structure/blocks/{block}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: block, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Structure]
+      operationId: getBlock
+      summary: Get a block
+      x-permission: structure.view
+      responses:
+        '200':
+          description: The block
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/StructureBlock' }
+        '404': { $ref: '#/components/responses/Problem' }
+    patch:
+      tags: [Structure]
+      operationId: updateBlock
+      summary: Update a block
+      description: Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.
+      x-permission: structure.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/StructureBlockInput'
+                - type: object
+                  properties:
+                    version: { type: integer }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/StructureBlock' }
+                  meta: { $ref: '#/components/schemas/StructureWarnings' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [Structure]
+      operationId: archiveBlock
+      summary: Archive a block
+      description: Soft delete. 409 has_active_children while it still contains active items.
+      x-permission: structure.manage
+      responses:
+        '204': { description: Archived }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/structure/sections:
+    post:
+      tags: [Structure]
+      operationId: createSection
+      summary: Create a section
+      x-permission: structure.manage
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StructureSectionInput' }
+      responses:
+        '201':
+          description: Created. `meta.warnings` lists soft geometry problems.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/StructureSection' }
+                  meta: { $ref: '#/components/schemas/StructureWarnings' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/structure/sections/{section}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: section, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Structure]
+      operationId: getSection
+      summary: Get a section
+      x-permission: structure.view
+      responses:
+        '200':
+          description: The section
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/StructureSection' }
+        '404': { $ref: '#/components/responses/Problem' }
+    patch:
+      tags: [Structure]
+      operationId: updateSection
+      summary: Update a section
+      description: Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.
+      x-permission: structure.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/StructureSectionInput'
+                - type: object
+                  properties:
+                    version: { type: integer }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/StructureSection' }
+                  meta: { $ref: '#/components/schemas/StructureWarnings' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [Structure]
+      operationId: archiveSection
+      summary: Archive a section
+      description: Soft delete. 409 has_active_children while it still contains active items.
+      x-permission: structure.manage
+      responses:
+        '204': { description: Archived }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/structure/plots:
+    post:
+      tags: [Structure]
+      operationId: createPlot
+      summary: Create a plot
+      x-permission: structure.manage
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StructurePlotInput' }
+      responses:
+        '201':
+          description: Created. `meta.warnings` lists soft geometry problems.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/StructurePlot' }
+                  meta: { $ref: '#/components/schemas/StructureWarnings' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/structure/plots/{plot}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: plot, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Structure]
+      operationId: getPlot
+      summary: Get a plot
+      x-permission: structure.view
+      responses:
+        '200':
+          description: The plot
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/StructurePlot' }
+        '404': { $ref: '#/components/responses/Problem' }
+    patch:
+      tags: [Structure]
+      operationId: updatePlot
+      summary: Update a plot
+      description: Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.
+      x-permission: structure.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/StructurePlotInput'
+                - type: object
+                  properties:
+                    version: { type: integer }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/StructurePlot' }
+                  meta: { $ref: '#/components/schemas/StructureWarnings' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [Structure]
+      operationId: archivePlot
+      summary: Archive a plot
+      description: Soft delete. 409 has_active_children while it still contains active items.
+      x-permission: structure.manage
+      responses:
+        '204': { description: Archived }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/structure/locations:
+    post:
+      tags: [Structure]
+      operationId: createLocation
+      summary: Create a location
+      x-permission: structure.manage
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StructureLocationInput' }
+      responses:
+        '201':
+          description: Created. `meta.warnings` lists soft geometry problems.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/StructureLocation' }
+                  meta: { $ref: '#/components/schemas/StructureWarnings' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/structure/locations/{location}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: location, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Structure]
+      operationId: getLocation
+      summary: Get a location
+      x-permission: structure.view
+      responses:
+        '200':
+          description: The location
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/StructureLocation' }
+        '404': { $ref: '#/components/responses/Problem' }
+    patch:
+      tags: [Structure]
+      operationId: updateLocation
+      summary: Update a location
+      description: Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.
+      x-permission: structure.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/StructureLocationInput'
+                - type: object
+                  properties:
+                    version: { type: integer }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/StructureLocation' }
+                  meta: { $ref: '#/components/schemas/StructureWarnings' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [Structure]
+      operationId: archiveLocation
+      summary: Archive a location
+      description: Soft delete. 409 has_active_children while it still contains active items.
+      x-permission: structure.manage
+      responses:
+        '204': { description: Archived }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/structure/plots/{plot}/soil:
+    put:
+      tags: [Structure]
+      operationId: recordPlotSoil
+      summary: Record the plot's soil profile (replaces the previous one)
+      x-permission: structure.soil.manage
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - { name: plot, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SoilProfile' }
+      responses:
+        '200':
+          description: Updated plot
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/StructurePlot' }
+        '422': { $ref: '#/components/responses/Problem' }
 
   /farms/{farm}/audit-logs:
     get:
@@ -1755,6 +2460,11 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    InvitationToken:
+      name: token
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[A-Za-z0-9]{48}$' }
     Catalog:
       name: catalog
       in: path
@@ -2057,6 +2767,7 @@ components:
           items:
             type: object
             properties:
+              id: { type: string, format: uuid }
               key: { type: string }
               name: { type: string }
         joined_at: { type: [string, 'null'], format: date-time }
@@ -2071,6 +2782,7 @@ components:
         description: { type: [string, 'null'] }
         is_system: { type: boolean }
         is_locked: { type: boolean }
+        member_count: { type: integer, description: Only on the list endpoint }
         grants:
           type: object
           additionalProperties: { $ref: '#/components/schemas/Scope' }
@@ -2587,3 +3299,334 @@ components:
               active: { type: boolean }
         last_activity_at: { type: string, format: date-time }
         created_at: { type: string, format: date-time }
+
+    GeoJsonPolygon:
+      type: object
+      description: 'GeoJSON Polygon in WGS 84, [longitude, latitude] positions; closed rings, at most 1000 vertices, no self-intersections.'
+      required: [type, coordinates]
+      properties:
+        type: { type: string, const: Polygon }
+        coordinates:
+          type: array
+          minItems: 1
+          maxItems: 21
+          items:
+            type: array
+            minItems: 4
+            items:
+              type: array
+              minItems: 2
+              maxItems: 3
+              items: { type: number }
+
+    StructureWarnings:
+      type: object
+      properties:
+        warnings:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: string, enum: [outside_parent, overlaps_sibling] }
+              message: { type: string }
+              related:
+                type: object
+                properties:
+                  type: { type: string, enum: [block, section, plot, location] }
+                  id: { type: string, format: uuid }
+                  code: { type: string }
+
+    StructureBlock:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        type: { type: string, const: farm_block }
+        boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
+        area_ha: { type: [number, 'null'], description: Computed from the boundary }
+        declared_area_ha: { type: [number, 'null'] }
+        effective_area_ha: { type: [number, 'null'], description: 'area_ha when mapped, else declared_area_ha' }
+        centroid:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                lat: { type: number }
+                lng: { type: number }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    StructureSection:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        type: { type: string, const: farm_section }
+        block_id: { type: string, format: uuid }
+        boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
+        area_ha: { type: [number, 'null'], description: Computed from the boundary }
+        declared_area_ha: { type: [number, 'null'] }
+        effective_area_ha: { type: [number, 'null'], description: 'area_ha when mapped, else declared_area_ha' }
+        centroid:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                lat: { type: number }
+                lng: { type: number }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    StructurePlot:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        type: { type: string, const: farm_plot }
+        section_id: { type: [string, 'null'], format: uuid }
+        land_use: { $ref: '#/components/schemas/LandUse' }
+        irrigation: { $ref: '#/components/schemas/Irrigation' }
+        soil_profile: { oneOf: [{ $ref: '#/components/schemas/SoilProfile' }, { type: 'null' }] }
+        soil_updated_at: { type: [string, 'null'], format: date-time }
+        boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
+        area_ha: { type: [number, 'null'], description: Computed from the boundary }
+        declared_area_ha: { type: [number, 'null'] }
+        effective_area_ha: { type: [number, 'null'], description: 'area_ha when mapped, else declared_area_ha' }
+        centroid:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                lat: { type: number }
+                lng: { type: number }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    StructureLocation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        type: { type: string, const: farm_location }
+        kind: { $ref: '#/components/schemas/LocationKind' }
+        plot_id: { type: [string, 'null'], format: uuid }
+        latitude: { type: [number, 'null'] }
+        longitude: { type: [number, 'null'] }
+        boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
+        area_ha: { type: [number, 'null'], description: Computed from the boundary }
+        declared_area_ha: { type: [number, 'null'] }
+        effective_area_ha: { type: [number, 'null'], description: 'area_ha when mapped, else declared_area_ha' }
+        centroid:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                lat: { type: number }
+                lng: { type: number }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    StructureBlockInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 120 }
+        code: { type: [string, 'null'], maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$', description: Generated when omitted; stored upper-case; never reused in the farm }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        declared_area_ha: { type: [number, 'null'], minimum: 0 }
+        boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
+
+    StructureSectionInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 120 }
+        code: { type: [string, 'null'], maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$', description: Generated when omitted; stored upper-case; never reused in the farm }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        declared_area_ha: { type: [number, 'null'], minimum: 0 }
+        boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
+        block_id: { type: string, format: uuid }
+
+    StructurePlotInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 120 }
+        code: { type: [string, 'null'], maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$', description: Generated when omitted; stored upper-case; never reused in the farm }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        declared_area_ha: { type: [number, 'null'], minimum: 0 }
+        boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
+        section_id: { type: [string, 'null'], format: uuid }
+        land_use: { $ref: '#/components/schemas/LandUse' }
+        irrigation: { $ref: '#/components/schemas/Irrigation' }
+
+    StructureLocationInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 120 }
+        code: { type: [string, 'null'], maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$', description: Generated when omitted; stored upper-case; never reused in the farm }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        declared_area_ha: { type: [number, 'null'], minimum: 0 }
+        boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
+        kind: { $ref: '#/components/schemas/LocationKind' }
+        plot_id: { type: [string, 'null'], format: uuid }
+        latitude: { type: [number, 'null'], minimum: -90, maximum: 90 }
+        longitude: { type: [number, 'null'], minimum: -180, maximum: 180 }
+
+    LandUse:
+      type: string
+      enum: [crop, pasture, fallow, orchard, forestry, other]
+    Irrigation:
+      type: string
+      enum: [rainfed, drip, sprinkler, furrow, flood, other]
+    LocationKind:
+      type: string
+      enum: [store, building, paddock, housing, water, gate, office, other]
+
+    SoilProfile:
+      type: object
+      properties:
+        texture: { type: [string, 'null'], enum: [sand, loamy_sand, sandy_loam, loam, silt_loam, silt, sandy_clay_loam, clay_loam, silty_clay_loam, sandy_clay, silty_clay, clay, null] }
+        ph: { type: [number, 'null'], minimum: 0, maximum: 14 }
+        organic_matter_pct: { type: [number, 'null'], minimum: 0, maximum: 100 }
+        nitrogen_mg_kg: { type: [number, 'null'], minimum: 0 }
+        phosphorus_mg_kg: { type: [number, 'null'], minimum: 0 }
+        potassium_mg_kg: { type: [number, 'null'], minimum: 0 }
+        ec_ds_m: { type: [number, 'null'], minimum: 0 }
+        drainage: { type: [string, 'null'], enum: [poor, moderate, good, excessive, null] }
+        depth_cm: { type: [integer, 'null'], minimum: 0 }
+        tested_on: { type: [string, 'null'], format: date }
+        laboratory: { type: [string, 'null'], maxLength: 150 }
+        notes: { type: [string, 'null'], maxLength: 2000 }
+
+    FarmStructure:
+      type: object
+      properties:
+        blocks: { type: array, items: { $ref: '#/components/schemas/StructureBlock' } }
+        sections: { type: array, items: { $ref: '#/components/schemas/StructureSection' } }
+        plots: { type: array, items: { $ref: '#/components/schemas/StructurePlot' } }
+        locations: { type: array, items: { $ref: '#/components/schemas/StructureLocation' } }
+        totals:
+          type: object
+          properties:
+            blocks: { type: integer }
+            sections: { type: integer }
+            plots: { type: integer }
+            locations: { type: integer }
+            plots_mapped: { type: integer }
+            mapped_area_ha: { type: number }
+            plot_area_ha: { type: number }
+            farm_size_ha: { type: [number, 'null'] }
+
+    FarmSettings:
+      type: object
+      properties:
+        require_mfa_for_all: { type: boolean }
+        approval_thresholds:
+          type: object
+          properties:
+            expense: { type: [number, 'null'], description: Farm currency }
+            purchase_order: { type: [number, 'null'] }
+            stock_adjustment_pct: { type: [number, 'null'] }
+        allow_negative_stock: { type: boolean }
+        units: { type: string, enum: [metric, imperial] }
+
+    FarmSettingsInput:
+      type: object
+      properties:
+        require_mfa_for_all: { type: boolean }
+        approval_thresholds:
+          type: object
+          additionalProperties: false
+          properties:
+            expense: { type: [number, 'null'], minimum: 0 }
+            purchase_order: { type: [number, 'null'], minimum: 0 }
+            stock_adjustment_pct: { type: [number, 'null'], minimum: 0, maximum: 100 }
+        allow_negative_stock: { type: boolean }
+        units: { type: string, enum: [metric, imperial] }
+
+    FarmOverview:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: farm_overview }
+        name: { type: string }
+        code: { type: string }
+        status: { type: string }
+        district: { type: [string, 'null'] }
+        is_owner: { type: boolean }
+        roles: { type: array, items: { type: string } }
+        home_dashboard: { type: [string, 'null'] }
+        metrics:
+          type: object
+          description: Only the numbers the member may see in that farm.
+          properties:
+            size_ha: { type: number }
+            plots: { type: integer }
+            mapped_area_ha: { type: number }
+            members: { type: integer }
+            open_batches: { type: integer }
+
+    Invitation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: farm_invitation }
+        email: { type: string }
+        status: { type: string, enum: [pending, accepted, revoked, expired] }
+        roles:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              key: { type: string }
+              name: { type: string }
+        message: { type: [string, 'null'] }
+        invited_by:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                id: { type: string, format: uuid }
+                name: { type: string }
+        send_count: { type: integer }
+        expires_at: { type: string, format: date-time }
+        last_sent_at: { type: string, format: date-time }
+        accepted_at: { type: [string, 'null'], format: date-time }
+        revoked_at: { type: [string, 'null'], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    InvitationPreview:
+      type: object
+      properties:
+        type: { type: string, const: invitation_preview }
+        status: { type: string, enum: [pending, accepted, revoked, expired] }
+        email: { type: string }
+        farm:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+        invited_by: { type: [string, 'null'] }
+        roles: { type: array, items: { type: string } }
+        message: { type: [string, 'null'] }
+        expires_at: { type: string, format: date-time }
+        account_exists: { type: boolean }
+
+    InvitationAcceptance:
+      type: object
+      properties:
+        type: { type: string, const: invitation_acceptance }
+        farm_id: { type: string, format: uuid }
+        membership_id: { type: string, format: uuid }
+        account_created: { type: boolean }

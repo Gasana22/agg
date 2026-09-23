@@ -2,6 +2,7 @@
 
 namespace App\Modules\Reporting\Application;
 
+use App\Modules\FarmStructure\Domain\Models\Plot;
 use App\Modules\Tenancy\Domain\Enums\MembershipStatus;
 use App\Modules\Tenancy\TenantContext;
 use App\Modules\Traceability\Domain\Enums\BatchStatus;
@@ -10,9 +11,9 @@ use App\Modules\Traceability\Domain\Models\TraceEvent;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Metric catalogue (docs/05 §4). Phase 1 covers membership and
- * traceability; each later phase adds its module's metrics here, then moves
- * heavy ones to precomputed farm_daily_metrics (Phase 13).
+ * Metric catalogue (docs/05 §4). Phases 1–3 cover membership, farm
+ * structure and traceability; each later phase adds its module's metrics
+ * here, then moves heavy ones to precomputed farm_daily_metrics (Phase 13).
  */
 class FarmMetrics
 {
@@ -24,6 +25,17 @@ class FarmMetrics
             ->where('farm_id', $this->context->farmId())
             ->where('status', MembershipStatus::Active->value)
             ->count();
+    }
+
+    public function plots(): int
+    {
+        return Plot::count();
+    }
+
+    /** Hectares inside drawn plot boundaries. */
+    public function mappedAreaHa(): float
+    {
+        return round((float) Plot::sum('area_ha'), 2);
     }
 
     public function openBatches(): int

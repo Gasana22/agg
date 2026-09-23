@@ -33,7 +33,7 @@ class DashboardTest extends TestCase
 
         $this->assertSame('owner', $data['dashboard']);
         $this->assertSame('7d', $data['period']['key']);
-        $this->assertSame(['farm.area', 'farm.members', 'trace.open_batches', 'trace.events'], array_column($data['kpis'], 'key'));
+        $this->assertSame(['farm.area', 'structure.mapped_area', 'structure.plots', 'farm.members', 'trace.open_batches', 'trace.events'], array_column($data['kpis'], 'key'));
 
         $kpis = collect($data['kpis'])->keyBy('key');
         $this->assertSame(['value' => '120.0000', 'unit' => 'ha'], $kpis['farm.area']['value']);
@@ -47,7 +47,7 @@ class DashboardTest extends TestCase
         $this->assertFalse($widgets['trace_activity']['inline']);
         $this->assertStringContainsString('/widgets/trace_activity?period=7d', $widgets['trace_activity']['href']);
 
-        $this->assertSame(['new_batch', 'view_audit_log'], array_column($data['quick_actions'], 'key'));
+        $this->assertSame(['invite_member', 'view_map', 'new_batch', 'view_audit_log'], array_column($data['quick_actions'], 'key'));
     }
 
     public function test_chart_widgets_are_fetched_separately(): void
@@ -68,8 +68,8 @@ class DashboardTest extends TestCase
     {
         $agronomist = $this->memberWithRole($this->farm, 'agronomist');
         $data = $this->dashboard('agronomist', $agronomist)->assertOk()->json('data');
-        $this->assertSame(['trace.open_batches', 'trace.events'], array_column($data['kpis'], 'key'));
-        $this->assertSame(['new_batch'], array_column($data['quick_actions'], 'key'));
+        $this->assertSame(['structure.plots', 'structure.mapped_area', 'trace.open_batches', 'trace.events'], array_column($data['kpis'], 'key'));
+        $this->assertSame(['view_map', 'new_batch'], array_column($data['quick_actions'], 'key'));
 
         $worker = $this->memberWithRole($this->farm, 'field_worker');
         $this->dashboard('worker', $worker)->assertOk()->assertJsonPath('data.kpis', [])->assertJsonPath('data.widgets', []);

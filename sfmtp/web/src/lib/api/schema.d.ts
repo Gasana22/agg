@@ -290,6 +290,166 @@ export interface paths {
         patch: operations["updateFarm"];
         trace?: never;
     };
+    "/me/farms/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My farms, with the headline numbers the member may see in each */
+        get: operations["myFarmsOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Farm settings */
+        get: operations["getFarmSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change farm settings (partial) */
+        patch: operations["updateFarmSettings"];
+        trace?: never;
+    };
+    "/farms/{farm}/members/{member}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                member: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a member from the farm */
+        delete: operations["removeMember"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a member's roles or status
+         * @description The owner's membership and your own cannot be changed (403 guard_rail_owner / guard_rail_self).
+         */
+        patch: operations["updateMember"];
+        trace?: never;
+    };
+    "/farms/{farm}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** List invitations (pending by default) */
+        get: operations["listInvitations"];
+        put?: never;
+        /**
+         * Invite someone by email
+         * @description Needs `members.manage`, or `members.invite_workers` when every role is a
+         *     field-worker role. The plan's user limit is checked now and again on
+         *     acceptance. The link expires after 7 days.
+         */
+        post: operations["createInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/invitations/{invitation}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Withdraw an invitation */
+        delete: operations["revokeInvitation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/invitations/{invitation}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send the invitation again with a fresh link */
+        post: operations["resendInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invitations/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read an invitation from its emailed link (public) */
+        get: operations["previewInvitation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invitations/{token}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept an invitation
+         * @description Signed in (bearer optional) with the invited email, or, when no account
+         *     exists for it, with `name` and `password` to create one. 409
+         *     sign_in_required when an account exists; 410 invitation_used /
+         *     invitation_revoked / invitation_expired.
+         */
+        post: operations["acceptInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/farms/{farm}/members": {
         parameters: {
             query?: never;
@@ -317,11 +477,39 @@ export interface paths {
         /** List roles */
         get: operations["listRoles"];
         put?: never;
-        post?: never;
+        /**
+         * Create a custom role
+         * @description Starts empty, from `grants`, or from a copy of another role's grants (owner-only permissions are never copied).
+         */
+        post: operations["createRole"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/roles/{role}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                role: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a custom role nobody holds
+         * @description 403 system_role for built-in roles; 409 role_in_use while members or pending invitations use it.
+         */
+        delete: operations["deleteRole"];
+        options?: never;
+        head?: never;
+        /** Rename or describe a role */
+        patch: operations["updateRole"];
         trace?: never;
     };
     "/farms/{farm}/roles/{role}/permissions": {
@@ -351,6 +539,223 @@ export interface paths {
         /** List permissions */
         get: operations["listPermissions"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/structure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The farm layout (flat lists with parent ids) and totals
+         * @description Filtered by the member's `structure.view` scope; an `assigned` scope sees only plots on their tasks (Phase 6).
+         */
+        get: operations["getFarmStructure"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/structure/blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a block */
+        post: operations["createBlock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/structure/blocks/{block}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                block: string;
+            };
+            cookie?: never;
+        };
+        /** Get a block */
+        get: operations["getBlock"];
+        put?: never;
+        post?: never;
+        /**
+         * Archive a block
+         * @description Soft delete. 409 has_active_children while it still contains active items.
+         */
+        delete: operations["archiveBlock"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a block
+         * @description Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.
+         */
+        patch: operations["updateBlock"];
+        trace?: never;
+    };
+    "/farms/{farm}/structure/sections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a section */
+        post: operations["createSection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/structure/sections/{section}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                section: string;
+            };
+            cookie?: never;
+        };
+        /** Get a section */
+        get: operations["getSection"];
+        put?: never;
+        post?: never;
+        /**
+         * Archive a section
+         * @description Soft delete. 409 has_active_children while it still contains active items.
+         */
+        delete: operations["archiveSection"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a section
+         * @description Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.
+         */
+        patch: operations["updateSection"];
+        trace?: never;
+    };
+    "/farms/{farm}/structure/plots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a plot */
+        post: operations["createPlot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/structure/plots/{plot}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                plot: string;
+            };
+            cookie?: never;
+        };
+        /** Get a plot */
+        get: operations["getPlot"];
+        put?: never;
+        post?: never;
+        /**
+         * Archive a plot
+         * @description Soft delete. 409 has_active_children while it still contains active items.
+         */
+        delete: operations["archivePlot"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a plot
+         * @description Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.
+         */
+        patch: operations["updatePlot"];
+        trace?: never;
+    };
+    "/farms/{farm}/structure/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a location */
+        post: operations["createLocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/structure/locations/{location}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                location: string;
+            };
+            cookie?: never;
+        };
+        /** Get a location */
+        get: operations["getLocation"];
+        put?: never;
+        post?: never;
+        /**
+         * Archive a location
+         * @description Soft delete. 409 has_active_children while it still contains active items.
+         */
+        delete: operations["archiveLocation"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a location
+         * @description Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.
+         */
+        patch: operations["updateLocation"];
+        trace?: never;
+    };
+    "/farms/{farm}/structure/plots/{plot}/soil": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Record the plot's soil profile (replaces the previous one) */
+        put: operations["recordPlotSoil"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1398,6 +1803,8 @@ export interface components {
             status?: "invited" | "active" | "suspended";
             is_owner?: boolean;
             roles?: {
+                /** Format: uuid */
+                id?: string;
                 key?: string;
                 name?: string;
             }[];
@@ -1414,6 +1821,8 @@ export interface components {
             description?: string | null;
             is_system?: boolean;
             is_locked?: boolean;
+            /** @description Only on the list endpoint */
+            member_count?: number;
             grants?: {
                 [key: string]: components["schemas"]["Scope"];
             };
@@ -1888,6 +2297,321 @@ export interface components {
             /** Format: date-time */
             created_at?: string;
         };
+        /** @description GeoJSON Polygon in WGS 84, [longitude, latitude] positions; closed rings, at most 1000 vertices, no self-intersections. */
+        GeoJsonPolygon: {
+            /** @constant */
+            type: "Polygon";
+            coordinates: number[][][];
+        };
+        StructureWarnings: {
+            warnings?: {
+                /** @enum {string} */
+                code?: "outside_parent" | "overlaps_sibling";
+                message?: string;
+                related?: {
+                    /** @enum {string} */
+                    type?: "block" | "section" | "plot" | "location";
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                };
+            }[];
+        };
+        StructureBlock: {
+            /** Format: uuid */
+            id?: string;
+            code?: string;
+            name?: string;
+            description?: string | null;
+            /** @constant */
+            type?: "farm_block";
+            boundary?: components["schemas"]["GeoJsonPolygon"] | null;
+            /** @description Computed from the boundary */
+            area_ha?: number | null;
+            declared_area_ha?: number | null;
+            /** @description area_ha when mapped, else declared_area_ha */
+            effective_area_ha?: number | null;
+            centroid?: null | {
+                lat?: number;
+                lng?: number;
+            };
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        StructureSection: {
+            /** Format: uuid */
+            id?: string;
+            code?: string;
+            name?: string;
+            description?: string | null;
+            /** @constant */
+            type?: "farm_section";
+            /** Format: uuid */
+            block_id?: string;
+            boundary?: components["schemas"]["GeoJsonPolygon"] | null;
+            /** @description Computed from the boundary */
+            area_ha?: number | null;
+            declared_area_ha?: number | null;
+            /** @description area_ha when mapped, else declared_area_ha */
+            effective_area_ha?: number | null;
+            centroid?: null | {
+                lat?: number;
+                lng?: number;
+            };
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        StructurePlot: {
+            /** Format: uuid */
+            id?: string;
+            code?: string;
+            name?: string;
+            description?: string | null;
+            /** @constant */
+            type?: "farm_plot";
+            /** Format: uuid */
+            section_id?: string | null;
+            land_use?: components["schemas"]["LandUse"];
+            irrigation?: components["schemas"]["Irrigation"];
+            soil_profile?: components["schemas"]["SoilProfile"] | null;
+            /** Format: date-time */
+            soil_updated_at?: string | null;
+            boundary?: components["schemas"]["GeoJsonPolygon"] | null;
+            /** @description Computed from the boundary */
+            area_ha?: number | null;
+            declared_area_ha?: number | null;
+            /** @description area_ha when mapped, else declared_area_ha */
+            effective_area_ha?: number | null;
+            centroid?: null | {
+                lat?: number;
+                lng?: number;
+            };
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        StructureLocation: {
+            /** Format: uuid */
+            id?: string;
+            code?: string;
+            name?: string;
+            description?: string | null;
+            /** @constant */
+            type?: "farm_location";
+            kind?: components["schemas"]["LocationKind"];
+            /** Format: uuid */
+            plot_id?: string | null;
+            latitude?: number | null;
+            longitude?: number | null;
+            boundary?: components["schemas"]["GeoJsonPolygon"] | null;
+            /** @description Computed from the boundary */
+            area_ha?: number | null;
+            declared_area_ha?: number | null;
+            /** @description area_ha when mapped, else declared_area_ha */
+            effective_area_ha?: number | null;
+            centroid?: null | {
+                lat?: number;
+                lng?: number;
+            };
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        StructureBlockInput: {
+            name?: string;
+            /** @description Generated when omitted; stored upper-case; never reused in the farm */
+            code?: string | null;
+            description?: string | null;
+            declared_area_ha?: number | null;
+            boundary?: components["schemas"]["GeoJsonPolygon"] | null;
+        };
+        StructureSectionInput: {
+            name?: string;
+            /** @description Generated when omitted; stored upper-case; never reused in the farm */
+            code?: string | null;
+            description?: string | null;
+            declared_area_ha?: number | null;
+            boundary?: components["schemas"]["GeoJsonPolygon"] | null;
+            /** Format: uuid */
+            block_id?: string;
+        };
+        StructurePlotInput: {
+            name?: string;
+            /** @description Generated when omitted; stored upper-case; never reused in the farm */
+            code?: string | null;
+            description?: string | null;
+            declared_area_ha?: number | null;
+            boundary?: components["schemas"]["GeoJsonPolygon"] | null;
+            /** Format: uuid */
+            section_id?: string | null;
+            land_use?: components["schemas"]["LandUse"];
+            irrigation?: components["schemas"]["Irrigation"];
+        };
+        StructureLocationInput: {
+            name?: string;
+            /** @description Generated when omitted; stored upper-case; never reused in the farm */
+            code?: string | null;
+            description?: string | null;
+            declared_area_ha?: number | null;
+            boundary?: components["schemas"]["GeoJsonPolygon"] | null;
+            kind?: components["schemas"]["LocationKind"];
+            /** Format: uuid */
+            plot_id?: string | null;
+            latitude?: number | null;
+            longitude?: number | null;
+        };
+        /** @enum {string} */
+        LandUse: "crop" | "pasture" | "fallow" | "orchard" | "forestry" | "other";
+        /** @enum {string} */
+        Irrigation: "rainfed" | "drip" | "sprinkler" | "furrow" | "flood" | "other";
+        /** @enum {string} */
+        LocationKind: "store" | "building" | "paddock" | "housing" | "water" | "gate" | "office" | "other";
+        SoilProfile: {
+            /** @enum {string|null} */
+            texture?: "sand" | "loamy_sand" | "sandy_loam" | "loam" | "silt_loam" | "silt" | "sandy_clay_loam" | "clay_loam" | "silty_clay_loam" | "sandy_clay" | "silty_clay" | "clay" | null;
+            ph?: number | null;
+            organic_matter_pct?: number | null;
+            nitrogen_mg_kg?: number | null;
+            phosphorus_mg_kg?: number | null;
+            potassium_mg_kg?: number | null;
+            ec_ds_m?: number | null;
+            /** @enum {string|null} */
+            drainage?: "poor" | "moderate" | "good" | "excessive" | null;
+            depth_cm?: number | null;
+            /** Format: date */
+            tested_on?: string | null;
+            laboratory?: string | null;
+            notes?: string | null;
+        };
+        FarmStructure: {
+            blocks?: components["schemas"]["StructureBlock"][];
+            sections?: components["schemas"]["StructureSection"][];
+            plots?: components["schemas"]["StructurePlot"][];
+            locations?: components["schemas"]["StructureLocation"][];
+            totals?: {
+                blocks?: number;
+                sections?: number;
+                plots?: number;
+                locations?: number;
+                plots_mapped?: number;
+                mapped_area_ha?: number;
+                plot_area_ha?: number;
+                farm_size_ha?: number | null;
+            };
+        };
+        FarmSettings: {
+            require_mfa_for_all?: boolean;
+            approval_thresholds?: {
+                /** @description Farm currency */
+                expense?: number | null;
+                purchase_order?: number | null;
+                stock_adjustment_pct?: number | null;
+            };
+            allow_negative_stock?: boolean;
+            /** @enum {string} */
+            units?: "metric" | "imperial";
+        };
+        FarmSettingsInput: {
+            require_mfa_for_all?: boolean;
+            approval_thresholds?: {
+                expense?: number | null;
+                purchase_order?: number | null;
+                stock_adjustment_pct?: number | null;
+            };
+            allow_negative_stock?: boolean;
+            /** @enum {string} */
+            units?: "metric" | "imperial";
+        };
+        FarmOverview: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "farm_overview";
+            name?: string;
+            code?: string;
+            status?: string;
+            district?: string | null;
+            is_owner?: boolean;
+            roles?: string[];
+            home_dashboard?: string | null;
+            /** @description Only the numbers the member may see in that farm. */
+            metrics?: {
+                size_ha?: number;
+                plots?: number;
+                mapped_area_ha?: number;
+                members?: number;
+                open_batches?: number;
+            };
+        };
+        Invitation: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "farm_invitation";
+            email?: string;
+            /** @enum {string} */
+            status?: "pending" | "accepted" | "revoked" | "expired";
+            roles?: {
+                /** Format: uuid */
+                id?: string;
+                key?: string;
+                name?: string;
+            }[];
+            message?: string | null;
+            invited_by?: null | {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            send_count?: number;
+            /** Format: date-time */
+            expires_at?: string;
+            /** Format: date-time */
+            last_sent_at?: string;
+            /** Format: date-time */
+            accepted_at?: string | null;
+            /** Format: date-time */
+            revoked_at?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        InvitationPreview: {
+            /** @constant */
+            type?: "invitation_preview";
+            /** @enum {string} */
+            status?: "pending" | "accepted" | "revoked" | "expired";
+            email?: string;
+            farm?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            invited_by?: string | null;
+            roles?: string[];
+            message?: string | null;
+            /** Format: date-time */
+            expires_at?: string;
+            account_exists?: boolean;
+        };
+        InvitationAcceptance: {
+            /** @constant */
+            type?: "invitation_acceptance";
+            /** Format: uuid */
+            farm_id?: string;
+            /** Format: uuid */
+            membership_id?: string;
+            account_created?: boolean;
+        };
     };
     responses: {
         /** @description RFC 9457 problem details */
@@ -2030,6 +2754,7 @@ export interface components {
         IdempotencyKey: string;
         SubscriptionId: string;
         Ticket: string;
+        InvitationToken: string;
         Catalog: "crops" | "crop-varieties" | "animal-species" | "animal-breeds" | "units" | "inventory-categories" | "activity-types";
     };
     requestBodies: {
@@ -2601,6 +3326,325 @@ export interface operations {
             422: components["responses"]["Problem"];
         };
     };
+    myFarmsOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One card per active membership */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["FarmOverview"][];
+                    };
+                };
+            };
+        };
+    };
+    getFarmSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settings merged over defaults */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["FarmSettings"];
+                    };
+                };
+            };
+        };
+    };
+    updateFarmSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FarmSettingsInput"];
+            };
+        };
+        responses: {
+            /** @description Updated settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["FarmSettings"];
+                    };
+                };
+            };
+            422: components["responses"]["Problem"];
+        };
+    };
+    removeMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                member: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    updateMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                member: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    role_ids?: string[];
+                    /** @enum {string} */
+                    status?: "active" | "suspended";
+                };
+            };
+        };
+        responses: {
+            /** @description Updated member */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Member"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listInvitations: {
+        parameters: {
+            query?: {
+                "filter[status]"?: "pending" | "accepted" | "revoked" | "expired";
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invitations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["Invitation"][];
+                    };
+                };
+            };
+        };
+    };
+    createInvitation: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    role_ids: string[];
+                    message?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Invitation sent */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Invitation"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    revokeInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                invitation: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    resendInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                invitation: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Invitation"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    previewInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: components["parameters"]["InvitationToken"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invitation preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InvitationPreview"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    acceptInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: components["parameters"]["InvitationToken"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    password?: string;
+                    password_confirmation?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Joined with an existing account */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InvitationAcceptance"];
+                    };
+                };
+            };
+            /** @description Account created and joined */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InvitationAcceptance"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            410: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
     listMembers: {
         parameters: {
             query?: {
@@ -2650,6 +3694,100 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    createRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    description?: string | null;
+                    /** Format: uuid */
+                    copy_from_role_id?: string | null;
+                    grants?: {
+                        [key: string]: components["schemas"]["Scope"];
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Created role */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Role"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    deleteRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                role: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    updateRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                role: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated role */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Role"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
         };
     };
     updateRolePermissions: {
@@ -2709,6 +3847,524 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    getFarmStructure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Structure */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["FarmStructure"];
+                    };
+                };
+            };
+        };
+    };
+    createBlock: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StructureBlockInput"];
+            };
+        };
+        responses: {
+            /** @description Created. `meta.warnings` lists soft geometry problems. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StructureBlock"];
+                        meta?: components["schemas"]["StructureWarnings"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getBlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                block: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The block */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StructureBlock"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    archiveBlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                block: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    updateBlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                block: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StructureBlockInput"] & {
+                    version?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StructureBlock"];
+                        meta?: components["schemas"]["StructureWarnings"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    createSection: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StructureSectionInput"];
+            };
+        };
+        responses: {
+            /** @description Created. `meta.warnings` lists soft geometry problems. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StructureSection"];
+                        meta?: components["schemas"]["StructureWarnings"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getSection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                section: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The section */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StructureSection"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    archiveSection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                section: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    updateSection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                section: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StructureSectionInput"] & {
+                    version?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StructureSection"];
+                        meta?: components["schemas"]["StructureWarnings"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    createPlot: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StructurePlotInput"];
+            };
+        };
+        responses: {
+            /** @description Created. `meta.warnings` lists soft geometry problems. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StructurePlot"];
+                        meta?: components["schemas"]["StructureWarnings"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getPlot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                plot: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The plot */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StructurePlot"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    archivePlot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                plot: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    updatePlot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                plot: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StructurePlotInput"] & {
+                    version?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StructurePlot"];
+                        meta?: components["schemas"]["StructureWarnings"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    createLocation: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StructureLocationInput"];
+            };
+        };
+        responses: {
+            /** @description Created. `meta.warnings` lists soft geometry problems. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StructureLocation"];
+                        meta?: components["schemas"]["StructureWarnings"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                location: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The location */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StructureLocation"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    archiveLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                location: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    updateLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                location: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StructureLocationInput"] & {
+                    version?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StructureLocation"];
+                        meta?: components["schemas"]["StructureWarnings"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    recordPlotSoil: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                plot: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SoilProfile"];
+            };
+        };
+        responses: {
+            /** @description Updated plot */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StructurePlot"];
+                    };
+                };
+            };
+            422: components["responses"]["Problem"];
         };
     };
     listAuditLogs: {

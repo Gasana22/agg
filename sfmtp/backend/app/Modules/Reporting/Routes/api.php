@@ -2,6 +2,7 @@
 
 use App\Modules\Reporting\Http\Controllers\AdminDashboardController;
 use App\Modules\Reporting\Http\Controllers\DashboardController;
+use App\Modules\Reporting\Http\Controllers\MyFarmsController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api', 'farm'])
@@ -16,3 +17,7 @@ Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api', 'farm'])
 Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api', 'platform.admin', 'platform.can:dashboard.view'])
     ->get('admin/dashboard', AdminDashboardController::class)
     ->name('admin.dashboard');
+
+Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api'])
+    ->get('me/farms/overview', MyFarmsController::class)
+    ->name('me.farms.overview');

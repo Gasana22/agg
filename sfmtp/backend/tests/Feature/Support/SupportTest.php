@@ -77,7 +77,7 @@ class SupportTest extends TestCase
 
         $this->asUser($support)->getJson("{$base}/traceability/batches")->assertOk()->assertJsonCount(1, 'data');
         $actions = array_column($this->asUser($support)->getJson("{$base}/dashboards/owner")->assertOk()->json('data.quick_actions'), 'key');
-        $this->assertSame(['view_audit_log'], $actions);   // read-only: no "new batch", no "invite"
+        $this->assertSame(['view_map', 'view_audit_log'], $actions);   // read-only: no "new batch", no "invite"
         $this->assertProblem($this->asUser($support)->postJson("{$base}/traceability/batches", ['kind' => 'processed']), 403, 'support_read_only');
 
         // A support workspace appears for the staff member; the owner sees the active grant.

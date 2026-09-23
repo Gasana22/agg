@@ -3,6 +3,7 @@
 namespace App\Modules\Tenancy\Http\Controllers;
 
 use App\Modules\Tenancy\Application\FarmService;
+use App\Modules\Tenancy\Application\FarmSettings;
 use App\Modules\Tenancy\Domain\Enums\FarmStatus;
 use App\Modules\Tenancy\Domain\Enums\MembershipStatus;
 use App\Modules\Tenancy\Domain\Models\Farm;
@@ -54,6 +55,35 @@ class FarmController
     public function update(StoreFarmRequest $request): FarmResource
     {
         return new FarmResource($this->farms->update($this->context->farm(), $request->validated()));
+    }
+
+    public function settings(FarmSettings $settings): JsonResponse
+    {
+        return new JsonResponse(['data' => $settings->get($this->context->farm())]);
+    }
+
+    public function updateSettings(Request $request, FarmSettings $settings): JsonResponse
+    {
+        $data = $request->validate([
+            'require_mfa_for_all' => ['sometimes', 'boolean'],
+            'approval_thresholds' => ['sometimes', 'array:expense,purchase_order,stock_adjustment_pct'],
+            'approval_thresholds.expense' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
+            'approval_thresholds.purchase_order' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
+            'approval_thresholds.stock_adjustment_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'allow_negative_stock' => ['sometimes', 'boolean'],
+            'units' => ['sometimes', 'in:metric,imperial'],
+        ]);
+
+        foreach ($data['approval_thresholds'] ?? [] as $key => $value) {
+            $data['approval_thresholds'][$key] = $value === null ? null : (float) $value;
+        }
+        foreach (['require_mfa_for_all', 'allow_negative_stock'] as $key) {
+            if (array_key_exists($key, $data)) {
+                $data[$key] = (bool) $data[$key];
+            }
+        }
+
+        return new JsonResponse(['data' => $settings->update($this->context->farm(), $data)]);
     }
 
     public function destroy(): Response

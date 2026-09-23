@@ -26,7 +26,7 @@ final class RoleTemplates
                 'name' => 'Farm Manager',
                 'description' => 'Runs daily operations, workers, tasks and approvals.',
                 'grants' => $all([
-                    'farm.profile.view', 'structure.view', 'structure.manage', 'members.view', 'members.invite_workers', 'roles.view',
+                    'farm.profile.view', 'structure.view', 'structure.manage', 'structure.soil.manage', 'members.view', 'members.invite_workers', 'roles.view',
                     'dashboard.manager.view',
                     'crops.plans.view', 'crops.plans.manage', 'crops.operations.view', 'crops.operations.record', 'crops.operations.approve',
                     'crops.harvest.view', 'crops.harvest.record',

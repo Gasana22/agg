@@ -2,8 +2,11 @@
 
 namespace Tests\Feature\Tenancy;
 
+use App\Modules\Access\Domain\Models\FarmInvitation;
 use App\Modules\Access\Domain\Models\FarmRole;
+use App\Modules\FarmStructure\Application\StructureService;
 use App\Modules\Tenancy\Domain\Models\Farm;
+use App\Modules\Tenancy\Domain\Models\FarmUser;
 use App\Modules\Tenancy\TenantContext;
 use App\Modules\Traceability\Application\Recorder;
 use App\Modules\Traceability\Domain\Enums\BatchKind;
@@ -36,10 +39,25 @@ class CrossTenantIsolationTest extends TestCase
         $this->attackerFarm = $this->farm();
 
         $recorder = $this->app->make(Recorder::class);
-        $this->victimRecords = $this->inFarm($this->victim, function () use ($recorder) {
+        $structure = $this->app->make(StructureService::class);
+        $victimMember = $this->memberWithRole($this->victim, 'agronomist');
+        $this->victimRecords = $this->inFarm($this->victim, function () use ($recorder, $structure, $victimMember) {
             $batch = $recorder->createBatch(BatchKind::SeedLot, ['name' => 'Victim seed']);
+            [$block] = $structure->create('block', ['name' => 'Victim block']);
+            [$section] = $structure->create('section', ['name' => 'Victim section', 'block_id' => $block->id]);
+            [$plot] = $structure->create('plot', ['name' => 'Victim plot', 'section_id' => $section->id]);
+            [$location] = $structure->create('location', ['name' => 'Victim store', 'kind' => 'store', 'plot_id' => $plot->id]);
 
             return [
+                'block' => $block->id,
+                'section' => $section->id,
+                'plot' => $plot->id,
+                'location' => $location->id,
+                'member' => FarmUser::where('farm_id', $this->victim->id)->where('user_id', $victimMember->id)->value('id'),
+                'invitation' => FarmInvitation::create([
+                    'email' => 'victim-invitee@example.com', 'token_hash' => str_repeat('a', 64), 'invited_by' => $this->ownerOf($this->victim)->id,
+                    'expires_at' => now()->addDay(), 'last_sent_at' => now(),
+                ])->id,
                 'batch' => $batch->id,
                 'event' => TraceEvent::where('batch_id', $batch->id)->value('id'),
                 'role' => FarmRole::where('key', 'manager')->value('id'),
@@ -81,6 +99,14 @@ class CrossTenantIsolationTest extends TestCase
             'links' => DB::table('trace_batch_links')->count(),
             'farms' => DB::table('farms')->where('status', 'active')->count(),
             'grants' => DB::table('farm_role_permissions')->count(),
+            'structure' => DB::table('farm_blocks')->whereNull('deleted_at')->count() + DB::table('farm_sections')->whereNull('deleted_at')->count()
+                + DB::table('farm_plots')->whereNull('deleted_at')->count() + DB::table('farm_locations')->whereNull('deleted_at')->count(),
+            'structure_versions' => DB::table('farm_plots')->sum('version'),
+            'members' => DB::table('farm_users')->where('status', 'active')->count(),
+            'member_roles' => DB::table('farm_user_roles')->count(),
+            'invitations' => DB::table('farm_invitations')->whereNull('revoked_at')->count(),
+            'roles' => DB::table('farm_roles')->count(),
+            'settings' => DB::table('farm_settings')->orderBy('farm_id')->pluck('settings')->all(),
         ]));
     }
 

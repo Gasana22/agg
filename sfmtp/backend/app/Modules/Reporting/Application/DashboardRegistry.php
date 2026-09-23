@@ -29,9 +29,10 @@ class DashboardRegistry
         $trace = ['trace.open_batches', 'trace.events'];
 
         return match ($dashboard) {
-            'owner' => ['kpis' => ['farm.area', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['new_batch', 'view_audit_log']],
-            'manager' => ['kpis' => ['farm.members', ...$trace], 'widgets' => ['recent_trace_events', 'trace_activity'], 'quick_actions' => ['new_batch']],
-            'agronomist', 'livestock', 'store' => ['kpis' => $trace, 'widgets' => ['recent_trace_events'], 'quick_actions' => ['new_batch']],
+            'owner' => ['kpis' => ['farm.area', 'structure.mapped_area', 'structure.plots', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'view_map', 'new_batch', 'view_audit_log']],
+            'manager' => ['kpis' => ['structure.plots', 'farm.members', ...$trace], 'widgets' => ['recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'view_map', 'new_batch']],
+            'agronomist' => ['kpis' => ['structure.plots', 'structure.mapped_area', ...$trace], 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_map', 'new_batch']],
+            'livestock', 'store' => ['kpis' => $trace, 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_map', 'new_batch']],
             'accountant' => ['kpis' => ['trace.open_batches'], 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_audit_log']],
             'worker' => ['kpis' => [], 'widgets' => [], 'quick_actions' => []],
         };
@@ -49,6 +50,10 @@ class DashboardRegistry
                 'value' => fn () => $farm->size_ha === null ? null : ['value' => $farm->size_ha, 'unit' => 'ha']],
             'farm.members' => ['label' => 'Active members', 'format' => 'number', 'permission' => 'members.view',
                 'value' => fn () => $this->metrics->membersActive()],
+            'structure.plots' => ['label' => 'Plots', 'format' => 'number', 'permission' => 'structure.view',
+                'value' => fn () => $this->metrics->plots()],
+            'structure.mapped_area' => ['label' => 'Mapped area', 'format' => 'quantity', 'permission' => 'structure.view',
+                'value' => fn () => ['value' => number_format($this->metrics->mappedAreaHa(), 2, '.', ''), 'unit' => 'ha']],
             'trace.open_batches' => ['label' => 'Open batches', 'format' => 'number', 'permission' => 'trace.batches.view',
                 'value' => fn () => $this->metrics->openBatches()],
             'trace.events' => ['label' => 'Traceability events', 'format' => 'number', 'permission' => 'trace.batches.view',
@@ -68,6 +73,7 @@ class DashboardRegistry
             'setup_checklist' => ['type' => 'checklist', 'permission' => 'farm.profile.manage', 'inline' => true,
                 'data' => fn () => ['items' => [
                     ['key' => 'profile', 'label' => 'Complete the farm profile', 'done' => $farm->district !== null && $farm->size_ha !== null, 'href' => "/farms/{$farm->id}/settings"],
+                    ['key' => 'structure', 'label' => 'Map your blocks and plots', 'done' => $this->metrics->plots() > 0, 'href' => "/farms/{$farm->id}/structure"],
                     ['key' => 'members', 'label' => 'Invite your team', 'done' => $this->metrics->membersActive() > 1, 'href' => "/farms/{$farm->id}/members"],
                     ['key' => 'approval', 'label' => 'Farm approved by SFMTP', 'done' => $farm->status->value === 'active', 'href' => null],
                 ]]],
@@ -92,7 +98,8 @@ class DashboardRegistry
         $id = $this->context->farmId();
 
         return [
-            // 'invite_member' arrives with member invitations (Phase 3).
+            'invite_member' => ['label' => 'Invite member', 'permission' => 'members.invite_workers', 'target' => "/farms/{$id}/members?invite=1"],
+            'view_map' => ['label' => 'Farm map', 'permission' => 'structure.view', 'target' => "/farms/{$id}/structure"],
             'new_batch' => ['label' => 'New batch', 'permission' => 'trace.batches.create', 'target' => "/farms/{$id}/traceability/batches/new"],
             'view_audit_log' => ['label' => 'Audit log', 'permission' => 'audit.view', 'target' => "/farms/{$id}/audit-log"],
         ];

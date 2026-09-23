@@ -25,6 +25,7 @@ return [
         'Billing',
         'Platform',
         'Catalog',
+        'FarmStructure',
         'Support',
         'Traceability',
         'Reporting',
@@ -44,6 +45,11 @@ return [
         // A just-rotated token presented again within this window is refused
         // without revoking the session (parallel refreshes are not theft).
         'reuse_grace_seconds' => 30,
+    ],
+
+    'invitations' => [
+        'ttl_days' => (int) env('INVITATION_TTL_DAYS', 7),
+        'max_resends' => 5,
     ],
 
     'security' => [
