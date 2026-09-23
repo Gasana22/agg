@@ -35,3 +35,21 @@ export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLS
     />
   );
 }
+
+export function Textarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className={cn("min-h-24 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus-visible:border-primary", className)}
+      {...props}
+    />
+  );
+}
+
+export function Checkbox({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  return (
+    <label className="inline-flex items-center gap-2 text-sm">
+      <input type="checkbox" className="size-4 rounded border-border accent-[var(--primary)]" {...props} />
+      {label}
+    </label>
+  );
+}

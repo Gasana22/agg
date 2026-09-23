@@ -23,6 +23,8 @@ const TITLES: Record<string, string> = {
   recent_trace_events: "Recent traceability activity",
   trace_activity: "Traceability events per day",
   farm_approvals: "Farms awaiting approval",
+  expiring_subscriptions: "Subscriptions ending within 14 days",
+  support_queue: "Open support tickets",
 };
 
 /**

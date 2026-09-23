@@ -37,9 +37,20 @@ export function useMe() {
   });
 }
 
-/** The farm workspace for a route, or undefined while loading / if not a member. */
+/**
+ * The farm workspace for a route: a membership, or an owner-granted
+ * read-only support session. Undefined while loading or without access.
+ */
 export function useFarmWorkspace(farmId: string) {
   const query = useWorkspaces();
-  const workspace = query.data?.workspaces.find((w) => w.type === "farm" && w.id === farmId);
+  const workspace =
+    query.data?.workspaces.find((w) => w.type === "farm" && w.id === farmId) ??
+    query.data?.workspaces.find((w) => w.type === "support" && w.id === farmId);
   return { ...query, workspace };
+}
+
+/** The platform workspace (admins only), with the caller's capabilities. */
+export function usePlatformWorkspace() {
+  const query = useWorkspaces();
+  return { ...query, workspace: query.data?.workspaces.find((w) => w.type === "platform") };
 }

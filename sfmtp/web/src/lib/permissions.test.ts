@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Workspace } from "@/lib/api/hooks";
 
-import { can, homePath, visibleNav } from "./permissions";
+import { can, homePath, visibleAdminNav, visibleNav } from "./permissions";
 
 const farm = (permissions: Record<string, "all" | "assigned" | "own">, dashboards: Workspace["dashboards"] = ["owner"]): Workspace => ({
   type: "farm",
@@ -15,16 +15,21 @@ const farm = (permissions: Record<string, "all" | "assigned" | "own">, dashboard
 describe("visibleNav", () => {
   it("shows only items the member holds a permission for", () => {
     const keys = visibleNav(farm({ "trace.batches.view": "all" }, ["agronomist"])).map((i) => i.key);
-    expect(keys).toEqual(["dashboard", "traceability"]);
+    expect(keys).toEqual(["dashboard", "traceability", "support"]);
   });
 
   it("hides the dashboard link when the role has no dashboard", () => {
-    expect(visibleNav(farm({}, [])).map((i) => i.key)).toEqual([]);
+    expect(visibleNav(farm({}, [])).map((i) => i.key)).toEqual(["support"]);
   });
 
-  it("gives owners everything", () => {
-    const all = { "trace.batches.view": "all", "members.view": "all", "roles.view": "all", "audit.view": "all", "farm.profile.manage": "all" } as const;
-    expect(visibleNav(farm(all)).map((i) => i.key)).toEqual(["dashboard", "traceability", "members", "roles", "audit", "settings"]);
+  it("gives owners everything, including their subscription", () => {
+    const all = { "trace.batches.view": "all", "members.view": "all", "roles.view": "all", "audit.view": "all", "farm.profile.manage": "all", "billing.manage": "all" } as const;
+    expect(visibleNav(farm(all)).map((i) => i.key)).toEqual(["dashboard", "traceability", "members", "roles", "audit", "settings", "billing", "support"]);
+  });
+
+  it("offers read-only support sessions no support tickets or billing", () => {
+    const support: Workspace = { ...farm({ "trace.batches.view": "all" }), type: "support" };
+    expect(visibleNav(support).map((i) => i.key)).toEqual(["dashboard", "traceability"]);
   });
 });
 
@@ -49,5 +54,16 @@ describe("homePath", () => {
   it("sends platform admins to /admin and new users to onboarding", () => {
     expect(homePath([{ type: "platform", id: "platform", name: "Admin", dashboards: ["admin"] }], meta)).toBe("/admin");
     expect(homePath([], meta)).toBe("/onboarding");
+  });
+});
+
+describe("visibleAdminNav", () => {
+  it("filters platform navigation by capability", () => {
+    expect(visibleAdminNav({ "dashboard.view": "all", "plans.manage": "all", "subscriptions.view": "all" }).map((i) => i.key)).toEqual([
+      "dashboard",
+      "subscriptions",
+      "plans",
+    ]);
+    expect(visibleAdminNav(undefined)).toEqual([]);
   });
 });

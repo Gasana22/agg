@@ -43,7 +43,10 @@ export default function MfaSetupPage() {
     try {
       const { data } = await api.POST("/auth/mfa/confirm", { body: { code } });
       setCodes(data!.data!.recovery_codes ?? []);
-      await queryClient.invalidateQueries();
+      // Drop cached workspaces: the next redirect must see MFA as enabled,
+      // not stale data that would send the user back here.
+      queryClient.removeQueries({ queryKey: ["workspaces"] });
+      queryClient.removeQueries({ queryKey: ["me"] });
     } catch (err) {
       setError(err instanceof ApiError ? err : null);
     }

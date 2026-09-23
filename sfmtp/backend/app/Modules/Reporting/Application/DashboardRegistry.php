@@ -29,7 +29,7 @@ class DashboardRegistry
         $trace = ['trace.open_batches', 'trace.events'];
 
         return match ($dashboard) {
-            'owner' => ['kpis' => ['farm.area', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'new_batch', 'view_audit_log']],
+            'owner' => ['kpis' => ['farm.area', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['new_batch', 'view_audit_log']],
             'manager' => ['kpis' => ['farm.members', ...$trace], 'widgets' => ['recent_trace_events', 'trace_activity'], 'quick_actions' => ['new_batch']],
             'agronomist', 'livestock', 'store' => ['kpis' => $trace, 'widgets' => ['recent_trace_events'], 'quick_actions' => ['new_batch']],
             'accountant' => ['kpis' => ['trace.open_batches'], 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_audit_log']],
@@ -92,7 +92,7 @@ class DashboardRegistry
         $id = $this->context->farmId();
 
         return [
-            'invite_member' => ['label' => 'Invite a member', 'permission' => 'members.manage', 'target' => "/farms/{$id}/members/invite"],
+            // 'invite_member' arrives with member invitations (Phase 3).
             'new_batch' => ['label' => 'New batch', 'permission' => 'trace.batches.create', 'target' => "/farms/{$id}/traceability/batches/new"],
             'view_audit_log' => ['label' => 'Audit log', 'permission' => 'audit.view', 'target' => "/farms/{$id}/audit-log"],
         ];

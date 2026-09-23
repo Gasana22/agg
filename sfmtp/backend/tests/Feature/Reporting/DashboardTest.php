@@ -47,7 +47,7 @@ class DashboardTest extends TestCase
         $this->assertFalse($widgets['trace_activity']['inline']);
         $this->assertStringContainsString('/widgets/trace_activity?period=7d', $widgets['trace_activity']['href']);
 
-        $this->assertSame(['invite_member', 'new_batch', 'view_audit_log'], array_column($data['quick_actions'], 'key'));
+        $this->assertSame(['new_batch', 'view_audit_log'], array_column($data['quick_actions'], 'key'));
     }
 
     public function test_chart_widgets_are_fetched_separately(): void

@@ -1,4 +1,20 @@
-import { LayoutDashboard, type LucideIcon, Route, ScrollText, Settings, ShieldCheck, Users } from "lucide-react";
+import {
+  Boxes,
+  CreditCard,
+  Gauge,
+  KeyRound,
+  LayoutDashboard,
+  LifeBuoy,
+  Library,
+  type LucideIcon,
+  Plug,
+  Route,
+  ScrollText,
+  Settings,
+  ShieldCheck,
+  Tractor,
+  Users,
+} from "lucide-react";
 
 export const NAV_ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -7,4 +23,12 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   roles: ShieldCheck,
   audit: ScrollText,
   settings: Settings,
+  billing: CreditCard,
+  support: LifeBuoy,
+  farms: Tractor,
+  plans: Boxes,
+  users: KeyRound,
+  catalog: Library,
+  integrations: Plug,
+  system: Gauge,
 };

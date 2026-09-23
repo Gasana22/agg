@@ -30,13 +30,19 @@ export function AppShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const isActive = (href: string) => pathname === href || (href.split("/").length > 3 && pathname.startsWith(href + "/"));
+  // A section is active on its own page and its sub-pages. Dashboards are
+  // workspace roots ("/admin", "/farms/{id}"), so they only match exactly
+  // or on a /dashboard/ page.
+  const isActive = (item: ShellNavItem) =>
+    item.key === "dashboard"
+      ? pathname === item.href || pathname.includes("/dashboard/")
+      : pathname === item.href || pathname.startsWith(item.href + "/");
 
   const links = (
     <nav aria-label="Main" className="space-y-1">
       {nav.map((item) => {
         const Icon = NAV_ICONS[item.icon];
-        const active = isActive(item.href) || (item.key === "dashboard" && pathname.includes("/dashboard/"));
+        const active = isActive(item);
         return (
           <Link
             key={item.key}

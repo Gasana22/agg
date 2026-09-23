@@ -24,7 +24,7 @@ export function WorkspaceSwitcher({ current }: { current: string }) {
       onChange={(e) => {
         const ws = workspaces.find((w) => w.id === e.target.value);
         if (!ws) return;
-        router.push(ws.type === "platform" ? "/admin" : `/farms/${ws.id}`);
+        router.push(ws.type === "platform" ? "/admin" : `/farms/${ws.id}`);   // farm or read-only support workspace
       }}
     >
       {workspaces.map((w) => (

@@ -22,17 +22,40 @@ export const FARM_NAV: NavItem[] = [
   { key: "roles", label: "Roles & permissions", href: (id) => `/farms/${id}/roles`, permission: "roles.view", icon: "roles" },
   { key: "audit", label: "Audit log", href: (id) => `/farms/${id}/audit-log`, permission: "audit.view", icon: "audit" },
   { key: "settings", label: "Farm settings", href: (id) => `/farms/${id}/settings`, permission: "farm.profile.manage", icon: "settings" },
+  { key: "billing", label: "Subscription", href: (id) => `/farms/${id}/billing`, permission: "billing.manage", icon: "billing" },
+  { key: "support", label: "Help & support", href: (id) => `/farms/${id}/support`, permission: null, icon: "support" },
 ];
+
+/** Platform administration navigation, filtered by platform capability (docs/04 §5). */
+export const ADMIN_NAV: { key: string; label: string; href: string; capability: string; icon: string }[] = [
+  { key: "dashboard", label: "Dashboard", href: "/admin", capability: "dashboard.view", icon: "dashboard" },
+  { key: "farms", label: "Farms", href: "/admin/farms", capability: "farms.view", icon: "farms" },
+  { key: "subscriptions", label: "Subscriptions", href: "/admin/subscriptions", capability: "subscriptions.view", icon: "billing" },
+  { key: "plans", label: "Plans & pricing", href: "/admin/plans", capability: "plans.manage", icon: "plans" },
+  { key: "support", label: "Support", href: "/admin/support", capability: "support.view", icon: "support" },
+  { key: "users", label: "Users & staff", href: "/admin/users", capability: "users.view", icon: "users" },
+  { key: "catalog", label: "Catalogues", href: "/admin/catalog", capability: "catalog.manage", icon: "catalog" },
+  { key: "integrations", label: "Integrations", href: "/admin/integrations", capability: "integrations.manage", icon: "integrations" },
+  { key: "settings", label: "Settings", href: "/admin/settings", capability: "settings.manage", icon: "settings" },
+  { key: "system", label: "System", href: "/admin/system", capability: "system.view", icon: "system" },
+];
+
+export function visibleAdminNav(capabilities: Permissions | undefined) {
+  return ADMIN_NAV.filter((item) => can(capabilities, item.capability));
+}
 
 export function can(permissions: Permissions | undefined, permission: string | null): boolean {
   return permission === null || Boolean(permissions && permission in permissions);
 }
 
-export function visibleNav(workspace: Pick<Workspace, "permissions" | "dashboards"> | undefined): NavItem[] {
+export function visibleNav(workspace: Pick<Workspace, "type" | "permissions" | "dashboards"> | undefined): NavItem[] {
   if (!workspace) return [];
-  return FARM_NAV.filter((item) =>
-    item.key === "dashboard" ? (workspace.dashboards?.length ?? 0) > 0 : can(workspace.permissions, item.permission),
-  );
+  const readOnlySupport = workspace.type === "support";
+  return FARM_NAV.filter((item) => {
+    if (item.key === "dashboard") return (workspace.dashboards?.length ?? 0) > 0;
+    if (item.key === "support" && readOnlySupport) return false;
+    return can(workspace.permissions, item.permission);
+  });
 }
 
 export const DASHBOARD_LABELS: Record<string, string> = {
@@ -52,7 +75,7 @@ export function homePath(workspaces: Workspace[], meta: { mfaRequired: boolean; 
   const first = workspaces[0];
   if (!first) return "/onboarding";
   if (first.type === "platform") return "/admin";
-  if (first.type === "farm") {
+  if (first.type === "farm" || first.type === "support") {
     const dashboard = first.dashboards[0];
     return dashboard ? `/farms/${first.id}/dashboard/${dashboard}` : `/farms/${first.id}/traceability`;
   }
