@@ -46,10 +46,18 @@ class TokenService
             }
 
             if ($token->revoked_at !== null) {
-                // A rotated token presented again: assume it was stolen.
-                return $token->replaced_by !== null
-                    ? ['error' => 'token_reuse_detected', 'revoke' => $token]
-                    : ['error' => 'invalid_refresh_token'];
+                if ($token->replaced_by === null) {
+                    return ['error' => 'invalid_refresh_token'];
+                }
+
+                // Two requests refreshing at the same moment (browser tabs, a
+                // retry) is normal: refuse softly for a short window.
+                if ($token->revoked_at->diffInSeconds(now(), true) <= config('sfmtp.refresh.reuse_grace_seconds')) {
+                    return ['error' => 'refresh_token_superseded'];
+                }
+
+                // A rotated token presented again later: assume it was stolen.
+                return ['error' => 'token_reuse_detected', 'revoke' => $token];
             }
 
             if ($token->expires_at->isPast()) {
@@ -83,6 +91,7 @@ class TokenService
 
         throw match ($outcome['error']) {
             'token_reuse_detected' => ApiException::unauthenticated('token_reuse_detected', 'This session has been revoked. Please sign in again.'),
+            'refresh_token_superseded' => ApiException::unauthenticated('refresh_token_superseded', 'This refresh token was just rotated by a parallel request. Retry with the newer token.'),
             'refresh_token_expired' => ApiException::unauthenticated('refresh_token_expired', 'The session has expired. Please sign in again.'),
             'account_disabled' => ApiException::unauthenticated('account_disabled', 'This account is disabled.'),
             'device_revoked' => ApiException::unauthenticated('device_revoked', 'This device has been signed out.'),

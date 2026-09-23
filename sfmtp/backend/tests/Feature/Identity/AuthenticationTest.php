@@ -81,7 +81,8 @@ class AuthenticationTest extends TestCase
         $first = $this->login('amina@example.com')->json('data');
         $second = $this->postJson('/api/v1/auth/refresh', ['refresh_token' => $first['refresh_token']])->json('data');
 
-        // Attacker replays the old token.
+        // Attacker replays the old token (after the parallel-refresh grace window).
+        $this->travel(31)->seconds();
         $this->assertProblem($this->postJson('/api/v1/auth/refresh', ['refresh_token' => $first['refresh_token']]), 401, 'token_reuse_detected');
 
         // The legitimate holder's newer tokens are dead too.
@@ -91,6 +92,19 @@ class AuthenticationTest extends TestCase
 
         $this->assertSame(0, RefreshToken::where('user_id', $user->id)->whereNull('revoked_at')->count());
         $this->assertDatabaseHas('audit_logs', ['action' => 'auth.refresh_token_reuse', 'user_id' => $user->id]);
+    }
+
+    public function test_parallel_refreshes_do_not_count_as_theft(): void
+    {
+        $this->member(['email' => 'amina@example.com']);
+        $first = $this->login('amina@example.com')->json('data');
+        $second = $this->postJson('/api/v1/auth/refresh', ['refresh_token' => $first['refresh_token']])->json('data');
+
+        // A second tab refreshed with the same token a moment later.
+        $this->assertProblem($this->postJson('/api/v1/auth/refresh', ['refresh_token' => $first['refresh_token']]), 401, 'refresh_token_superseded');
+
+        // The session survives.
+        $this->postJson('/api/v1/auth/refresh', ['refresh_token' => $second['refresh_token']])->assertOk();
     }
 
     public function test_logout_invalidates_the_access_token_immediately(): void

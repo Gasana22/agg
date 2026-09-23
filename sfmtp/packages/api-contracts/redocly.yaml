@@ -1,0 +1,8 @@
+extends:
+  - recommended
+rules:
+  # Farm routes deliberately answer 404 for foreign farms; documenting it on
+  # every operation adds noise. Auth/validation errors are listed where useful.
+  operation-4xx-response: off
+  # Proprietary API: no public licence to reference yet.
+  info-license: off

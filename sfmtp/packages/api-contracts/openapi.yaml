@@ -1,0 +1,1359 @@
+openapi: 3.1.0
+info:
+  title: SFMTP API
+  version: 1.0.0-phase1
+  description: |
+    Smart Farm Management & Traceability Platform REST API.
+
+    Conventions (docs/06-api-contracts.md): JSON, snake_case, UTC ISO-8601
+    timestamps, UUIDv7 ids, cursor pagination, RFC 9457 problem+json errors.
+    Every farm route lives under `/farms/{farm}`; a farm you are not an active
+    member of is indistinguishable from one that does not exist (404).
+
+    This file is the contract between backend, web and mobile. The backend
+    test `OpenApiCoverageTest` fails if a route is missing here.
+servers:
+  - url: /api/v1
+security:
+  - bearer: []
+
+tags:
+  - name: Auth
+    description: Sign-in, token rotation, MFA and password reset.
+  - name: Me
+    description: The signed-in user, their devices and workspaces.
+  - name: Farms
+    description: Farm (tenant) profile and lifecycle.
+  - name: Access
+    description: Members, roles and the permission registry.
+  - name: Traceability
+    description: Batches, append-only events, links and journeys.
+  - name: Dashboards
+    description: Server-driven, permission-aware role dashboards.
+  - name: Audit
+    description: Append-only record of user actions.
+  - name: Admin
+    description: Platform administration (no farm operational data).
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      security: []
+      summary: Sign in with email and password
+      description: |
+        Returns tokens, or `mfa_required: true` with a short-lived `mfa_token`
+        to complete with `/auth/mfa/challenge`. Unknown emails, wrong passwords
+        and locked accounts all return the same 401 `invalid_credentials`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+                client: { type: string, enum: [web, mobile], default: web }
+                device:
+                  type: object
+                  properties:
+                    name: { type: string, maxLength: 120 }
+                    platform: { type: string, enum: [android, ios, web] }
+                    push_token: { type: string }
+      responses:
+        '200':
+          description: Signed in, or second factor required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: '#/components/schemas/TokenPair'
+                      - $ref: '#/components/schemas/MfaPending'
+        '401': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+
+  /auth/mfa/challenge:
+    post:
+      tags: [Auth]
+      operationId: mfaChallenge
+      security: []
+      summary: Complete sign-in with an authenticator or recovery code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mfa_token]
+              properties:
+                mfa_token: { type: string }
+                code: { type: string, pattern: '^\d{6}$' }
+                recovery_code: { type: string }
+      responses:
+        '200':
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/TokenPair' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refresh
+      security: []
+      summary: Rotate a refresh token
+      description: Each refresh token works once. Replaying an old one revokes the whole session (`token_reuse_detected`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/TokenPair' }
+        '401': { $ref: '#/components/responses/Problem' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      summary: Revoke the current session (all its tokens)
+      responses:
+        '204': { description: Signed out }
+        '401': { $ref: '#/components/responses/Problem' }
+
+  /auth/password/forgot:
+    post:
+      tags: [Auth]
+      operationId: forgotPassword
+      summary: Forgot password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '202': { description: A reset link is emailed if the account exists }
+
+  /auth/password/reset:
+    post:
+      tags: [Auth]
+      operationId: resetPassword
+      summary: Reset password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, token, password, password_confirmation]
+              properties:
+                email: { type: string, format: email }
+                token: { type: string }
+                password: { type: string, minLength: 10 }
+                password_confirmation: { type: string }
+      responses:
+        '204': { description: Password changed; every session is signed out }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /auth/mfa/setup:
+    post:
+      tags: [Auth]
+      operationId: mfaSetup
+      summary: Start authenticator-app enrolment
+      responses:
+        '200':
+          description: Secret and otpauth URI for the QR code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      secret: { type: string }
+                      otpauth_uri: { type: string }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /auth/mfa/confirm:
+    post:
+      tags: [Auth]
+      operationId: mfaConfirm
+      summary: Mfa confirm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        '200':
+          description: MFA enabled; recovery codes are shown once
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      mfa_enabled: { type: boolean }
+                      recovery_codes: { type: array, items: { type: string } }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /auth/mfa/recovery-codes:
+    post:
+      tags: [Auth]
+      operationId: mfaRegenerateRecoveryCodes
+      summary: Mfa regenerate recovery codes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        '200':
+          description: New recovery codes (old ones stop working)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      recovery_codes: { type: array, items: { type: string } }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /auth/mfa:
+    delete:
+      tags: [Auth]
+      operationId: mfaDisable
+      summary: Turn MFA off (refused when the role requires it)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        '204': { description: MFA disabled }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /me:
+    get:
+      tags: [Me]
+      operationId: getMe
+      summary: Get me
+      responses:
+        '200':
+          description: The signed-in user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/User' }
+                  meta:
+                    type: object
+                    properties:
+                      mfa_required: { type: boolean }
+        '401': { $ref: '#/components/responses/Problem' }
+
+  /me/workspaces:
+    get:
+      tags: [Me]
+      operationId: listWorkspaces
+      summary: Farms and portals the user can enter, with permissions and dashboards
+      responses:
+        '200':
+          description: Workspaces
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Workspace' }
+                  meta:
+                    type: object
+                    properties:
+                      default_workspace: { type: [string, 'null'] }
+                      mfa_enabled: { type: boolean }
+                      mfa_required: { type: boolean }
+
+  /me/devices:
+    get:
+      tags: [Me]
+      operationId: listDevices
+      summary: List devices
+      responses:
+        '200':
+          description: Signed-in devices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Device' }
+
+  /me/devices/{device}:
+    delete:
+      tags: [Me]
+      operationId: revokeDevice
+      summary: Revoke device
+      parameters:
+        - { name: device, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Device signed out }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /farms:
+    get:
+      tags: [Farms]
+      operationId: listFarms
+      summary: List farms
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Farms the user is an active member of
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Farm' }
+    post:
+      tags: [Farms]
+      operationId: createFarm
+      summary: Create a farm (starts `pending` until approved by the platform)
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FarmInput' }
+      responses:
+        '201':
+          description: Farm created; the caller is its owner
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Farm' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Farms]
+      operationId: getFarm
+      summary: Get farm
+      x-permission: farm.profile.view
+      responses:
+        '200':
+          description: Farm profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Farm' }
+        '404': { $ref: '#/components/responses/Problem' }
+    put:
+      tags: [Farms]
+      operationId: replaceFarm
+      summary: Replace farm
+      x-permission: farm.profile.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FarmInput' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Farm' }
+    patch:
+      tags: [Farms]
+      operationId: updateFarm
+      summary: Update farm
+      x-permission: farm.profile.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FarmInput' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Farm' }
+        '422': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [Farms]
+      operationId: closeFarm
+      x-permission: farm.delete
+      summary: Close (archive) the farm. Owner only; data is retained.
+      responses:
+        '204': { description: Closed }
+        '403': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/members:
+    get:
+      tags: [Access]
+      operationId: listMembers
+      summary: List members
+      x-permission: members.view
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Farm members
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Member' }
+
+  /farms/{farm}/roles:
+    get:
+      tags: [Access]
+      operationId: listRoles
+      summary: List roles
+      x-permission: roles.view
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+      responses:
+        '200':
+          description: Farm roles with grants
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Role' }
+
+  /farms/{farm}/roles/{role}/permissions:
+    put:
+      tags: [Access]
+      operationId: updateRolePermissions
+      x-permission: roles.manage
+      summary: Replace a role's grants (guard-rails apply, docs/04 §4)
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - { name: role, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [grants]
+              properties:
+                grants:
+                  type: object
+                  additionalProperties: { $ref: '#/components/schemas/Scope' }
+      responses:
+        '200':
+          description: Updated role
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Role' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/permissions:
+    get:
+      tags: [Access]
+      operationId: listPermissions
+      summary: List permissions
+      x-permission: roles.view
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+      responses:
+        '200':
+          description: Permission registry
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/PermissionDefinition' }
+
+  /farms/{farm}/audit-logs:
+    get:
+      tags: [Audit]
+      operationId: listAuditLogs
+      summary: List audit logs
+      x-permission: audit.view
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+        - { name: 'filter[action]', in: query, schema: { type: string } }
+        - { name: 'filter[entity_type]', in: query, schema: { type: string } }
+        - { name: 'filter[entity_id]', in: query, schema: { type: string } }
+        - { name: 'filter[user_id]', in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Audit entries, newest first
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/AuditLog' }
+
+  /farms/{farm}/dashboards/{dashboard}:
+    get:
+      tags: [Dashboards]
+      operationId: getDashboard
+      summary: Get dashboard
+      x-permission: dashboard.{dashboard}.view
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - $ref: '#/components/parameters/Dashboard'
+        - $ref: '#/components/parameters/Period'
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Dashboard summary (KPIs, widgets, quick actions)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Dashboard' }
+        '403': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/dashboards/{dashboard}/widgets/{widget}:
+    get:
+      tags: [Dashboards]
+      operationId: getDashboardWidget
+      summary: Get dashboard widget
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - $ref: '#/components/parameters/Dashboard'
+        - { name: widget, in: path, required: true, schema: { type: string } }
+        - $ref: '#/components/parameters/Period'
+      responses:
+        '200':
+          description: One heavy widget (chart, map)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ChartWidget' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/traceability/batches:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Traceability]
+      operationId: listBatches
+      summary: List batches
+      x-permission: trace.batches.view
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+        - { name: 'filter[kind]', in: query, schema: { $ref: '#/components/schemas/BatchKind' } }
+        - { name: 'filter[status]', in: query, schema: { $ref: '#/components/schemas/BatchStatus' } }
+        - { name: q, in: query, schema: { type: string }, description: Search batch code or name }
+        - { name: sort, in: query, schema: { type: string, enum: [created_at, -created_at, batch_code, -batch_code] } }
+      responses:
+        '200':
+          description: Batches
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Batch' }
+    post:
+      tags: [Traceability]
+      operationId: createBatch
+      summary: Create batch
+      x-permission: trace.batches.create
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind]
+              properties:
+                kind: { type: string, enum: [seed_lot, input_lot, processed, packaged] }
+                name: { type: string, maxLength: 150 }
+                quantity: { type: number, minimum: 0 }
+                unit: { type: string, maxLength: 20 }
+                occurred_at: { type: string, format: date-time }
+                notes: { type: string, maxLength: 2000 }
+      responses:
+        '201':
+          description: Batch created (with its `created` event)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Batch' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/traceability/batches/{batch}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - $ref: '#/components/parameters/Batch'
+    get:
+      tags: [Traceability]
+      operationId: getBatch
+      summary: Get batch
+      x-permission: trace.batches.view
+      responses:
+        '200':
+          description: Batch
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Batch' }
+        '404': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [Traceability]
+      operationId: deleteBatch
+      summary: Always refused — traceability history is permanent
+      responses:
+        '405': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/traceability/batches/{batch}/events:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - $ref: '#/components/parameters/Batch'
+    get:
+      tags: [Traceability]
+      operationId: listBatchEvents
+      summary: List batch events
+      x-permission: trace.batches.view
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Event timeline in occurred_at order
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/TraceEvent' }
+    post:
+      tags: [Traceability]
+      operationId: recordBatchEvent
+      summary: Record batch event
+      x-permission: trace.events.create
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_type]
+              properties:
+                event_type: { type: string, enum: [note, inspection, certification, storage_check] }
+                occurred_at: { type: string, format: date-time }
+                payload: { type: object, additionalProperties: true }
+                location: { $ref: '#/components/schemas/Location' }
+      responses:
+        '201':
+          description: Event appended
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/TraceEvent' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/traceability/batches/{batch}/journey:
+    get:
+      tags: [Traceability]
+      operationId: getBatchJourney
+      summary: Get batch journey
+      x-permission: trace.batches.view
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - $ref: '#/components/parameters/Batch'
+        - { name: direction, in: query, schema: { type: string, enum: [backward, forward, both], default: both } }
+        - { name: depth, in: query, schema: { type: integer, minimum: 1, maximum: 50 } }
+      responses:
+        '200':
+          description: Upstream and/or downstream graph
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      batch: { $ref: '#/components/schemas/Batch' }
+                      backward: { oneOf: [{ $ref: '#/components/schemas/Graph' }, { type: 'null' }] }
+                      forward: { oneOf: [{ $ref: '#/components/schemas/Graph' }, { type: 'null' }] }
+                      evidence_summary:
+                        type: object
+                        properties:
+                          events: { type: integer }
+                          gps_points: { type: integer }
+
+  /farms/{farm}/traceability/batches/{batch}/links:
+    post:
+      tags: [Traceability]
+      operationId: linkBatch
+      x-permission: trace.batches.create
+      summary: Add a parent → this batch edge (cycles are refused)
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - $ref: '#/components/parameters/Batch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [parent_batch_id, link_type]
+              properties:
+                parent_batch_id: { type: string, format: uuid }
+                link_type: { $ref: '#/components/schemas/LinkType' }
+                quantity: { type: number, minimum: 0 }
+                unit: { type: string }
+      responses:
+        '201':
+          description: Link created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/GraphEdge' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/traceability/batches/{batch}/status:
+    post:
+      tags: [Traceability]
+      operationId: changeBatchStatus
+      summary: Change batch status
+      x-permission: trace.batches.create
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - $ref: '#/components/parameters/Batch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, reason]
+              properties:
+                status: { $ref: '#/components/schemas/BatchStatus' }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Status changed (recorded as a `status_changed` event)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Batch' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/traceability/events/{event}/corrections:
+    post:
+      tags: [Traceability]
+      operationId: correctEvent
+      x-permission: trace.events.create
+      summary: Correct an event by appending a `correction` event
+      parameters:
+        - $ref: '#/components/parameters/Farm'
+        - { name: event, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payload, reason]
+              properties:
+                payload: { type: object, additionalProperties: true }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '201':
+          description: Correction event
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/TraceEvent' }
+
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      operationId: getAdminDashboard
+      summary: Platform dashboard (platform admins only)
+      responses:
+        '200':
+          description: Platform KPIs; never farm operational data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Dashboard' }
+        '403': { $ref: '#/components/responses/Problem' }
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Farm:
+      name: farm
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Batch:
+      name: batch
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Dashboard:
+      name: dashboard
+      in: path
+      required: true
+      schema: { type: string, enum: [owner, manager, agronomist, livestock, store, accountant, worker] }
+    Period:
+      name: period
+      in: query
+      schema: { type: string, enum: [today, 7d, 30d, 90d, ytd, custom], default: 30d }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    PerPage:
+      name: per_page
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      description: 'Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true.'
+      schema: { type: string, pattern: '^[A-Za-z0-9\-_]{8,128}$' }
+
+  responses:
+    Problem:
+      description: RFC 9457 problem details
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        code:
+          type: string
+          description: Stable machine-readable code (e.g. validation_failed, not_found, mfa_setup_required, token_reuse_detected, append_only)
+        errors:
+          type: object
+          additionalProperties: { type: array, items: { type: string } }
+        request_id: { type: [string, 'null'] }
+
+    CursorPage:
+      type: object
+      properties:
+        links:
+          type: object
+          properties:
+            first: { type: [string, 'null'] }
+            last: { type: [string, 'null'] }
+            prev: { type: [string, 'null'] }
+            next: { type: [string, 'null'] }
+        meta:
+          type: object
+          properties:
+            path: { type: string }
+            per_page: { type: integer }
+            next_cursor: { type: [string, 'null'] }
+            prev_cursor: { type: [string, 'null'] }
+
+    TokenPair:
+      type: object
+      required: [token_type, access_token, expires_in, refresh_token, refresh_expires_in]
+      properties:
+        mfa_required: { type: boolean, const: false }
+        token_type: { type: string, const: Bearer }
+        access_token: { type: string }
+        expires_in: { type: integer, description: seconds }
+        refresh_token: { type: string }
+        refresh_expires_in: { type: integer, description: seconds }
+
+    MfaPending:
+      type: object
+      required: [mfa_required, mfa_token]
+      properties:
+        mfa_required: { type: boolean, const: true }
+        mfa_token: { type: string }
+        methods: { type: array, items: { type: string, enum: [totp, recovery_code] } }
+
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: user }
+        user_type: { type: string, enum: [platform_admin, member, party] }
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: [string, 'null'] }
+        mfa_enabled: { type: boolean }
+        last_login_at: { type: [string, 'null'], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    Device:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: device }
+        client: { type: string, enum: [web, mobile] }
+        name: { type: [string, 'null'] }
+        platform: { type: [string, 'null'] }
+        last_ip: { type: [string, 'null'] }
+        last_seen_at: { type: [string, 'null'], format: date-time }
+        current: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    Scope:
+      type: string
+      enum: [all, assigned, own]
+
+    Workspace:
+      type: object
+      required: [type, id, name, dashboards]
+      properties:
+        type: { type: string, enum: [platform, farm, supplier, customer] }
+        id: { type: string }
+        name: { type: string }
+        code: { type: string }
+        status: { type: string }
+        is_owner: { type: boolean }
+        roles:
+          type: array
+          items:
+            type: object
+            properties:
+              key: { type: string }
+              name: { type: string }
+        permissions:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/Scope' }
+        dashboards:
+          type: array
+          items: { type: string, enum: [admin, owner, manager, agronomist, livestock, store, accountant, worker] }
+
+    FarmInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 150 }
+        organization_name: { type: string, maxLength: 150 }
+        district: { type: [string, 'null'] }
+        village: { type: [string, 'null'] }
+        country: { type: string, minLength: 2, maxLength: 2 }
+        size_ha: { type: [number, 'null'], minimum: 0 }
+        timezone: { type: string }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+
+    Farm:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: farm }
+        organization_id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [pending, active, suspended, closed] }
+        district: { type: [string, 'null'] }
+        village: { type: [string, 'null'] }
+        country: { type: string }
+        size_ha: { type: [string, 'null'], description: decimal string }
+        timezone: { type: string }
+        currency: { type: string }
+        approved_at: { type: [string, 'null'], format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    Member:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: farm_member }
+        user:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            email: { type: string }
+        status: { type: string, enum: [invited, active, suspended] }
+        is_owner: { type: boolean }
+        roles:
+          type: array
+          items:
+            type: object
+            properties:
+              key: { type: string }
+              name: { type: string }
+        joined_at: { type: [string, 'null'], format: date-time }
+
+    Role:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: farm_role }
+        key: { type: string }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        is_system: { type: boolean }
+        is_locked: { type: boolean }
+        grants:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/Scope' }
+
+    PermissionDefinition:
+      type: object
+      properties:
+        key: { type: string }
+        module: { type: string }
+        description: { type: string }
+        scopes: { type: array, items: { $ref: '#/components/schemas/Scope' } }
+        owner_only: { type: boolean }
+        money: { type: boolean }
+
+    AuditLog:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: audit_log }
+        action: { type: string }
+        entity_type: { type: [string, 'null'] }
+        entity_id: { type: [string, 'null'] }
+        user_id: { type: [string, 'null'] }
+        old_values: { type: [object, 'null'] }
+        new_values: { type: [object, 'null'] }
+        ip: { type: [string, 'null'] }
+        request_id: { type: [string, 'null'] }
+        created_at: { type: string, format: date-time }
+
+    Dashboard:
+      type: object
+      required: [dashboard, generated_at, kpis, widgets, quick_actions, alerts]
+      properties:
+        dashboard: { type: string }
+        farm:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            currency: { type: string }
+            timezone: { type: string }
+        period:
+          type: object
+          properties:
+            key: { type: string }
+            from: { type: string, format: date }
+            to: { type: string, format: date }
+        generated_at: { type: string, format: date-time }
+        kpis:
+          type: array
+          items: { $ref: '#/components/schemas/Kpi' }
+        widgets:
+          type: array
+          items: { $ref: '#/components/schemas/WidgetRef' }
+        quick_actions:
+          type: array
+          items:
+            type: object
+            properties:
+              key: { type: string }
+              label: { type: string }
+              target: { type: string }
+        alerts:
+          type: array
+          items:
+            type: object
+            properties:
+              severity: { type: string, enum: [low, medium, high] }
+              type: { type: string }
+              message: { type: string }
+              href: { type: string }
+
+    Kpi:
+      type: object
+      required: [key, label, value, format]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        value:
+          description: number, money {amount,currency}, quantity {value,unit}, status string, or null
+        format: { type: string, enum: [number, money, percent, quantity, duration, status] }
+        delta:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                value: { type: [number, 'null'] }
+                direction: { type: string, enum: [up, down, flat] }
+                vs: { type: string }
+        meta: { type: object }
+
+    WidgetRef:
+      type: object
+      required: [key, type, inline]
+      properties:
+        key: { type: string }
+        type: { type: string, enum: [action_list, checklist, chart, map, timeline] }
+        inline: { type: boolean }
+        data: { type: object, additionalProperties: true, description: Present when inline }
+        href: { type: string, description: Present when not inline }
+
+    ChartWidget:
+      type: object
+      properties:
+        key: { type: string }
+        type: { type: string, const: chart }
+        chart: { type: string, enum: [bar, line, bar_line] }
+        x:
+          type: object
+          properties:
+            type: { type: string }
+            values: { type: array, items: { type: string } }
+        series:
+          type: array
+          items:
+            type: object
+            properties:
+              key: { type: string }
+              label: { type: string }
+              unit: { type: string }
+              values: { type: array, items: { type: number } }
+
+    BatchKind:
+      type: string
+      enum: [seed_lot, input_lot, nursery, crop_lot, harvest, animal, animal_product, processed, packaged, shipment]
+    BatchStatus:
+      type: string
+      enum: [open, closed, recalled]
+    LinkType:
+      type: string
+      enum: [derived, split, merge, process, package, ship]
+
+    Quantity:
+      type: object
+      properties:
+        value: { type: string, description: decimal string }
+        unit: { type: [string, 'null'] }
+
+    Location:
+      type: object
+      required: [lat, lng]
+      properties:
+        lat: { type: number, minimum: -90, maximum: 90 }
+        lng: { type: number, minimum: -180, maximum: 180 }
+        accuracy_m: { type: [number, 'null'] }
+
+    Batch:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: trace_batch }
+        batch_code: { type: string, pattern: '^SFM-[0-9A-Z]{4}-[0-9A-Z]{4}$' }
+        kind: { $ref: '#/components/schemas/BatchKind' }
+        name: { type: [string, 'null'] }
+        status: { $ref: '#/components/schemas/BatchStatus' }
+        quantity: { oneOf: [{ $ref: '#/components/schemas/Quantity' }, { type: 'null' }] }
+        origin_plot_id: { type: [string, 'null'] }
+        source:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                type: { type: string }
+                id: { type: string }
+        version: { type: integer }
+        created_by: { type: [string, 'null'] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    TraceEvent:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: trace_event }
+        batch_id: { type: string, format: uuid }
+        event_type: { type: string }
+        occurred_at: { type: string, format: date-time }
+        recorded_at: { type: string, format: date-time }
+        recorded_late: { type: boolean, description: occurred_at and recorded_at differ by over an hour }
+        actor_user_id: { type: [string, 'null'] }
+        worker_id: { type: [string, 'null'] }
+        plot_id: { type: [string, 'null'] }
+        location: { oneOf: [{ $ref: '#/components/schemas/Location' }, { type: 'null' }] }
+        subject:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                type: { type: string }
+                id: { type: string }
+        payload: { type: object, additionalProperties: true }
+        corrects_event_id: { type: [string, 'null'] }
+        integrity:
+          type: object
+          properties:
+            seq: { type: integer }
+            hash: { type: string }
+            prev_hash: { type: string }
+
+    GraphNode:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        batch_code: { type: string }
+        kind: { $ref: '#/components/schemas/BatchKind' }
+        name: { type: [string, 'null'] }
+        status: { $ref: '#/components/schemas/BatchStatus' }
+        quantity: { oneOf: [{ $ref: '#/components/schemas/Quantity' }, { type: 'null' }] }
+        depth: { type: integer }
+
+    GraphEdge:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        from: { type: string, format: uuid }
+        to: { type: string, format: uuid }
+        link_type: { $ref: '#/components/schemas/LinkType' }
+        quantity: { type: [string, 'null'] }
+        unit: { type: [string, 'null'] }
+
+    Graph:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items: { $ref: '#/components/schemas/GraphNode' }
+        edges:
+          type: array
+          items: { $ref: '#/components/schemas/GraphEdge' }

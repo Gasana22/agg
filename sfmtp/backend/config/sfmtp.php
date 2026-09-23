@@ -32,6 +32,9 @@ return [
     'refresh' => [
         'ttl_web' => (int) env('REFRESH_TTL_WEB', 60 * 60 * 24 * 7),      // 7 days, sliding
         'ttl_mobile' => (int) env('REFRESH_TTL_MOBILE', 60 * 60 * 24 * 30), // 30 days, sliding
+        // A just-rotated token presented again within this window is refused
+        // without revoking the session (parallel refreshes are not theft).
+        'reuse_grace_seconds' => 30,
     ],
 
     'security' => [
