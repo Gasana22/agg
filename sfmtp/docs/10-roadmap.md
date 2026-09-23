@@ -36,6 +36,28 @@ Everything in the Phase 1 row below, with these notes:
   hash-chain tamper detection. The web app has unit tests, and the main role
   journeys were checked end to end in a browser.
 
+### Phase 2 — delivered
+
+Everything in the Phase 2 row below, with these notes:
+
+- **Subscription statuses** are `trialing → active → grace → suspended`, plus
+  `cancelled`. The requirements' "past due" is the `grace` state, when farms
+  stay open with a warning ([ADR-0008](adr/0008-subscription-lifecycle.md)).
+- **Payments are recorded by SFMTP staff** (mobile money, bank transfer,
+  cash). Online checkout through payment gateways is Phase 14. Integration
+  providers can already be configured; the adapters that call them come in
+  Phase 14.
+- **Support access** follows ADR-0005: the owner grants it from a ticket, for
+  up to 72 h. It is read-only, and every request is written to the farm's
+  audit log.
+- **Deferred:** storage usage is shown against the plan limit from Phase 6
+  (media). Member invitations, and the plan's user limit applied to them,
+  arrive in Phase 3; the limit is already enforced by `FarmService::addMember`.
+- **Test gate met:** 133 API tests on PostgreSQL (131 on MySQL, plus 2 that
+  need PostgreSQL features) and 26 web unit tests. The admin, owner, support
+  and billing journeys were checked end to end in a browser. CI is green,
+  including the Docker image builds.
+
 ## Phase plan
 
 | Phase | Scope | Key deliverables | Exit criteria (test gate) |

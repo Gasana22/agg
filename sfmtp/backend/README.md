@@ -10,9 +10,12 @@ own routes, migrations, domain, application services and HTTP layer
 | `Tenancy` | Organizations, farms (tenants), memberships, `TenantContext`, `BelongsToFarm` scope |
 | `Access` | Permission registry, role templates, guard-rails, farm permissions, workspaces |
 | `Audit` | Append-only audit log |
-| `Platform` | System-admin surface (`/api/v1/admin`) |
+| `Billing` | Plans, subscriptions, lifecycle, payments, plan limits (`SubscriptionGate`), owner billing API |
+| `Platform` | Platform roles and capabilities, farm administration, accounts and staff, settings, integrations, system pages |
+| `Catalog` | Global catalogues (crops, varieties, species, breeds, units, inventory categories, activity types) |
+| `Support` | Tickets, internal notes, owner-granted read-only support access |
 | `Traceability` | Batch graph, hash-chained events, recorder, journeys, chain verification |
-| `Reporting` | Server-driven role dashboards |
+| `Reporting` | Server-driven role dashboards and the admin dashboard |
 
 Shared plumbing is in `app/Support` (problem+json errors, request IDs,
 idempotency keys, engine-specific DDL for triggers and row-level security).
@@ -35,7 +38,9 @@ is `Password123!`:
 
 | Account | Role |
 |---|---|
-| `admin@sfmtp.test` | Platform admin (MFA enrolment required) |
+| `admin@sfmtp.test` | Platform super admin (MFA enrolment required) |
+| `support@sfmtp.test` | Platform support staff (MFA enrolment required) |
+| `billing@sfmtp.test` | Platform billing staff (MFA enrolment required) |
 | `owner@aggfarms.test` | Owner of AGG Mixed Farm and AGG Crop Farm (MFA enrolment required) |
 | `manager@`, `agronomist@`, `livestock@`, `store@`, `accountant@`, `worker@aggfarms.test` | One role each on AGG Mixed Farm |
 
@@ -57,4 +62,6 @@ another farm's owner), `Access/RoleBoundaryTest`, `Traceability/TraceabilityTest
 ```bash
 php artisan access:sync-permissions   # after adding permissions (run on every deploy)
 php artisan trace:verify-chain        # verify traceability hash chains (scheduled nightly)
+php artisan billing:advance-subscriptions   # trial/period end → grace → suspended (scheduled daily)
+php artisan platform:record-backup success --location=… --size=…   # called by infra/deploy/backup.sh
 ```

@@ -13,7 +13,8 @@ REST API.
 |---|---|
 | 0 — Design | ✅ Done ([docs](docs/)) |
 | 1 — Architecture & foundation | ✅ Done: identity + MFA, multi-tenancy, permissions, audit log, traceability core, dashboards framework, web shell, CI |
-| 2 — Platform administration | Next |
+| 2 — Platform administration | ✅ Done: platform roles, farm approval/suspension, plans & subscriptions with limits and lifecycle, owner billing page, global catalogues, integrations, settings, system health, support tickets with owner-granted read-only access |
+| 3 — Farm management | Next |
 
 ## Repository layout
 
@@ -37,7 +38,8 @@ docker compose -f infra/docker/compose.yaml up --build
 
 Open http://localhost:3000 and sign in with a demo account (password
 `Password123!`), e.g. `agronomist@aggfarms.test`, `manager@aggfarms.test`, or
-`owner@aggfarms.test` (the owner is asked to set up MFA first). The full list is
+`owner@aggfarms.test` (the owner is asked to set up MFA first). Platform staff:
+`admin@sfmtp.test`, `support@sfmtp.test`, `billing@sfmtp.test`. The full list is
 in [backend/README.md](backend/README.md).
 
 To run without Docker, follow [backend/README.md](backend/README.md) and

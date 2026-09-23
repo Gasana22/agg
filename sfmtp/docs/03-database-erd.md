@@ -101,7 +101,7 @@ erDiagram
         uuid id PK
         uuid organization_id FK
         uuid plan_id FK
-        text status "trialing | active | past_due | grace | suspended | cancelled"
+        text status "trialing | active | grace | suspended | cancelled"
         date starts_on
         date expires_on
         date grace_until

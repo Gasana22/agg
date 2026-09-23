@@ -106,20 +106,26 @@ roles:
 
 ## 5. Platform and portal permissions
 
-**System Administrator** (platform roles: `super_admin`, `support`, `billing`)
+**System Administrator** (platform roles: `super_admin`, `support`, `billing`).
+Capabilities are checked with `platform.can:<capability>`; the table is
+`App\Modules\Platform\Application\PlatformRoles`.
 
 | Capability | super_admin | support | billing |
 |---|---|---|---|
-| Farms: approve / suspend / unsuspend | ✔ | — | ✔ (suspend for non-payment) |
-| Trigger owner password reset | ✔ | ✔ | — |
-| Plans & pricing | ✔ | — | ✔ |
-| Subscriptions & platform payments | ✔ | V | ✔ |
-| Global catalogues (crops, breeds, units) | ✔ | — | — |
-| Integrations & platform settings | ✔ | — | — |
-| System logs, health, backups | ✔ | V | — |
-| Support tickets | ✔ | ✔ | V |
-| Time-boxed read-only support access (granted by owner) | — | ✔ | — |
-| **Any farm operational data** | **—** | **—** | **—** |
+| `dashboard.view`: platform dashboard (trimmed to the role) | ✔ | ✔ | ✔ |
+| `farms.view`: farm metadata, never records | ✔ | ✔ | ✔ |
+| `farms.approve`: approve farms; suspend/unsuspend for any reason | ✔ | — | — |
+| `farms.suspend`: suspend/unsuspend | ✔ | — | ✔ (non-payment only) |
+| `farms.reset_owner_password`: email a reset link | ✔ | ✔ | — |
+| `users.view` / `users.manage`: accounts; staff roles | ✔ / ✔ | ✔ / — | — |
+| `plans.manage`: plans & pricing | ✔ | — | ✔ |
+| `subscriptions.view` / `subscriptions.manage`: payments, plan changes, cancel, extend | ✔ / ✔ | ✔ / — | ✔ / ✔ |
+| `catalog.manage`: global catalogues | ✔ | — | — |
+| `integrations.manage`, `settings.manage` | ✔ | — | — |
+| `system.view`: health, logs, failed jobs, backups | ✔ | ✔ | — |
+| `support.view` / `support.manage`: tickets | ✔ / ✔ | ✔ / ✔ | ✔ / — |
+| `support.access`: use an owner's read-only grant ([ADR-0005](adr/0005-support-access.md)) | — | ✔ | — |
+| **Any farm operational data** | **—** | **only under an owner's grant, read-only** | **—** |
 
 **Supplier portal**: view and respond to POs addressed to them (accept,
 reject, confirm quantities); confirm dispatch; upload delivery notes and
