@@ -60,10 +60,7 @@ class FarmPermissions
     {
         if ($membership->is_owner) {
             // The owner always holds every permission (except the worker marker).
-            return array_fill_keys(
-                array_values(array_diff(PermissionRegistry::keys(), ['worker.self'])),
-                PermissionScope::All,
-            );
+            return array_map(fn (string $scope) => PermissionScope::from($scope), PermissionRegistry::ownerGrants());
         }
 
         $rows = DB::table('farm_user_roles as fur')

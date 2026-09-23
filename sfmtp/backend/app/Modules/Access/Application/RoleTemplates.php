@@ -20,7 +20,7 @@ final class RoleTemplates
             self::OWNER => [
                 'name' => 'Farm Owner',
                 'description' => 'Highest authority in the farm. Always holds every permission.',
-                'grants' => $all(array_values(array_diff(PermissionRegistry::keys(), ['worker.self']))),
+                'grants' => PermissionRegistry::ownerGrants(),
             ],
             'manager' => [
                 'name' => 'Farm Manager',

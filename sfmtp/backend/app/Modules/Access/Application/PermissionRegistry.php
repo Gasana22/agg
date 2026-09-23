@@ -150,6 +150,37 @@ final class PermissionRegistry
         return $p;
     }
 
+    /** The broadest scope a permission supports (what the owner holds). */
+    public static function widestScope(string $key): string
+    {
+        $scopes = self::all()[$key]['scopes'];
+        foreach (['all', 'assigned', 'own'] as $scope) {
+            if (in_array($scope, $scopes, true)) {
+                return $scope;
+            }
+        }
+
+        return $scopes[0];
+    }
+
+    /**
+     * The owner's grants: every permission except the worker marker, each at
+     * its widest supported scope.
+     *
+     * @return array<string,string>
+     */
+    public static function ownerGrants(): array
+    {
+        $grants = [];
+        foreach (self::keys() as $key) {
+            if ($key !== 'worker.self') {
+                $grants[$key] = self::widestScope($key);
+            }
+        }
+
+        return $grants;
+    }
+
     public static function exists(string $key): bool
     {
         return array_key_exists($key, self::all());

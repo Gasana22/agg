@@ -37,9 +37,11 @@ final class Period
     /** The equal-length period immediately before this one (for deltas). */
     public function previous(): self
     {
-        $seconds = $this->to->diffInSeconds($this->from, true) + 1;
+        // Whole microseconds: Carbon's diffInSeconds() is a float that would
+        // carry the trailing .999999 of `to` and shift the window by a day.
+        $length = (int) $this->from->diffInMicroseconds($this->to, true) + 1;
 
-        return new self($this->key, $this->from->subSeconds($seconds), $this->from->subSecond());
+        return new self($this->key, $this->from->subMicroseconds($length), $this->from->subMicrosecond());
     }
 
     public function toArray(string $timezone): array
