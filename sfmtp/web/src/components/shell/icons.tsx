@@ -5,6 +5,7 @@ import {
   KeyRound,
   LayoutDashboard,
   LifeBuoy,
+  Map,
   Library,
   type LucideIcon,
   Plug,
@@ -18,6 +19,7 @@ import {
 
 export const NAV_ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
+  map: Map,
   trace: Route,
   members: Users,
   roles: ShieldCheck,

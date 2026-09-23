@@ -23,8 +23,8 @@ describe("visibleNav", () => {
   });
 
   it("gives owners everything, including their subscription", () => {
-    const all = { "trace.batches.view": "all", "members.view": "all", "roles.view": "all", "audit.view": "all", "farm.profile.manage": "all", "billing.manage": "all" } as const;
-    expect(visibleNav(farm(all)).map((i) => i.key)).toEqual(["dashboard", "traceability", "members", "roles", "audit", "settings", "billing", "support"]);
+    const all = { "structure.view": "all", "trace.batches.view": "all", "members.view": "all", "roles.view": "all", "audit.view": "all", "farm.profile.manage": "all", "billing.manage": "all" } as const;
+    expect(visibleNav(farm(all)).map((i) => i.key)).toEqual(["dashboard", "structure", "traceability", "members", "roles", "audit", "settings", "billing", "support"]);
   });
 
   it("offers read-only support sessions no support tickets or billing", () => {

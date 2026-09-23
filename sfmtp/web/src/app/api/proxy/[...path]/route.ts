@@ -12,6 +12,11 @@ import { ACCESS_COOKIE, clearSession, REFRESH_COOKIE, setSession, type TokenPair
  */
 const RESPONSE_HEADERS = ["content-type", "x-request-id", "idempotent-replayed", "retry-after"];
 
+/** API paths that also work signed out: the emailed invitation link. */
+function isPublicApiPath(path: string[]): boolean {
+  return path[0] === "invitations";
+}
+
 async function handle(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   if (!isSameOriginRequest(req)) return problem(403, "csrf_failed", "Cross-site request refused.");
 
@@ -30,15 +35,16 @@ async function handle(req: NextRequest, { params }: { params: Promise<{ path: st
       access = rotated.access_token;
     }
   }
-  if (!access) return signedOut();
+  const anonymous = !access && isPublicApiPath(path);
+  if (!access && !anonymous) return signedOut();
 
   const body = req.method === "GET" || req.method === "HEAD" ? undefined : await req.arrayBuffer();
-  const send = (token: string) => callApi(target, { method: req.method, headers: forwardHeaders(req, token), body });
+  const send = (token: string | undefined) => callApi(target, { method: req.method, headers: forwardHeaders(req, token), body });
 
   let res: Response;
   try {
     res = await send(access);
-    if (res.status === 401 && refresh && !rotated) {
+    if (res.status === 401 && refresh && !rotated && !anonymous) {
       const result = await refreshSession(refresh);
       if (result.ok) {
         rotated = result.tokens;
@@ -56,7 +62,7 @@ async function handle(req: NextRequest, { params }: { params: Promise<{ path: st
   }
   const out = new NextResponse(res.status === 204 ? null : await res.arrayBuffer(), { status: res.status, headers });
 
-  if (res.status === 401) {
+  if (res.status === 401 && !anonymous) {
     clearSession(out);
   } else if (rotated) {
     setSession(out, rotated);
