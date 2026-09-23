@@ -1,0 +1,77 @@
+<?php
+
+namespace App\Modules\Reporting\Application;
+
+use App\Modules\Tenancy\Domain\Enums\MembershipStatus;
+use App\Modules\Tenancy\TenantContext;
+use App\Modules\Traceability\Domain\Enums\BatchStatus;
+use App\Modules\Traceability\Domain\Models\TraceBatch;
+use App\Modules\Traceability\Domain\Models\TraceEvent;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Metric catalogue (docs/05 §4). Phase 1 covers membership and
+ * traceability; each later phase adds its module's metrics here, then moves
+ * heavy ones to precomputed farm_daily_metrics (Phase 13).
+ */
+class FarmMetrics
+{
+    public function __construct(private readonly TenantContext $context) {}
+
+    public function membersActive(): int
+    {
+        return DB::table('farm_users')
+            ->where('farm_id', $this->context->farmId())
+            ->where('status', MembershipStatus::Active->value)
+            ->count();
+    }
+
+    public function openBatches(): int
+    {
+        return TraceBatch::where('status', BatchStatus::Open->value)->count();
+    }
+
+    public function traceEvents(Period $period): int
+    {
+        return TraceEvent::whereBetween('recorded_at', [$period->from, $period->to])->count();
+    }
+
+    /** @return array<int,array{date:string,count:int}> events per local day */
+    public function traceEventsPerDay(Period $period, string $timezone): array
+    {
+        $counts = [];
+        TraceEvent::whereBetween('recorded_at', [$period->from, $period->to])
+            ->select('recorded_at')
+            ->orderBy('recorded_at')
+            ->lazy(1000)
+            ->each(function (TraceEvent $e) use (&$counts, $timezone) {
+                $day = $e->recorded_at->setTimezone($timezone)->toDateString();
+                $counts[$day] = ($counts[$day] ?? 0) + 1;
+            });
+
+        $series = [];
+        for ($d = $period->from->setTimezone($timezone)->startOfDay(); $d <= $period->to; $d = $d->addDay()) {
+            $series[] = ['date' => $d->toDateString(), 'count' => $counts[$d->toDateString()] ?? 0];
+        }
+
+        return $series;
+    }
+
+    /** @return array<int,array> */
+    public function recentTraceEvents(int $limit = 10): array
+    {
+        return TraceEvent::with('batch:id,batch_code,kind,name')
+            ->orderByDesc('recorded_at')
+            ->orderByDesc('farm_seq')
+            ->limit($limit)
+            ->get()
+            ->map(fn (TraceEvent $e) => [
+                'id' => $e->id,
+                'title' => str_replace('_', ' ', ucfirst($e->event_type)),
+                'subtitle' => $e->batch->batch_code.($e->batch->name ? ' · '.$e->batch->name : ''),
+                'at' => $e->occurred_at->toIso8601ZuluString(),
+                'href' => "/farms/{$e->farm_id}/traceability/batches/{$e->batch_id}",
+            ])
+            ->all();
+    }
+}
