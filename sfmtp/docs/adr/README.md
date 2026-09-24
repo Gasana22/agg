@@ -16,6 +16,7 @@ consequences.
 | [0009](0009-geojson-geometry.md) | Farm geometry as GeoJSON, measured in the application | Accepted |
 | [0010](0010-sync-protocol.md) | Offline sync as built: ordered mutations through the normal services, a change feed with a lag | Accepted |
 | [0011](0011-stock-valuation-and-ledger-core.md) | Stock valuation and the ledger core: average cost per lot, row locks, entries corrected through their documents | Accepted |
+| [0012](0012-finance-documents-and-payables.md) | Finance as documents: approval by threshold, voids by reversal, one payable registry, control accounts, payroll by task time | Accepted |
 
 ## Product-owner decisions (2026-09-23)
 

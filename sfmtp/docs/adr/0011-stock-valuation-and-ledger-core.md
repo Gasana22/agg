@@ -82,5 +82,6 @@ choices have to hold for it too.
   the same ledger through `Ledger::post` with source type `manual` or their
   own document type.
 - Returns to suppliers and supplier credit notes are not built yet. Until
-  they are, a wrong delivery is corrected with a count, and a wrong invoice
-  with a manual entry.
+  they are, a wrong delivery is corrected with a count. A wrong supplier
+  invoice is cancelled (Phase 8, ADR-0012), which reverses it; manual
+  entries cannot post to payables.

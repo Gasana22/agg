@@ -259,6 +259,59 @@ Everything in the Phase 7 row below, with these notes
   every new route and request body. The store manager's, manager's,
   accountant's and owner's journeys were checked in a browser.
 
+### Phase 8 — delivered
+
+Everything in the Phase 8 row below, with these notes
+([ADR-0012](adr/0012-finance-documents-and-payables.md)):
+
+- **Documents, not journal entries.** Expenses, income, customer and
+  supplier invoices, payments and payroll each post their own entry. A
+  mistake is voided, which posts the reversal; a document with payments has
+  them voided first. Manual entries (opening balances, capital, transfers)
+  cannot touch control accounts, so receivables, payables, stock and wages
+  always equal their documents.
+- **Approvals.** Expense requests are approved by someone else: finance
+  within the farm's expense threshold, the owner above it. The accountant's
+  own receipts within the threshold post at once. Payroll needs a second
+  person with `finance.payroll.approve`.
+- **Payments** settle one document each (customer or supplier invoice,
+  expense, payroll) through a registry each module plugs into, never more
+  than is owed.
+- **Payroll** comes from attendance at each worker's daily rate, with bonus
+  and deductions. Wages are charged to the crop cycles, animals and groups
+  of the tasks verified in the period, by time, so labour shows in the cost
+  of each crop.
+- **Sales module:** customers and invoices, including completed livestock
+  sales (billed once, charged to the animal).
+- **Budgets** per account for the farm or a cost centre, against the
+  ledger.
+- **Reports:** profit and loss (also per cost centre), 12 months of income
+  and expenses, cash flow with a 13-week forecast from open documents, and
+  cost and margin per crop cycle (per hectare, acre and kilogram) and per
+  animal group.
+- **Dashboards:** the Accountant dashboard (revenue, expenses, profit,
+  cash, receivables, payables, wages, budget, with the approval and
+  collection queues and the charts) and the owner's financial KPIs and
+  pending approvals.
+- **Web:** Finance (expenses, income, invoices, payments, payroll, budgets,
+  customers), Reports, and accounts and journal entries on the Ledger page.
+- **Deferred:** payment approval above a threshold, credit notes and
+  returns, VAT, bank reconciliation, statutory payroll deductions (PAYE,
+  NSSF) and payslips (entered as deductions for now), finance exports
+  (Phase 13), mobile money collection through Flutterwave (Phase 14), sales
+  orders and products (Phase 12).
+- **Test gate met:** 214 API tests on PostgreSQL (210 on MySQL, plus 4 that
+  need PostgreSQL features) and 53 web unit tests. They include the
+  trial balance balancing after every flow and each entry balancing on
+  its own, ledger rows that cannot change, voids by reversal for every
+  document, approval thresholds and four eyes, payments capped at what is
+  owed, payroll from attendance with its cost split, invoicing a livestock
+  sale once, budgets and every report against hand-computed figures, the
+  field worker and the crop, livestock and store leads refused on every
+  finance, sales and report route, and the cross-tenant sweep over every
+  new route and request body. The accountant's, manager's and owner's
+  journeys were checked in a browser.
+
 ## Phase plan
 
 | Phase | Scope | Key deliverables | Exit criteria (test gate) |

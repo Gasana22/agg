@@ -88,6 +88,8 @@ those arrows are drawn.
 | Workforce | `ActivityService::create/submit/verify`, events `ActivityVerified` | Crops, Livestock, Assets, Inventory (store tasks) |
 | Inventory | `StockService::receive/issue/transfer/adjust` (transactional, row-locked) | Procurement, Crops, Livestock, Sales |
 | Finance | `LedgerService::post(JournalEntry)`, `CostCenter` value object | Procurement, Inventory (valuation), Sales, Workforce (payroll), Assets |
+| Finance | `Payables` registry and `Payable` contract: each module registers the documents payments can settle (ADR-0012) | Sales (customer invoices), Procurement (supplier invoices) |
+| Livestock | Completed `SaleRequest`s, billed on customer invoices | Sales |
 | Traceability | `Recorder::createBatch/link/record/correct` | Crops, Livestock, Inventory, Procurement, Sales |
 | Media | `MediaService::attach`, signed URLs | All |
 | Notifications | `Notifier::send(Notification, recipients)` (queued, multi-channel) | All |

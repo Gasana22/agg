@@ -995,6 +995,37 @@ an unbalanced entry at commit. `ledger_sequences` numbers entries per farm.
 Only manual entries can be reversed; entries posted by stock or purchasing
 documents are corrected through those documents.
 
+As built in Phase 8 (ADR-0012), the model differs from the diagram in these
+places:
+
+- **Accounts** gain `is_cash` (money accounts payments use) and a
+  description. Control accounts (receivables, inventory, payables, GRNI,
+  wages and deductions payable) take no manual lines.
+- **`transactions` / `transaction_lines` are `ledger_entries` /
+  `ledger_lines`** (Phase 7).
+- **Expenses** post directly to an expense account: there are no expense
+  categories apart from accounts. Status is requested, approved, paid,
+  rejected, cancelled or void. `paid_from_account_id` marks one paid on the
+  spot, and `paid_amount` tracks payments otherwise.
+- **`income` is `income_records`**: an income account, the money account it
+  went into, and a cost centre; status recorded or void.
+- **Payments** settle one document (`payable_type` / `payable_id`:
+  customer_invoice, supplier_invoice, expense, payroll_run), with a money
+  account, method, reference, and status posted or void. The documents keep
+  `paid_amount`.
+- **Payroll lines** carry days, minutes and verified tasks from Workforce, the
+  daily rate, bonus, deductions, net, and an `allocation` (JSON) of the gross
+  over task cost centres.
+- **Budgets** have a period and an optional cost-centre scope instead of a
+  season; lines are per income or expense account.
+- **Customers and customer invoices** are in the Sales module; invoice lines
+  have an income account, a cost centre, a `position`, and an optional
+  `animal_sale_id`. Sales orders and products come in Phase 12.
+- **Supplier invoices** gain `paid_amount` and cancellation fields.
+- **Cost centres** everywhere are `cost_center_type` / `cost_center_id` /
+  `cost_center_label`: a crop cycle, plot, location, animal or animal
+  group.
+
 ## 9. Assets, media, notifications
 
 ```mermaid

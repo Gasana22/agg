@@ -14,17 +14,18 @@ own routes, migrations, domain, application services and HTTP layer
 | `Platform` | Platform roles and capabilities, farm administration, accounts and staff, settings, integrations, system pages |
 | `Catalog` | Global catalogues (crops, varieties, species, breeds, units, inventory categories, activity types) |
 | `Crops` | Farm crops, seasons, crop plans, cycles, field operations and inputs, observations, harvests; writes the crop trace history |
-| `Finance` | Double-entry ledger core: system chart of accounts, balanced append-only entries, manual reversals, trial balance (ADR-0011) |
+| `Finance` | Double-entry ledger (ADR-0011, ADR-0012): chart of accounts, manual entries, expenses with approval, income, payments through a payable registry, payroll from attendance, budgets |
 | `Inventory` | Items, lots (trace batches), the stock ledger and balances with average cost, issues, transfers, counts with approval, stock requests, alerts |
 | `Procurement` | Suppliers, purchase requests, purchase orders with approval, deliveries into stock lots, supplier invoices matched to receipts |
 | `Workforce` | Workers, activities and tasks (state machine, logs, verification), attendance, GPS points, task photos, leave; the `assigned` scope for crops and livestock |
 | `Media` | Photo and document uploads, stored once per farm by SHA-256 (local disk or S3 / MinIO) |
 | `Sync` | Offline push (ordered mutations through the normal services) and pull (snapshot or change feed) for the mobile app (ADR-0010) |
+| `Sales` | Customers and customer invoices, including completed livestock sales; registers invoices as payable |
 | `Livestock` | Animals and groups, breeding and births, health and vaccinations with withdrawal periods, feeding, weights, milk and egg production, movements, exits and sale requests; writes the animal trace history |
 | `FarmStructure` | Blocks, sections, plots and locations with GeoJSON boundaries, soil profiles, geometry warnings (ADR-0009) |
 | `Support` | Tickets, internal notes, owner-granted read-only support access |
 | `Traceability` | Batch graph, hash-chained events, recorder, journeys, chain verification |
-| `Reporting` | Server-driven role dashboards, "My farms" overview, the admin dashboard |
+| `Reporting` | Server-driven role dashboards, "My farms" overview, the admin dashboard, financial reports (P&L, cash flow and forecast, cost per crop and animal group) |
 
 Shared plumbing is in `app/Support` (problem+json errors, request IDs,
 idempotency keys, engine-specific DDL for triggers and row-level security).
@@ -77,6 +78,12 @@ owner's approval, a week of feed issued to the dairy herd, a dewormer
 request from the livestock manager, a purchase request and a diesel count
 waiting for the manager, a vaccine lot close to expiry, and mineral licks
 below their reorder level.
+
+Its books are kept by the accountant: opening balances, part of the
+dewormer invoice paid, expenses (fuel for the dairy, a vet visit paid in
+cash, a roof repair above the threshold waiting for the owner), manure sold
+at the gate, milk invoiced to the co-op and half collected, last week's
+payroll approved and paid, and a quarterly budget for the dairy herd.
 
 Both farms have a mapped layout: paddocks and livestock buildings on the mixed
 farm near Kakiri, and two blocks of three plots (with a soil test on B-3, the
