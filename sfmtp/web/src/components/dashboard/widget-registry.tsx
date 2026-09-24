@@ -21,6 +21,7 @@ type WidgetRef = components["schemas"]["WidgetRef"];
 const TITLES: Record<string, string> = {
   setup_checklist: "Get your farm ready",
   recent_trace_events: "Recent traceability activity",
+  trace_alerts: "Traceability alerts",
   trace_activity: "Traceability events per day",
   farm_approvals: "Farms awaiting approval",
   expiring_subscriptions: "Subscriptions ending within 14 days",

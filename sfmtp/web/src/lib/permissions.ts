@@ -31,6 +31,7 @@ export const FARM_NAV: NavItem[] = [
   { key: "reports", label: "Reports", href: (id) => `/farms/${id}/reports`, permission: "reports.finance.view|finance.view", icon: "reports" },
   { key: "ledger", label: "Ledger", href: (id) => `/farms/${id}/ledger`, permission: "finance.view", icon: "ledger" },
   { key: "traceability", label: "Traceability", href: (id) => `/farms/${id}/traceability`, permission: "trace.batches.view", icon: "trace" },
+  { key: "shipments", label: "Shipments", href: (id) => `/farms/${id}/shipments`, permission: "sales.view|sales.fulfil|sales.invoice", icon: "shipments" },
   { key: "members", label: "Members", href: (id) => `/farms/${id}/members`, permission: "members.view", icon: "members" },
   { key: "roles", label: "Roles & permissions", href: (id) => `/farms/${id}/roles`, permission: "roles.view", icon: "roles" },
   { key: "audit", label: "Audit log", href: (id) => `/farms/${id}/audit-log`, permission: "audit.view", icon: "audit" },

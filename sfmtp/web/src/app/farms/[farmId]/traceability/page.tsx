@@ -1,26 +1,85 @@
 "use client";
 
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { Plus, Search } from "lucide-react";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, Plus, Search, ShieldAlert, ShieldCheck, Truck } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useDeferredValue, useState } from "react";
 
 import { KIND_LABELS, STATUS_TONE } from "@/components/trace/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
 import { EmptyState, ErrorNotice, PageHeader, Skeleton, Table, Td, Th } from "@/components/ui/misc";
 import { api, type components } from "@/lib/api/client";
 import { useFarmWorkspace } from "@/lib/api/hooks";
 import { formatDateTime } from "@/lib/format";
 import { can } from "@/lib/permissions";
+import { ALERT_TONE, formatQty } from "@/lib/trace";
+import { cn } from "@/lib/utils";
 
 type Kind = components["schemas"]["BatchKind"];
+type Tab = "batches" | "alerts" | "integrity";
 
 export default function TraceabilityPage() {
   const { farmId } = useParams<{ farmId: string }>();
+  const search = useSearchParams();
   const { workspace } = useFarmWorkspace(farmId);
+  const [tab, setTab] = useState<Tab>((search.get("tab") as Tab) || "batches");
+  const alerts = useQuery({
+    queryKey: ["trace-alerts", farmId],
+    queryFn: async () => (await api.GET("/farms/{farm}/traceability/alerts", { params: { path: { farm: farmId } } })).data!,
+  });
+  const counts = alerts.data?.meta?.counts;
+  const flagged = (counts?.critical ?? 0) + (counts?.warning ?? 0);
+
+  return (
+    <>
+      <PageHeader
+        title="Traceability"
+        description="Every batch has a permanent, auditable journey from seed to customer."
+        actions={
+          <div className="flex gap-2">
+            {can(workspace?.permissions, "sales.view|sales.fulfil|sales.invoice") ? (
+              <Link href={`/farms/${farmId}/shipments`} className={buttonVariants({ variant: "secondary" })}>
+                <Truck /> Shipments
+              </Link>
+            ) : null}
+            {can(workspace?.permissions, "trace.batches.create") ? (
+              <Link href={`/farms/${farmId}/traceability/batches/new`} className={buttonVariants()}>
+                <Plus /> New batch
+              </Link>
+            ) : null}
+          </div>
+        }
+      />
+      <div role="tablist" aria-label="Traceability sections" className="mb-4 flex gap-1 border-b border-border">
+        {(
+          [
+            ["batches", "Batches"],
+            ["alerts", flagged ? `Alerts (${flagged})` : "Alerts"],
+            ["integrity", "Integrity"],
+          ] as [Tab, string][]
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            role="tab"
+            type="button"
+            aria-selected={tab === key}
+            onClick={() => setTab(key)}
+            className={cn("-mb-px border-b-2 px-3 py-2 text-sm", tab === key ? "border-primary font-medium text-foreground" : "border-transparent text-muted hover:text-foreground", key === "alerts" && (counts?.critical ?? 0) > 0 && "text-danger")}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === "batches" ? <Batches farmId={farmId} /> : tab === "alerts" ? <Alerts farmId={farmId} query={alerts} /> : <Integrity farmId={farmId} canVerify={can(workspace?.permissions, "trace.publish|audit.view")} />}
+    </>
+  );
+}
+
+function Batches({ farmId }: { farmId: string }) {
   const [kind, setKind] = useState<Kind | "">("");
   const [q, setQ] = useState("");
   const search = useDeferredValue(q.trim());
@@ -44,18 +103,6 @@ export default function TraceabilityPage() {
 
   return (
     <>
-      <PageHeader
-        title="Traceability"
-        description="Every batch has a permanent, auditable journey from seed to sale."
-        actions={
-          can(workspace?.permissions, "trace.batches.create") ? (
-            <Link href={`/farms/${farmId}/traceability/batches/new`} className={buttonVariants()}>
-              <Plus /> New batch
-            </Link>
-          ) : null
-        }
-      />
-
       <div className="mb-4 flex flex-wrap gap-2">
         <div className="relative w-full max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
@@ -85,6 +132,7 @@ export default function TraceabilityPage() {
                 <Th>Batch</Th>
                 <Th>Kind</Th>
                 <Th className="text-right">Quantity</Th>
+                <Th className="text-right">Left</Th>
                 <Th>Status</Th>
                 <Th>Created</Th>
               </tr>
@@ -99,7 +147,8 @@ export default function TraceabilityPage() {
                     {b.name ? <p className="text-xs text-muted">{b.name}</p> : null}
                   </Td>
                   <Td>{KIND_LABELS[b.kind ?? ""] ?? b.kind}</Td>
-                  <Td className="text-right tabular-nums">{b.quantity ? `${Number(b.quantity.value).toLocaleString()} ${b.quantity.unit ?? ""}` : "—"}</Td>
+                  <Td className="text-right tabular-nums">{formatQty(b.quantity)}</Td>
+                  <Td className="text-right tabular-nums text-muted">{formatQty(b.available)}</Td>
                   <Td>
                     <Badge tone={STATUS_TONE[b.status ?? "open"]}>{b.status}</Badge>
                   </Td>
@@ -118,5 +167,127 @@ export default function TraceabilityPage() {
         </>
       )}
     </>
+  );
+}
+
+type AlertsQuery = { isLoading: boolean; error: unknown; data?: { data?: components["schemas"]["TraceAlert"][] } };
+
+function Alerts({ farmId, query }: { farmId: string; query: AlertsQuery }) {
+  if (query.isLoading) return <Skeleton className="h-48 w-full" />;
+  if (query.error) return <ErrorNotice error={query.error} />;
+  const alerts = query.data?.data ?? [];
+  if (alerts.length === 0)
+    return (
+      <EmptyState title="Nothing needs attention">
+        <span className="inline-flex items-center gap-1">
+          <CheckCircle2 className="size-4 text-primary" aria-hidden /> The history verifies, every product has a source and every shipment is accounted for.
+        </span>
+      </EmptyState>
+    );
+  return (
+    <div className="space-y-4">
+      {alerts.map((a) => (
+        <Card key={a.code} className={cn(a.severity === "critical" && "border-danger/50")}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Badge tone={ALERT_TONE[a.severity ?? "info"]}>{a.severity}</Badge> {a.title}
+            </CardTitle>
+            <span className="text-sm text-muted">{a.count}</span>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y divide-border">
+              {(a.items ?? []).map((item, i) => {
+                const it = item as { batch?: { id: string; batch_code: string; name?: string | null }; customer?: string | null; reason?: string | null; first_bad_seq?: number | null; checked_at?: string | null };
+                return (
+                  <li key={it.batch?.id ?? i} className="flex flex-wrap items-baseline gap-x-3 py-2 text-sm">
+                    {it.batch ? (
+                      <Link href={`/farms/${farmId}/traceability/batches/${it.batch.id}`} className="font-mono text-primary hover:underline">
+                        {it.batch.batch_code}
+                      </Link>
+                    ) : null}
+                    {it.batch?.name ? <span className="text-muted">{it.batch.name}</span> : null}
+                    {it.customer && !it.batch?.name?.includes(it.customer) ? <span>→ {it.customer}</span> : null}
+                    {it.reason ? <span className="text-danger">{it.reason.replaceAll("_", " ")} at event #{it.first_bad_seq}</span> : null}
+                    {it.checked_at !== undefined ? <span className="text-muted">last checked {it.checked_at ? formatDateTime(it.checked_at) : "never"}</span> : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function Integrity({ farmId, canVerify }: { farmId: string; canVerify: boolean }) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const q = useQuery({
+    queryKey: ["trace-integrity", farmId],
+    queryFn: async () => (await api.GET("/farms/{farm}/traceability/integrity", { params: { path: { farm: farmId } } })).data!.data!,
+  });
+  async function verify() {
+    setBusy(true);
+    try {
+      await api.POST("/farms/{farm}/traceability/integrity/verify", { params: { path: { farm: farmId } } });
+      await queryClient.invalidateQueries({ queryKey: ["trace-integrity", farmId] });
+      await queryClient.invalidateQueries({ queryKey: ["trace-alerts", farmId] });
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (q.isLoading) return <Skeleton className="h-48 w-full" />;
+  if (q.error) return <ErrorNotice error={q.error} />;
+  const d = q.data!;
+  const ok = d.latest?.result === "pass";
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {ok ? <ShieldCheck className="size-5 text-primary" aria-hidden /> : <ShieldAlert className="size-5 text-danger" aria-hidden />}
+            {d.latest ? (ok ? "The history is intact" : "The history has been altered") : "Not checked yet"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <p>
+            {d.events?.toLocaleString()} events, each sealed with the hash of the one before. Changing any stored event breaks the chain from that point on.
+          </p>
+          {d.latest && !ok ? (
+            <p className="text-danger" role="alert">
+              First bad event: #{d.latest.first_bad_seq} ({d.latest.reason?.replaceAll("_", " ")}). Contact SFMTP support.
+            </p>
+          ) : null}
+          <p className="break-all font-mono text-xs text-muted">Head {d.head_hash ?? "—"}</p>
+          <p className="text-xs text-muted">Checked every night; the owner is emailed if it fails.</p>
+          {canVerify ? (
+            <Button variant="secondary" size="sm" onClick={verify} disabled={busy}>
+              {busy ? "Checking…" : "Check now"}
+            </Button>
+          ) : null}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent checks</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(d.history ?? []).length === 0 ? (
+            <EmptyState title="No checks yet." />
+          ) : (
+            <ul className="divide-y divide-border text-sm">
+              {(d.history ?? []).map((h) => (
+                <li key={h.id} className="flex items-center justify-between py-2">
+                  <span>{formatDateTime(h.checked_at)}</span>
+                  <span className="text-xs text-muted">{h.events} events</span>
+                  <Badge tone={h.result === "pass" ? "success" : "danger"}>{h.result}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

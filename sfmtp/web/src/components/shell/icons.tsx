@@ -23,6 +23,7 @@ import {
   ShoppingCart,
   ShieldCheck,
   Tractor,
+  Truck,
   Users,
   Wallet,
 } from "lucide-react";
@@ -41,6 +42,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   finance: Wallet,
   reports: BarChart3,
   trace: Route,
+  shipments: Truck,
   members: Users,
   roles: ShieldCheck,
   audit: ScrollText,

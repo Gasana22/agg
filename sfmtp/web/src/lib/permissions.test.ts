@@ -23,8 +23,8 @@ describe("visibleNav", () => {
   });
 
   it("gives owners everything, including their subscription", () => {
-    const all = { "structure.view": "all", "crops.plans.view": "all", "livestock.animals.view": "all", "tasks.execute": "assigned", "tasks.view": "all", "workers.view": "all", "inventory.view": "all", "procurement.orders.approve": "all", "finance.view": "all", "trace.batches.view": "all", "members.view": "all", "roles.view": "all", "audit.view": "all", "farm.profile.manage": "all", "billing.manage": "all" } as const;
-    expect(visibleNav(farm(all)).map((i) => i.key)).toEqual(["dashboard", "my-day", "tasks", "structure", "crops", "livestock", "inventory", "procurement", "workers", "finance", "reports", "ledger", "traceability", "members", "roles", "audit", "settings", "billing", "support"]);
+    const all = { "structure.view": "all", "crops.plans.view": "all", "livestock.animals.view": "all", "tasks.execute": "assigned", "tasks.view": "all", "workers.view": "all", "inventory.view": "all", "procurement.orders.approve": "all", "finance.view": "all", "trace.batches.view": "all", "sales.view": "all", "members.view": "all", "roles.view": "all", "audit.view": "all", "farm.profile.manage": "all", "billing.manage": "all" } as const;
+    expect(visibleNav(farm(all)).map((i) => i.key)).toEqual(["dashboard", "my-day", "tasks", "structure", "crops", "livestock", "inventory", "procurement", "workers", "finance", "reports", "ledger", "traceability", "shipments", "members", "roles", "audit", "settings", "billing", "support"]);
   });
 
   it("shows purchasing to anyone with one of its permissions", () => {
