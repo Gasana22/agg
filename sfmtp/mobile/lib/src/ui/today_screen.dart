@@ -2,50 +2,20 @@ import 'package:flutter/material.dart';
 
 import 'labels.dart';
 import 'scope.dart';
-import 'sync_screen.dart';
 import 'task_screen.dart';
 
-/// The home screen: attendance and today's tasks, from the phone's database.
-class TodayScreen extends StatelessWidget {
-  const TodayScreen({super.key});
+/// A worker's day: attendance and today's tasks, from the phone's database.
+class TodayView extends StatelessWidget {
+  const TodayView({super.key});
 
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(app.farmName ?? 'My day'),
-        actions: [
-          StreamBuilder(
-            stream: app.db.watchOutbox(),
-            builder: (context, snap) {
-              final waiting = (snap.data ?? []).where((o) => o.status == 'pending').length;
-              final problems = (snap.data ?? []).where((o) => o.status != 'pending').length;
-              return IconButton(
-                key: const Key('sync-status'),
-                tooltip: waiting > 0 ? '$waiting changes not sent yet' : 'Sync',
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SyncScreen())),
-                icon: Badge(
-                  isLabelVisible: waiting + problems > 0,
-                  backgroundColor: problems > 0 ? Theme.of(context).colorScheme.error : null,
-                  label: Text('${waiting + problems}'),
-                  child: Icon(app.syncing ? Icons.sync : (waiting > 0 ? Icons.cloud_upload_outlined : Icons.cloud_done_outlined)),
-                ),
-              );
-            },
-          ),
-          PopupMenuButton<String>(
-            onSelected: (v) => v == 'signout' ? app.signOut() : null,
-            itemBuilder: (_) => const [PopupMenuItem(value: 'signout', child: Text('Sign out'))],
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: app.syncNow,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: const [_AttendanceCard(), SizedBox(height: 16), _TaskList()],
-        ),
+    return RefreshIndicator(
+      onRefresh: app.syncNow,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: const [_AttendanceCard(), SizedBox(height: 16), _TaskList()],
       ),
     );
   }

@@ -94,7 +94,7 @@ those arrows are drawn.
 | Traceability | `BatchOperations::split/merge/process/package/ship/recall` (quantity-checked, row-locked; ADR-0013) | Sales (shipments) |
 | Traceability | `WorkerNames` contract for the journey's worker view | implemented by Workforce |
 | Media | `MediaService::attach`, signed URLs | All |
-| Notifications | `Notifier::send(Notification, recipients)` (queued, multi-channel) | All |
+| Notifications | `Inbox::notify(userIds, kind, title, body, link, data)` and `notifyHolders(permission, …)`: an inbox row per member, synced to phones, then a queued push through `PushSender` (FCM, ADR-0015); more channels (SMS, email) in Phase 14 | Workforce, Sync (conflicts); all later |
 
 ## Build order that follows from the graph
 

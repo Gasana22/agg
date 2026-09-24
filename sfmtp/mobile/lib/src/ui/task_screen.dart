@@ -15,7 +15,7 @@ class TaskScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     return StreamBuilder(
-      stream: app.db.watchRecords('tasks').map((all) => all.where((t) => t['id'] == taskId).firstOrNull),
+      stream: app.db.watchRecord('tasks', taskId),
       builder: (context, snap) {
         final t = snap.data;
         if (t == null) return Scaffold(appBar: AppBar(), body: const Center(child: Text('This task is no longer assigned to you.')));

@@ -18,6 +18,9 @@ class ApiException implements Exception {
   /// No response at all: offline, DNS, timeout.
   bool get isNetwork => status == 0;
 
+  /// This phone was signed out from the web: its local data must go (docs/08 §5).
+  bool get isDeviceRevoked => code == 'device_revoked';
+
   @override
   String toString() => 'ApiException($status $code: $title)';
 }
@@ -33,7 +36,9 @@ class ApiClient {
   final http.Client _http;
   static const _uuid = Uuid();
 
-  Future<void> login(String email, String password, {String deviceName = 'SFMTP phone', String platform = 'android'}) async {
+  /// Signs in. Returns an MFA token when the account uses a second factor:
+  /// finish with [mfaChallenge] and the code from the authenticator app.
+  Future<String?> login(String email, String password, {String deviceName = 'SFMTP phone', String platform = 'android'}) async {
     final res = await _send('POST', '/auth/login', body: {
       'email': email,
       'password': password,
@@ -41,9 +46,13 @@ class ApiClient {
       'device': {'name': deviceName, 'platform': platform},
     }, auth: false);
     final data = res['data'] as Map<String, dynamic>;
-    if (data['mfa_required'] == true) {
-      throw ApiException(403, 'mfa_required', 'This account needs a second factor. Field accounts sign in with a password only; ask your manager.');
-    }
+    if (data['mfa_required'] == true) return data['mfa_token'] as String;
+    await tokens.save(data['access_token'] as String, data['refresh_token'] as String);
+    return null;
+  }
+
+  Future<void> mfaChallenge(String mfaToken, String code) async {
+    final data = (await _send('POST', '/auth/mfa/challenge', body: {'mfa_token': mfaToken, 'code': code.replaceAll(' ', '')}, auth: false))['data'] as Map<String, dynamic>;
     await tokens.save(data['access_token'] as String, data['refresh_token'] as String);
   }
 
@@ -61,6 +70,16 @@ class ApiClient {
 
   Future<Map<String, dynamic>> pull(String farmId, {String? cursor, int limit = 500}) async =>
       (await _send('GET', '/farms/$farmId/sync/pull', query: {'cursor': ?cursor, 'limit': '$limit'}))['data'] as Map<String, dynamic>;
+
+  Future<void> registerPushToken(String? token, {String platform = 'fcm'}) =>
+      _put('/me/devices/current/push-token', {'token': token, 'platform': token == null ? null : platform});
+
+  Future<void> _put(String path, Map<String, dynamic> body) async {
+    Future<http.Response> once() async => _http.put(Uri.parse('$baseUrl$path'), headers: {...await _headers(json: true), 'Idempotency-Key': _uuid.v7()}, body: jsonEncode(body));
+    var res = await _guard(once);
+    if (res.statusCode == 401 && await _refresh()) res = await _guard(once);
+    _decode(res);
+  }
 
   Future<List<Map<String, dynamic>>> push(String farmId, List<Map<String, dynamic>> mutations) async =>
       (((await _send('POST', '/farms/$farmId/sync/push', body: {'mutations': mutations}))['data'] as Map)['results'] as List).cast<Map<String, dynamic>>();
@@ -98,6 +117,8 @@ class ApiClient {
     return _decode(res);
   }
 
+  /// Rotates the tokens. A refused refresh signs the phone out; a revoked
+  /// device is reported as such so the app can wipe its data.
   Future<bool> _refresh() async {
     final refresh = await tokens.refreshToken();
     if (refresh == null) return false;
@@ -106,6 +127,11 @@ class ApiClient {
         body: jsonEncode({'refresh_token': refresh})));
     if (res.statusCode != 200) {
       await tokens.clear();
+      if (res.statusCode == 401) {
+        try {
+          if ((jsonDecode(res.body) as Map)['code'] == 'device_revoked') throw ApiException(401, 'device_revoked', 'This phone was signed out.');
+        } on FormatException catch (_) {}
+      }
       return false;
     }
     final data = (jsonDecode(res.body) as Map)['data'] as Map<String, dynamic>;

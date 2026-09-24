@@ -119,6 +119,108 @@ class FieldWork {
     });
   }
 
+  // Agronomist (docs/10 Phase 11)
+
+  /// A pest, disease or other problem seen in the field, with where it was seen.
+  Future<void> reportObservation(String cycleId, {required String kind, required String severity, required String title, String? description, double? affectedPct}) async {
+    final place = await location.current();
+    await _enqueue('crop_observations', 'insert', _now(), target: 'crop_cycles:$cycleId', data: {
+      'cycle_id': cycleId,
+      'kind': kind,
+      'severity': severity,
+      'title': title,
+      if (description != null && description.isNotEmpty) 'description': description,
+      'affected_pct': ?affectedPct,
+      if (place != null) ...{'latitude': place.lat, 'longitude': place.lng},
+    });
+  }
+
+  /// Field work done on a crop cycle, with the inputs applied (withholding periods count from now).
+  Future<void> recordOperation(String cycleId, {required String type, String? notes, double? labourHours, List<Map<String, dynamic>> inputs = const []}) async {
+    final place = await location.current();
+    final at = _now();
+    await _enqueue('crop_operations', 'insert', at, target: 'crop_cycles:$cycleId', data: {
+      'cycle_id': cycleId,
+      'type': type,
+      'occurred_at': at,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
+      'labour_hours': ?labourHours,
+      if (inputs.isNotEmpty) 'inputs': inputs,
+      if (place != null) ...{'latitude': place.lat, 'longitude': place.lng},
+    });
+  }
+
+  // Livestock
+
+  Future<void> recordHealth({String? animalId, String? groupId, required String kind, String? productName, String? diagnosis, int? meatWithdrawalDays, int? milkWithdrawalDays, String? notes}) =>
+      _enqueue('animal_health', 'insert', _now(), target: animalId != null ? 'animals:$animalId' : null, data: {
+        'animal_id': ?animalId,
+        'group_id': ?groupId,
+        'kind': kind,
+        'given_on': _today(),
+        if (productName != null && productName.isNotEmpty) 'product_name': productName,
+        if (diagnosis != null && diagnosis.isNotEmpty) 'diagnosis': diagnosis,
+        'meat_withdrawal_days': ?meatWithdrawalDays,
+        'milk_withdrawal_days': ?milkWithdrawalDays,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      });
+
+  Future<void> recordWeight(String animalId, double kg) =>
+      _enqueue('animal_weights', 'insert', _now(), target: 'animals:$animalId', data: {'animal_id': animalId, 'weighed_on': _today(), 'weight_kg': kg});
+
+  Future<void> recordProduction({String? animalId, String? groupId, required String product, required double quantity, required String unit, String? session, bool discarded = false}) =>
+      _enqueue('animal_production', 'insert', _now(), target: animalId != null ? 'animals:$animalId' : null, data: {
+        'animal_id': ?animalId,
+        'group_id': ?groupId,
+        'product': product,
+        'produced_on': _today(),
+        'session': ?session,
+        'quantity': quantity,
+        'unit': unit,
+        if (discarded) 'discarded': true,
+      });
+
+  /// Change an animal's details. The phone sends what it saw before (`base`)
+  /// and the version, so the server merges field by field (docs/08 §4).
+  Future<void> editAnimal(String animalId, Map<String, dynamic> changes) async {
+    final animal = await db.record('animals', animalId) ?? (throw StateError('Unknown animal'));
+    final changed = {for (final e in changes.entries) if (e.value != animal[e.key]) e.key: e.value};
+    if (changed.isEmpty) return;
+    final version = (await (db.select(db.mirrorRecords)..where((r) => r.entity.equals('animals') & r.id.equals(animalId))).getSingle()).version;
+    await db.transaction(() async {
+      await db.upsertRecord('animals', animalId, version, {...animal, ...changed}, pending: true);
+      await _enqueue('animals', 'update', _now(), id: animalId, target: 'animals:$animalId', baseVersion: version, data: {
+        'changes': changed,
+        'base': {for (final k in changed.keys) k: animal[k]},
+      });
+    });
+  }
+
+  // Supervisors
+
+  Future<void> reviewTask(String taskId, {required bool approve, String? note}) async {
+    final task = await db.record('team_tasks', taskId) ?? (throw StateError('Unknown task'));
+    if (!approve && (note == null || note.trim().isEmpty)) throw StateError('Say why the work is sent back.');
+    await db.transaction(() async {
+      await db.upsertRecord('team_tasks', taskId, task['version'] as int?, {...task, 'status': approve ? 'verified' : 'rejected', 'review_note': note}, pending: true);
+      await _enqueue('task_reviews', approve ? 'verify' : 'reject', _now(), target: 'team_tasks:$taskId', data: {'task_id': taskId, if (note != null && note.isNotEmpty) 'note': note});
+    });
+  }
+
+  /// Keep mine or the server's value for each conflicting field.
+  Future<void> resolveConflict(String conflictId, Map<String, String> choices) async {
+    final conflict = await db.record('conflicts', conflictId) ?? (throw StateError('Unknown conflict'));
+    await db.transaction(() async {
+      await db.upsertRecord('conflicts', conflictId, conflict['version'] as int?, {...conflict, 'status': 'resolved', 'resolution': choices}, pending: true);
+      await _enqueue('sync_conflicts', 'resolve', _now(), target: 'conflicts:$conflictId', data: {'conflict_id': conflictId, 'choices': choices});
+    });
+  }
+
+  String _today() {
+    final local = _clock();
+    return '${local.year.toString().padLeft(4, '0')}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}';
+  }
+
   /// Today's attendance still open (checked in, not out).
   Future<Map<String, dynamic>?> openAttendance() async {
     final all = await db.records('attendance');
@@ -129,7 +231,7 @@ class FieldWork {
     return null;
   }
 
-  Future<void> _enqueue(String entity, String op, String occurredAt, {required Map<String, dynamic> data, String? id, String? target}) =>
+  Future<void> _enqueue(String entity, String op, String occurredAt, {required Map<String, dynamic> data, String? id, String? target, int? baseVersion}) =>
       db.into(db.outbox).insert(OutboxCompanion.insert(
             mutationId: _uuid.v7(),
             entity: entity,
@@ -137,6 +239,7 @@ class FieldWork {
             recordId: Value(id ?? (op == 'insert' ? _uuid.v7() : null)),
             target: Value(target),
             occurredAt: occurredAt,
+            baseVersion: Value(baseVersion),
             data: jsonEncode(data),
           ));
 }

@@ -44,6 +44,12 @@ dependencies:
   crypto: ^3.0.7
   path_provider: ^2.1.6
   path: ^1.9.1
+  sqlite3: ^3.6.0
+  workmanager: ^0.10.10
+  flutter_local_notifications: ^22.3.1
+  connectivity_plus: ^7.3.1
+  firebase_core: ^4.15.0
+  firebase_messaging: ^16.7.0
 
 dev_dependencies:
   flutter_test:
@@ -60,6 +66,13 @@ dev_dependencies:
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+
+# The phone's database is encrypted (docs/08 §5, ADR-0015): package:sqlite3
+# bundles SQLite3MultipleCiphers instead of plain SQLite on every platform.
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3mc
 
 # The following section is specific to Flutter packages.
 flutter:

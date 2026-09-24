@@ -438,6 +438,17 @@ class $OutboxTable extends Outbox with TableInfo<$OutboxTable, OutboxEntry> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _baseVersionMeta = const VerificationMeta(
+    'baseVersion',
+  );
+  @override
+  late final GeneratedColumn<int> baseVersion = GeneratedColumn<int>(
+    'base_version',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _dataMeta = const VerificationMeta('data');
   @override
   late final GeneratedColumn<String> data = GeneratedColumn<String>(
@@ -489,6 +500,7 @@ class $OutboxTable extends Outbox with TableInfo<$OutboxTable, OutboxEntry> {
     recordId,
     target,
     occurredAt,
+    baseVersion,
     data,
     status,
     attempts,
@@ -553,6 +565,15 @@ class $OutboxTable extends Outbox with TableInfo<$OutboxTable, OutboxEntry> {
     } else if (isInserting) {
       context.missing(_occurredAtMeta);
     }
+    if (data.containsKey('base_version')) {
+      context.handle(
+        _baseVersionMeta,
+        baseVersion.isAcceptableOrUnknown(
+          data['base_version']!,
+          _baseVersionMeta,
+        ),
+      );
+    }
     if (data.containsKey('data')) {
       context.handle(
         _dataMeta,
@@ -616,6 +637,10 @@ class $OutboxTable extends Outbox with TableInfo<$OutboxTable, OutboxEntry> {
         DriftSqlType.string,
         data['${effectivePrefix}occurred_at'],
       )!,
+      baseVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}base_version'],
+      ),
       data: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}data'],
@@ -651,6 +676,9 @@ class OutboxEntry extends DataClass implements Insertable<OutboxEntry> {
   /// The mirrored record the change applies to, e.g. `tasks:<id>`.
   final String? target;
   final String occurredAt;
+
+  /// For edits: the record version the phone saw (field-level merge, docs/08 §4).
+  final int? baseVersion;
   final String data;
 
   /// pending → (pushed) removed; or rejected / conflict, kept for the sync screen.
@@ -665,6 +693,7 @@ class OutboxEntry extends DataClass implements Insertable<OutboxEntry> {
     this.recordId,
     this.target,
     required this.occurredAt,
+    this.baseVersion,
     required this.data,
     required this.status,
     required this.attempts,
@@ -684,6 +713,9 @@ class OutboxEntry extends DataClass implements Insertable<OutboxEntry> {
       map['target'] = Variable<String>(target);
     }
     map['occurred_at'] = Variable<String>(occurredAt);
+    if (!nullToAbsent || baseVersion != null) {
+      map['base_version'] = Variable<int>(baseVersion);
+    }
     map['data'] = Variable<String>(data);
     map['status'] = Variable<String>(status);
     map['attempts'] = Variable<int>(attempts);
@@ -706,6 +738,9 @@ class OutboxEntry extends DataClass implements Insertable<OutboxEntry> {
           ? const Value.absent()
           : Value(target),
       occurredAt: Value(occurredAt),
+      baseVersion: baseVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(baseVersion),
       data: Value(data),
       status: Value(status),
       attempts: Value(attempts),
@@ -728,6 +763,7 @@ class OutboxEntry extends DataClass implements Insertable<OutboxEntry> {
       recordId: serializer.fromJson<String?>(json['recordId']),
       target: serializer.fromJson<String?>(json['target']),
       occurredAt: serializer.fromJson<String>(json['occurredAt']),
+      baseVersion: serializer.fromJson<int?>(json['baseVersion']),
       data: serializer.fromJson<String>(json['data']),
       status: serializer.fromJson<String>(json['status']),
       attempts: serializer.fromJson<int>(json['attempts']),
@@ -745,6 +781,7 @@ class OutboxEntry extends DataClass implements Insertable<OutboxEntry> {
       'recordId': serializer.toJson<String?>(recordId),
       'target': serializer.toJson<String?>(target),
       'occurredAt': serializer.toJson<String>(occurredAt),
+      'baseVersion': serializer.toJson<int?>(baseVersion),
       'data': serializer.toJson<String>(data),
       'status': serializer.toJson<String>(status),
       'attempts': serializer.toJson<int>(attempts),
@@ -760,6 +797,7 @@ class OutboxEntry extends DataClass implements Insertable<OutboxEntry> {
     Value<String?> recordId = const Value.absent(),
     Value<String?> target = const Value.absent(),
     String? occurredAt,
+    Value<int?> baseVersion = const Value.absent(),
     String? data,
     String? status,
     int? attempts,
@@ -772,6 +810,7 @@ class OutboxEntry extends DataClass implements Insertable<OutboxEntry> {
     recordId: recordId.present ? recordId.value : this.recordId,
     target: target.present ? target.value : this.target,
     occurredAt: occurredAt ?? this.occurredAt,
+    baseVersion: baseVersion.present ? baseVersion.value : this.baseVersion,
     data: data ?? this.data,
     status: status ?? this.status,
     attempts: attempts ?? this.attempts,
@@ -790,6 +829,9 @@ class OutboxEntry extends DataClass implements Insertable<OutboxEntry> {
       occurredAt: data.occurredAt.present
           ? data.occurredAt.value
           : this.occurredAt,
+      baseVersion: data.baseVersion.present
+          ? data.baseVersion.value
+          : this.baseVersion,
       data: data.data.present ? data.data.value : this.data,
       status: data.status.present ? data.status.value : this.status,
       attempts: data.attempts.present ? data.attempts.value : this.attempts,
@@ -807,6 +849,7 @@ class OutboxEntry extends DataClass implements Insertable<OutboxEntry> {
           ..write('recordId: $recordId, ')
           ..write('target: $target, ')
           ..write('occurredAt: $occurredAt, ')
+          ..write('baseVersion: $baseVersion, ')
           ..write('data: $data, ')
           ..write('status: $status, ')
           ..write('attempts: $attempts, ')
@@ -824,6 +867,7 @@ class OutboxEntry extends DataClass implements Insertable<OutboxEntry> {
     recordId,
     target,
     occurredAt,
+    baseVersion,
     data,
     status,
     attempts,
@@ -840,6 +884,7 @@ class OutboxEntry extends DataClass implements Insertable<OutboxEntry> {
           other.recordId == this.recordId &&
           other.target == this.target &&
           other.occurredAt == this.occurredAt &&
+          other.baseVersion == this.baseVersion &&
           other.data == this.data &&
           other.status == this.status &&
           other.attempts == this.attempts &&
@@ -854,6 +899,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxEntry> {
   final Value<String?> recordId;
   final Value<String?> target;
   final Value<String> occurredAt;
+  final Value<int?> baseVersion;
   final Value<String> data;
   final Value<String> status;
   final Value<int> attempts;
@@ -866,6 +912,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxEntry> {
     this.recordId = const Value.absent(),
     this.target = const Value.absent(),
     this.occurredAt = const Value.absent(),
+    this.baseVersion = const Value.absent(),
     this.data = const Value.absent(),
     this.status = const Value.absent(),
     this.attempts = const Value.absent(),
@@ -879,6 +926,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxEntry> {
     this.recordId = const Value.absent(),
     this.target = const Value.absent(),
     required String occurredAt,
+    this.baseVersion = const Value.absent(),
     required String data,
     this.status = const Value.absent(),
     this.attempts = const Value.absent(),
@@ -896,6 +944,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxEntry> {
     Expression<String>? recordId,
     Expression<String>? target,
     Expression<String>? occurredAt,
+    Expression<int>? baseVersion,
     Expression<String>? data,
     Expression<String>? status,
     Expression<int>? attempts,
@@ -909,6 +958,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxEntry> {
       if (recordId != null) 'record_id': recordId,
       if (target != null) 'target': target,
       if (occurredAt != null) 'occurred_at': occurredAt,
+      if (baseVersion != null) 'base_version': baseVersion,
       if (data != null) 'data': data,
       if (status != null) 'status': status,
       if (attempts != null) 'attempts': attempts,
@@ -924,6 +974,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxEntry> {
     Value<String?>? recordId,
     Value<String?>? target,
     Value<String>? occurredAt,
+    Value<int?>? baseVersion,
     Value<String>? data,
     Value<String>? status,
     Value<int>? attempts,
@@ -937,6 +988,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxEntry> {
       recordId: recordId ?? this.recordId,
       target: target ?? this.target,
       occurredAt: occurredAt ?? this.occurredAt,
+      baseVersion: baseVersion ?? this.baseVersion,
       data: data ?? this.data,
       status: status ?? this.status,
       attempts: attempts ?? this.attempts,
@@ -968,6 +1020,9 @@ class OutboxCompanion extends UpdateCompanion<OutboxEntry> {
     if (occurredAt.present) {
       map['occurred_at'] = Variable<String>(occurredAt.value);
     }
+    if (baseVersion.present) {
+      map['base_version'] = Variable<int>(baseVersion.value);
+    }
     if (data.present) {
       map['data'] = Variable<String>(data.value);
     }
@@ -993,6 +1048,7 @@ class OutboxCompanion extends UpdateCompanion<OutboxEntry> {
           ..write('recordId: $recordId, ')
           ..write('target: $target, ')
           ..write('occurredAt: $occurredAt, ')
+          ..write('baseVersion: $baseVersion, ')
           ..write('data: $data, ')
           ..write('status: $status, ')
           ..write('attempts: $attempts, ')
@@ -1857,6 +1913,7 @@ typedef $$OutboxTableCreateCompanionBuilder = OutboxCompanion Function({
   Value<String?> recordId,
   Value<String?> target,
   required String occurredAt,
+  Value<int?> baseVersion,
   required String data,
   Value<String> status,
   Value<int> attempts,
@@ -1870,6 +1927,7 @@ typedef $$OutboxTableUpdateCompanionBuilder = OutboxCompanion Function({
   Value<String?> recordId,
   Value<String?> target,
   Value<String> occurredAt,
+  Value<int?> baseVersion,
   Value<String> data,
   Value<String> status,
   Value<int> attempts,
@@ -1917,6 +1975,11 @@ class $$OutboxTableFilterComposer
 
   ColumnFilters<String> get occurredAt => $composableBuilder(
     column: $table.occurredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get baseVersion => $composableBuilder(
+    column: $table.baseVersion,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1985,6 +2048,11 @@ class $$OutboxTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get baseVersion => $composableBuilder(
+    column: $table.baseVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get data => $composableBuilder(
     column: $table.data,
     builder: (column) => ColumnOrderings(column),
@@ -2040,6 +2108,11 @@ class $$OutboxTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get baseVersion => $composableBuilder(
+    column: $table.baseVersion,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get data =>
       $composableBuilder(column: $table.data, builder: (column) => column);
 
@@ -2091,6 +2164,7 @@ class $$OutboxTableTableManager
                 Value<String?> recordId = const Value.absent(),
                 Value<String?> target = const Value.absent(),
                 Value<String> occurredAt = const Value.absent(),
+                Value<int?> baseVersion = const Value.absent(),
                 Value<String> data = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int> attempts = const Value.absent(),
@@ -2103,6 +2177,7 @@ class $$OutboxTableTableManager
                 recordId: recordId,
                 target: target,
                 occurredAt: occurredAt,
+                baseVersion: baseVersion,
                 data: data,
                 status: status,
                 attempts: attempts,
@@ -2117,6 +2192,7 @@ class $$OutboxTableTableManager
                 Value<String?> recordId = const Value.absent(),
                 Value<String?> target = const Value.absent(),
                 required String occurredAt,
+                Value<int?> baseVersion = const Value.absent(),
                 required String data,
                 Value<String> status = const Value.absent(),
                 Value<int> attempts = const Value.absent(),
@@ -2129,6 +2205,7 @@ class $$OutboxTableTableManager
                 recordId: recordId,
                 target: target,
                 occurredAt: occurredAt,
+                baseVersion: baseVersion,
                 data: data,
                 status: status,
                 attempts: attempts,

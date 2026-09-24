@@ -1,15 +1,19 @@
 # 08 — Offline-First Sync Design
 
-> **Phase 6 status.** The protocol below is implemented for the field
-> worker's data: task steps, task photos, attendance, GPS points and leave
-> requests are pushed; tasks, attendance, leave and the worker profile are
-> pulled. Push results also include `deferred` (a photo not uploaded yet)
-> and `error` (retry later). How the server applies mutations and builds the
-> feed is in [ADR-0010](adr/0010-sync-protocol.md). Field-level merge and
-> `sync/conflicts` (editable master data), SQLCipher and background sync
-> come in Phase 11. The airplane-mode, duplicate-push and conflicting-
-> transition tests in §6 already pass (backend `SyncTest`, the Flutter tests,
-> and the live offline scenario in CI).
+> **Status (Phase 11).** The protocol below is implemented for every role
+> on the phone:
+> - the field worker's tasks, photos, attendance, GPS and leave (Phase 6);
+> - the agronomist's crop operations and observations;
+> - livestock health, weight and production records, and animal edits;
+> - the manager's checks of submitted work.
+>
+> Push results also include `deferred` (a photo not uploaded yet) and
+> `error` (retry later). How the server applies mutations and builds the
+> feed is in [ADR-0010](adr/0010-sync-protocol.md). The field-level merge,
+> `sync/conflicts`, notifications, encryption and background sync are in
+> [ADR-0015](adr/0015-mobile-roles-conflicts-and-notifications.md).
+> Every test in §6 passes: the backend `SyncTest` and `MobileSyncTest`, the
+> Flutter suite (`test/phase11_test.dart`), and the live scenarios in CI.
 
 ```
 LOCAL DATA → SYNC QUEUE → SERVER → CONFLICT CHECK → DATABASE
@@ -87,8 +91,10 @@ sequenceDiagram
 
 ## 5. Security of offline data
 
-- The SQLite database is encrypted (SQLCipher), with the key in the Android
-  Keystore / iOS Keychain.
+- The SQLite database is encrypted (SQLite3MultipleCiphers, the successor
+  build to SQLCipher for Flutter), with a random 256-bit key in the Android
+  Keystore / iOS Keychain. Only the app creates the key; the background
+  sync never does.
 - Refresh tokens are held in secure storage. When a device is revoked, its
   next sync attempt wipes local data.
 - Location capture only happens during a work session (checked-in or task in

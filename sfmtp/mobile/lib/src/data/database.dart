@@ -4,12 +4,13 @@ import 'package:drift/drift.dart';
 
 part 'database.g.dart';
 
-/// The phone's copy of what the member may see (docs/08 §2): tasks,
-/// attendance, leave and their worker profile, stored as the server's JSON
-/// with the fields the screens sort and filter on.
+/// The phone's copy of what the member may see (docs/08 §2), stored as the
+/// server's JSON: a worker's tasks, attendance, leave and profile; plots and
+/// crop cycles; animal groups and animals; tasks to verify; notifications
+/// and open sync conflicts.
 @DataClassName('MirrorRecord')
 class MirrorRecords extends Table {
-  TextColumn get entity => text()(); // tasks | attendance | leave | workers
+  TextColumn get entity => text()(); // tasks | attendance | leave | workers | plots | crop_cycles | animals …
   TextColumn get id => text()();
   IntColumn get version => integer().nullable()();
   TextColumn get data => text()(); // JSON
@@ -31,6 +32,8 @@ class Outbox extends Table {
   /// The mirrored record the change applies to, e.g. `tasks:<id>`.
   TextColumn get target => text().nullable()();
   TextColumn get occurredAt => text()(); // ISO-8601 UTC, the phone's time
+  /// For edits: the record version the phone saw (field-level merge, docs/08 §4).
+  IntColumn get baseVersion => integer().nullable()();
   TextColumn get data => text()(); // JSON
   /// pending → (pushed) removed; or rejected / conflict, kept for the sync screen.
   TextColumn get status => text().withDefault(const Constant('pending'))();
@@ -66,7 +69,14 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) await m.addColumn(outbox, outbox.baseVersion);
+        },
+      );
 
   // Mirror
 
@@ -90,6 +100,10 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<Map<String, dynamic>>> watchRecords(String entity) =>
       (select(mirrorRecords)..where((r) => r.entity.equals(entity))).watch().map((rows) => [for (final r in rows) jsonDecode(r.data) as Map<String, dynamic>]);
 
+  /// One record, without decoding the rest of the entity (large herds on slow phones).
+  Stream<Map<String, dynamic>?> watchRecord(String entity, String id) =>
+      (select(mirrorRecords)..where((r) => r.entity.equals(entity) & r.id.equals(id))).watchSingleOrNull().map((r) => r == null ? null : jsonDecode(r.data) as Map<String, dynamic>);
+
   Future<List<Map<String, dynamic>>> records(String entity) async =>
       [for (final r in await (select(mirrorRecords)..where((r) => r.entity.equals(entity))).get()) jsonDecode(r.data) as Map<String, dynamic>];
 
@@ -112,6 +126,14 @@ class AppDatabase extends _$AppDatabase {
   Future<void> setSetting(String key, String? value) => value == null
       ? (delete(syncState)..where((s) => s.key.equals(key))).go()
       : into(syncState).insertOnConflictUpdate(SyncStateCompanion.insert(key: key, value: value));
+
+  /// Everything, e.g. when the device was signed out remotely (docs/08 §5).
+  Future<void> wipe() => transaction(() async {
+        await delete(mirrorRecords).go();
+        await delete(outbox).go();
+        await delete(mediaQueue).go();
+        await delete(syncState).go();
+      });
 
   /// Everything but the settings, e.g. when switching farm or signing out.
   Future<void> clearFarmData() => transaction(() async {

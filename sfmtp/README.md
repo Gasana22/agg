@@ -22,7 +22,8 @@ REST API.
 | 8 — Finance | ✅ Done: accounts and manual entries, expenses with approval thresholds, income, customer invoices (with livestock sales), payments against any document, payroll from attendance charged to the work done, budgets, profit and loss, cash flow with a forecast, cost per crop and per acre; accountant dashboard and the owner's financial KPIs |
 | 9 — Traceability (full) | ✅ Done: split / merge / process / package with quantity checks, recall to the customer, shipments, journey views (timeline, workers, inputs, customers, map), the journey projection, integrity checks and alerts; the traceability explorer |
 | 10 — QR system | ✅ Done: approved public fields with preview, random QR codes with revoke and recall notices, the public scan page, signed payloads, rate limits, anonymous scan statistics, printable PDF labels |
-| 11 — Mobile app (complete) | Next |
+| 11 — Mobile app (complete) | ✅ Done: agronomist, livestock and supervisor flows on the phone, a sync feed filtered by permission, field-level merge with conflicts resolved in the app, a notification inbox with FCM push, an encrypted local database, background sync, remote wipe, and store builds for the internal testing tracks |
+| 12 — Supplier & customer portals | Next |
 
 ## Repository layout
 
@@ -30,7 +31,7 @@ REST API.
 sfmtp/
 ├── backend/                 Laravel 12 API (modular monolith)          → backend/README.md
 ├── web/                     Next.js 16 web app + backend-for-frontend  → web/README.md
-├── mobile/                  Flutter field app (offline-first)          → mobile/README.md
+├── mobile/                  Flutter app for every farm role (offline)  → mobile/README.md
 ├── packages/api-contracts/  OpenAPI 3.1 contract (source of the typed clients)
 ├── infra/docker/            Dockerfiles and the local compose stack
 └── docs/                    Architecture and design documents
@@ -63,7 +64,8 @@ CI (`.github/workflows/sfmtp-ci.yml`) runs on every change under `sfmtp/`:
   farm's owner and must answer 404 without changing data
 - OpenAPI lint, and a check that routes, contract and generated web types agree
 - web lint, type-check, unit tests and production build
-- mobile analyze, unit and widget tests, and the offline scenario against a live API
+- mobile analyze, unit and widget tests (the docs/08 §6 offline suite), the
+  offline scenarios against a live API, and release APKs with a size budget
 - Docker image builds
 
 ## Design documents

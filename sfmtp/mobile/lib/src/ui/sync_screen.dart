@@ -9,6 +9,14 @@ const _entityLabels = {
   'worker_attendance': 'Attendance',
   'worker_leave': 'Leave request',
   'worker_gps_points': 'Location',
+  'crop_observations': 'Crop problem',
+  'crop_operations': 'Field work',
+  'animal_health': 'Health record',
+  'animal_weights': 'Weight',
+  'animal_production': 'Milk / eggs',
+  'animals': 'Animal details',
+  'task_reviews': 'Task check',
+  'sync_conflicts': 'Conflict choice',
 };
 
 /// What is waiting to be sent, and anything the server refused.

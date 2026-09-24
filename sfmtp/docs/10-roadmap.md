@@ -312,6 +312,85 @@ Everything in the Phase 8 row below, with these notes
   new route and request body. The accountant's, manager's and owner's
   journeys were checked in a browser.
 
+### Phase 11 — delivered
+
+Everything in the Phase 11 row below, with these notes
+([ADR-0015](adr/0015-mobile-roles-conflicts-and-notifications.md)):
+
+- **Every role on the phone**, with the tabs chosen by the member's
+  permissions:
+  - the field worker's day (Phase 6);
+  - the agronomist records operations with inputs and withholding, and
+    reports problems at the phone's location;
+  - the livestock team records health, weight and milk / eggs, and edits
+    animals;
+  - supervisors approve submitted work or send it back with a reason.
+
+  Sign-in handles the authenticator code, and a member of several farms
+  chooses one.
+- **Sync for all of it.** The feed is filtered by permission on the server.
+  New push handlers go through the same services and validation as the
+  web.
+- **Field-level merge and conflicts.** Offline animal edits merge per
+  field. A field changed on both sides becomes a `sync_conflicts` entry,
+  with a notification, resolved in the Inbox field by field (keep mine /
+  keep the server's), offline too. A late check of work that changed in
+  the meantime is a conflict with the server's record.
+- **Notifications.** A new Notifications module:
+  - a member inbox on the API, also synced to phones;
+  - notices for work assigned, approved, sent back or refused, and for
+    conflicts;
+  - Firebase Cloud Messaging push (HTTP v1) when configured, and phone
+    notifications after every sync otherwise.
+- **Encrypted local database** (SQLite3MultipleCiphers, key in the
+  Keystore / Keychain):
+  - v0 plain databases are encrypted in place with their unsent work;
+  - only the app makes keys;
+  - a lost key starts the app empty instead of failing.
+- **Background sync** every 15 minutes (WorkManager / BGTask), plus on
+  reconnect and when the app returns to the foreground. A phone signed out
+  from the web wipes its data.
+- **Store builds.**
+  - CI builds release APKs split per ABI, with a size budget.
+  - A manual workflow signs and uploads to the Play internal track and to
+    TestFlight, using repository secrets.
+- **Low-end Android.** Checked through:
+  - small per-ABI downloads;
+  - detail screens that read one record, not the whole herd;
+  - lists capped with search;
+  - pushes batched at 200;
+  - 1,000 queued mutations in about 25 s over a simulated 3G link
+    (latency, bandwidth and server time).
+
+  Checks on a physical low-end phone remain a manual step before each
+  store release.
+- **Deferred:**
+  - mobile stock flows and harvest or treatment approvals on the phone
+    (Phase 12 / 13);
+  - offline editing of records other than animals (via `FieldMerge`);
+  - a generated Dart client;
+  - trimming the change feed (Phase 15);
+  - SMS and email channels for notifications (Phase 14).
+- **Test gate met.**
+  - 233 API tests on PostgreSQL (228 on MySQL, plus 5 that need
+    PostgreSQL features) and 56 web unit tests.
+  - 16 Flutter tests covering docs/08 §6:
+    - airplane mode and reconnect;
+    - duplicate push;
+    - a late check giving a conflict and a notification;
+    - two phones editing one animal (merge plus conflict, resolved from
+      the Inbox UI);
+    - 1,000 mutations under 60 s on 3G;
+    - encryption, the key rules and the upgrade;
+    - push tokens;
+    - remote wipe;
+    - role tabs with the authenticator code.
+  - Live scenarios against the demo API in CI: the worker's day, the
+    agronomist offline, and two phones editing one animal.
+  - The backend `MobileSyncTest` covers the same flows through the API,
+    including 1,000 mutations and the cross-tenant sweep over the new
+    routes.
+
 ### Phase 10 — delivered
 
 Everything in the Phase 10 row below, with these notes

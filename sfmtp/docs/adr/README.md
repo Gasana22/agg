@@ -19,6 +19,7 @@ consequences.
 | [0012](0012-finance-documents-and-payables.md) | Finance as documents: approval by threshold, voids by reversal, one payable registry, control accounts, payroll by task time | Accepted |
 | [0013](0013-batch-operations-journeys-and-shipments.md) | Batch operations with quantity accounting, downstream recall, journey views and projection, alerts, shipments in Sales | Accepted |
 | [0014](0014-public-traceability-and-qr-codes.md) | Public traceability: allow-listed fields, approved snapshots, random codes, revocation and recall notices, signed payloads, anonymous scan counts, PDF labels | Accepted |
+| [0015](0015-mobile-roles-conflicts-and-notifications.md) | The complete mobile app: role feeds by permission, field-level merge of animal edits, server-side conflicts, the notification inbox with FCM push, the encrypted database, background sync, store builds | Accepted |
 
 ## Product-owner decisions (2026-09-23)
 

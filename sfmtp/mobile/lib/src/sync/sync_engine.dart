@@ -13,6 +13,9 @@ class SyncReport {
   int pulled = 0;
   String? error;
 
+  /// The API's problem code when the sync failed, e.g. `device_revoked`.
+  String? errorCode;
+
   bool get ok => error == null;
 
   @override
@@ -46,6 +49,7 @@ class SyncEngine {
       await db.setSetting('last_sync_at', _clock().toUtc().toIso8601String());
     } on ApiException catch (e) {
       report.error = e.isNetwork ? 'Offline: changes are kept on the phone.' : e.title;
+      report.errorCode = e.code;
     } finally {
       _running = false;
     }
@@ -87,7 +91,15 @@ class SyncEngine {
         data['media_id'] = mediaId;
       }
       ready.add(o);
-      payload.add({'mutation_id': o.mutationId, 'entity': o.entity, 'op': o.op, 'id': o.recordId, 'occurred_at': o.occurredAt, 'data': data});
+      payload.add({
+        'mutation_id': o.mutationId,
+        'entity': o.entity,
+        'op': o.op,
+        'id': o.recordId,
+        'occurred_at': o.occurredAt,
+        if (o.baseVersion != null) 'base_version': o.baseVersion,
+        'data': data,
+      });
     }
 
     for (var i = 0; i < payload.length; i += batchSize) {
@@ -98,10 +110,15 @@ class SyncEngine {
         final status = r?['status'] as String? ?? 'error';
         final server = r?['server'] as Map<String, dynamic>?;
         final message = ((r?['error'] as Map?)?['message'] as String?) ?? '';
+        final conflictId = r == null ? null : r['conflict_id'] as String?;
         switch (status) {
           case 'applied' || 'duplicate':
             await (db.delete(db.outbox)..where((x) => x.seq.equals(o.seq))).go();
             report.applied++;
+          case 'conflict' when conflictId != null:
+            // A field conflict: merged fields are in, the rest waits in the inbox.
+            await (db.delete(db.outbox)..where((x) => x.seq.equals(o.seq))).go();
+            report.conflicts++;
           case 'conflict':
             await _mark(o, 'conflict', message);
             report.conflicts++;
