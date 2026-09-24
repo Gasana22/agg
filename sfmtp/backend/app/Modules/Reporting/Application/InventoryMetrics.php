@@ -57,11 +57,6 @@ class InventoryMetrics
         return PurchaseOrder::whereIn('status', ['approved', 'sent', 'partially_received'])->count();
     }
 
-    public function payablesOpen(): string
-    {
-        return $this->accountBalance(ChartOfAccounts::PAYABLES, credit: true);
-    }
-
     public function receivedNotInvoiced(): string
     {
         return $this->accountBalance(ChartOfAccounts::GOODS_RECEIVED_NOT_INVOICED, credit: true);
@@ -173,7 +168,7 @@ class InventoryMetrics
             ->map(fn (SupplierInvoice $i) => [
                 'id' => $i->id,
                 'title' => "{$i->supplier->name} · {$i->invoice_number}",
-                'subtitle' => number_format((float) $i->amount).' '.$this->context->farm()->currency,
+                'subtitle' => number_format((float) $i->amount - (float) $i->paid_amount).' '.$this->context->farm()->currency.((float) $i->paid_amount > 0 ? ' still to pay' : ''),
                 'at' => $i->due_on ? $i->due_on->toDateString().'T12:00:00Z' : null,
                 'badge' => $i->due_on && $i->due_on->isPast() ? ['label' => 'Overdue', 'tone' => 'danger'] : ['label' => 'Due', 'tone' => 'neutral'],
                 'href' => "/farms/{$i->farm_id}/procurement/orders/{$i->order_id}",

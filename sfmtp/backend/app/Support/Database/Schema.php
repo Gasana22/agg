@@ -28,6 +28,11 @@ class Schema
         DB::statement("ALTER TABLE {$table} ADD CONSTRAINT {$name} CHECK ({$expression})");
     }
 
+    public static function dropCheck(string $table, string $name): void
+    {
+        DB::statement(self::isMysql() ? "ALTER TABLE {$table} DROP CHECK {$name}" : "ALTER TABLE {$table} DROP CONSTRAINT {$name}");
+    }
+
     /**
      * CHECK that a column holds one of the given values (mirrors a PHP enum).
      *

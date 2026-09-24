@@ -4,6 +4,7 @@ namespace App\Modules\Procurement\Http\Controllers;
 
 use App\Modules\Procurement\Application\Purchasing;
 use App\Modules\Procurement\Application\Receiving;
+use App\Modules\Procurement\Application\SupplierInvoices;
 use App\Modules\Procurement\Domain\Models\PurchaseOrder;
 use App\Modules\Procurement\Domain\Models\SupplierInvoice;
 use App\Modules\Procurement\Http\Resources\PurchaseOrderResource;
@@ -124,6 +125,14 @@ class PurchaseOrderController
         $invoice = $this->receiving->invoice($order, $data);
 
         return (new SupplierInvoiceResource($invoice->load(['supplier', 'order', 'lines.orderLine.item', 'recorder'])))->response()->setStatusCode(201);
+    }
+
+    public function cancelInvoice(Request $request, string $farm, SupplierInvoice $supplierInvoice): SupplierInvoiceResource
+    {
+        $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:300']]);
+        $invoice = app(SupplierInvoices::class)->cancel($supplierInvoice, $data['reason']);
+
+        return new SupplierInvoiceResource($invoice->load(['supplier', 'order', 'lines.orderLine.item', 'recorder']));
     }
 
     private function rules(bool $creating): array

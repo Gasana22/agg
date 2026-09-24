@@ -22,7 +22,9 @@ class SupplierInvoiceResource extends JsonResource
             'invoice_date' => $this->invoice_date->toDateString(),
             'due_on' => $this->due_on?->toDateString(),
             'amount' => (float) $this->amount,
+            'paid_amount' => (float) $this->paid_amount,
             'status' => $this->status,
+            'cancel_reason' => $this->cancel_reason,
             'lines' => $this->lines->map(fn ($l) => [
                 'order_line_id' => $l->order_line_id,
                 'item' => Refs::item($l->orderLine->item),

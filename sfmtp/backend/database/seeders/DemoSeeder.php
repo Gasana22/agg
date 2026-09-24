@@ -15,6 +15,14 @@ use App\Modules\Crops\Domain\Models\CropCycle;
 use App\Modules\FarmStructure\Application\StructureService;
 use App\Modules\FarmStructure\Domain\Models\Location;
 use App\Modules\FarmStructure\Domain\Models\Plot;
+use App\Modules\Finance\Application\Budgets;
+use App\Modules\Finance\Application\ChartOfAccounts;
+use App\Modules\Finance\Application\Expenses;
+use App\Modules\Finance\Application\IncomeBook;
+use App\Modules\Finance\Application\Ledger;
+use App\Modules\Finance\Application\PaymentDesk;
+use App\Modules\Finance\Application\Payroll;
+use App\Modules\Finance\Domain\Models\LedgerAccount;
 use App\Modules\Identity\Domain\Enums\UserType;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Inventory\Application\Items;
@@ -30,7 +38,10 @@ use App\Modules\Platform\Application\PlatformPermissions;
 use App\Modules\Procurement\Application\Purchasing;
 use App\Modules\Procurement\Application\Receiving;
 use App\Modules\Procurement\Domain\Models\Supplier;
+use App\Modules\Procurement\Domain\Models\SupplierInvoice;
+use App\Modules\Sales\Application\Invoicing;
 use App\Modules\Tenancy\Application\FarmService;
+use App\Modules\Tenancy\Application\FarmSettings;
 use App\Modules\Tenancy\Domain\Enums\FarmStatus;
 use App\Modules\Tenancy\Domain\Models\Farm;
 use App\Modules\Tenancy\Domain\Models\FarmUser;
@@ -46,6 +57,7 @@ use App\Modules\Workforce\Application\Workers;
 use App\Modules\Workforce\Domain\Enums\TaskEvent;
 use App\Modules\Workforce\Domain\Enums\TaskStatus;
 use App\Modules\Workforce\Domain\Models\Attendance;
+use App\Modules\Workforce\Domain\Models\Worker;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Auth;
@@ -165,6 +177,89 @@ class DemoSeeder extends Seeder
         $this->seedLivestock($mixed, $context);
         $this->seedWorkforce($mixed, $crop, $context);
         $this->seedInventory($mixed, $context);
+        $this->seedFinance($mixed, $context);
+    }
+
+    /**
+     * The mixed farm's books, kept by the accountant: opening balances, part
+     * of the dewormer invoice paid, expenses (one charged to the dairy herd,
+     * one paid in cash for the goats, one waiting for the owner), manure sold
+     * at the gate, milk invoiced to the co-op and partly collected, last
+     * week's payroll approved and paid, and a quarter's budget for the dairy.
+     */
+    private function seedFinance(Farm $farm, TenantContext $context): void
+    {
+        $membership = fn (string $email) => FarmUser::where('farm_id', $farm->id)->whereHas('user', fn ($q) => $q->where('email', $email))->firstOrFail();
+        $as = function (string $email, callable $work) use ($context, $farm, $membership) {
+            $who = $membership($email);
+            Auth::setUser($who->user);
+
+            return $context->run($farm, $work, $who);
+        };
+        $tz = $farm->timezone;
+        $day = fn (int $ago) => now($tz)->subDays($ago)->toDateString();
+        $context->run($farm, fn () => app(FarmSettings::class)->update($farm, ['approval_thresholds' => ['expense' => 500000]]));
+        $acc = fn () => LedgerAccount::pluck('id', 'code');
+        $dairy = fn () => AnimalGroup::where('code', 'DAIRY')->value('id');
+
+        // Opening balances, and part of the supplier's invoice paid.
+        $as('accountant@aggfarms.test', function () use ($acc, $day) {
+            app(ChartOfAccounts::class)->ensure();
+            $a = $acc();
+            app(Ledger::class)->postManual('Opening balances: cash box and Stanbic account', [
+                ['account_id' => $a['1000'], 'debit' => 450000], ['account_id' => $a['1010'], 'debit' => 6500000], ['account_id' => $a['3100'], 'credit' => 6950000],
+            ], CarbonImmutable::parse($day(30)));
+            $invoice = SupplierInvoice::where('invoice_number', 'KAV-10231')->firstOrFail();
+            app(PaymentDesk::class)->record(['payable_type' => 'supplier_invoice', 'payable_id' => $invoice->id, 'amount' => 600000, 'paid_on' => $day(2),
+                'method' => 'bank', 'account_id' => $a['1010'], 'reference' => 'EFT 55120']);
+        });
+
+        // Expenses: fuel for the milk run (the manager asks, the accountant approves), a vet visit paid in cash, a big repair for the owner.
+        $fuel = $as('manager@aggfarms.test', fn () => app(Expenses::class)->create(['account_id' => $acc()['5400'], 'amount' => 120000, 'spent_on' => $day(4), 'payee' => 'Total Kakiri',
+            'description' => 'Diesel for the milk run to the co-op', 'cost_center_type' => 'animal_group', 'cost_center_id' => $dairy()]));
+        $as('accountant@aggfarms.test', function () use ($fuel, $acc, $day) {
+            app(Expenses::class)->approve($fuel, null);
+            app(Expenses::class)->create(['account_id' => $acc()['5500'], 'amount' => 85000, 'spent_on' => $day(3), 'payee' => 'Dr. Ssali',
+                'description' => 'Vet visit: goat kids', 'cost_center_type' => 'animal_group', 'cost_center_id' => AnimalGroup::where('code', 'GOATS')->value('id'), 'paid_from_account_id' => $acc()['1000']]);
+            app(IncomeBook::class)->record(['account_id' => $acc()['4100'], 'received_into_account_id' => $acc()['1000'], 'amount' => 60000, 'received_on' => $day(5),
+                'payer' => 'Neighbour', 'description' => 'Manure, 3 tractor loads']);
+        });
+        $as('manager@aggfarms.test', fn () => app(Expenses::class)->create(['account_id' => $acc()['5600'], 'amount' => 780000, 'spent_on' => $day(1), 'payee' => 'Kakiri Welders',
+            'description' => 'Repair the milking parlour roof']));
+
+        // Milk invoiced to the co-op twenty days ago on 14-day terms; half collected.
+        $as('accountant@aggfarms.test', function () use ($acc, $day, $dairy) {
+            $sales = app(Invoicing::class);
+            $coop = $sales->createCustomer(['name' => 'Kakiri Dairy Co-operative', 'contact_person' => 'Grace Nabirye', 'phone' => '+256 701 555111', 'payment_terms_days' => 14]);
+            $sales->createCustomer(['name' => 'Kampala Prime Butchery', 'phone' => '+256 772 000111', 'payment_terms_days' => 7]);
+            $invoice = $sales->create(['customer_id' => $coop->id, 'invoice_date' => $day(20), 'lines' => [
+                ['description' => 'Milk delivered, first half of the month', 'quantity' => 600, 'unit' => 'l', 'unit_price' => 1200, 'account_id' => $acc()['4200'], 'cost_center_type' => 'animal_group', 'cost_center_id' => $dairy()],
+            ]]);
+            $sales->issue($invoice);
+            app(PaymentDesk::class)->record(['payable_type' => 'customer_invoice', 'payable_id' => $invoice->id, 'amount' => 360000, 'paid_on' => $day(6), 'method' => 'mobile_money',
+                'account_id' => $acc()['1010'], 'reference' => 'MTN 88214409']);
+        });
+
+        // Daily rates, then last week's payroll: prepared by the accountant, approved by the owner, paid by mobile money.
+        $as('owner@aggfarms.test', function () {
+            foreach (['Wilson Worker' => 15000, 'Okello Joseph' => 10000, 'Nakato Sarah' => 12000, 'Mugisha Peter' => 14000] as $name => $rate) {
+                Worker::where('full_name', $name)->update(['daily_rate' => $rate]);
+            }
+        });
+        $run = $as('accountant@aggfarms.test', fn () => app(Payroll::class)->prepare(['period_start' => $day(7), 'period_end' => $day(1), 'notes' => 'Weekly casual wages']));
+        $as('owner@aggfarms.test', fn () => app(Payroll::class)->approve($run));
+        $as('accountant@aggfarms.test', fn () => app(PaymentDesk::class)->record(['payable_type' => 'payroll_run', 'payable_id' => $run->id, 'amount' => (string) $run->refresh()->total_net,
+            'paid_on' => $day(0), 'method' => 'mobile_money', 'account_id' => $acc()['1010'], 'reference' => 'Bulk pay 0924']));
+
+        // The dairy's budget for the quarter.
+        $as('accountant@aggfarms.test', fn () => app(Budgets::class)->create([
+            'name' => 'Dairy herd, this quarter', 'period_start' => now($tz)->firstOfQuarter()->toDateString(), 'period_end' => now($tz)->lastOfQuarter()->toDateString(),
+            'scope_type' => 'animal_group', 'scope_id' => $dairy(), 'lines' => [
+                ['account_id' => $acc()['5000'], 'amount' => 1500000, 'note' => 'Dairy meal and minerals'],
+                ['account_id' => $acc()['5400'], 'amount' => 300000], ['account_id' => $acc()['5500'], 'amount' => 200000],
+                ['account_id' => $acc()['4200'], 'amount' => 3000000, 'note' => 'Milk to the co-op'],
+            ],
+        ]));
     }
 
     /**

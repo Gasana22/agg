@@ -2,6 +2,7 @@
 
 use App\Modules\Reporting\Http\Controllers\AdminDashboardController;
 use App\Modules\Reporting\Http\Controllers\DashboardController;
+use App\Modules\Reporting\Http\Controllers\FinanceReportController;
 use App\Modules\Reporting\Http\Controllers\MyFarmsController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,3 +22,13 @@ Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api', 'platform.admin'
 Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api'])
     ->get('me/farms/overview', MyFarmsController::class)
     ->name('me.farms.overview');
+
+Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api', 'farm', 'farm.can:reports.finance.view|finance.view'])
+    ->prefix('farms/{farm}/reports')
+    ->name('farms.reports.')
+    ->group(function () {
+        Route::get('profit-and-loss', [FinanceReportController::class, 'profitAndLoss'])->name('profit-and-loss');
+        Route::get('cash-flow', [FinanceReportController::class, 'cashFlow'])->name('cash-flow');
+        Route::get('cost-per-crop', [FinanceReportController::class, 'costPerCrop'])->name('cost-per-crop');
+        Route::get('cost-per-animal-group', [FinanceReportController::class, 'costPerAnimalGroup'])->name('cost-per-animal-group');
+    });

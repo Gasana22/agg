@@ -4060,7 +4060,8 @@ export interface paths {
         /** Chart of accounts with balances (trial balance) */
         get: operations["listLedgerAccounts"];
         put?: never;
-        post?: never;
+        /** Add an account */
+        post: operations["createLedgerAccount"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4079,7 +4080,11 @@ export interface paths {
         /** Journal entries */
         get: operations["listLedgerEntries"];
         put?: never;
-        post?: never;
+        /**
+         * Post a manual journal entry
+         * @description Debits must equal credits; each line has a debit or a credit. Control accounts (receivables, inventory, payables, goods received not invoiced, wages payable, deductions payable) are refused: record the document instead.
+         */
+        post: operations["createLedgerEntry"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4123,6 +4128,702 @@ export interface paths {
          * @description Manual entries only. Entries are never changed or deleted, and a reversal posts the mirror image, at most once (409). An entry posted by a stock movement, delivery or supplier invoice is 409 posted_by_document; correct it through that document (a count or a return).
          */
         post: operations["reverseLedgerEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/ledger/accounts/{ledgerAccount}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                ledgerAccount: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Rename or (de)activate an account
+         * @description System accounts keep their code, type and money flag, and stay active.
+         */
+        patch: operations["updateLedgerAccount"];
+        trace?: never;
+    };
+    "/farms/{farm}/expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Expenses
+         * @description Without finance.view, only your own requests.
+         */
+        get: operations["listExpenses"];
+        put?: never;
+        /**
+         * Record or request an expense
+         * @description Posted at once when the owner records it, or finance within the farm's expense threshold; otherwise it waits for approval. Posting: Dr the expense (cost centre), Cr the money account or payables.
+         */
+        post: operations["createExpense"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/expenses/{expense}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                expense: string;
+            };
+            cookie?: never;
+        };
+        /** An expense */
+        get: operations["getExpense"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/expenses/{expense}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                expense: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve an expense
+         * @description Not your own (unless the owner). Above the expense threshold, finance.approve (the owner) only.
+         */
+        post: operations["approveExpense"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/expenses/{expense}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                expense: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject an expense */
+        post: operations["rejectExpense"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/expenses/{expense}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                expense: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw a request
+         * @description The requester, or finance, before it is decided.
+         */
+        post: operations["cancelExpense"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/expenses/{expense}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                expense: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void a posted expense
+         * @description Reverses its entry. Void its payments first (409 has_payments).
+         */
+        post: operations["voidExpense"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/income": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Other income */
+        get: operations["listIncome"];
+        put?: never;
+        /**
+         * Record money received without an invoice
+         * @description Dr the money account, Cr the income account (cost centre).
+         */
+        post: operations["recordIncome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/income/{income}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                income: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void income
+         * @description Reverses its entry.
+         */
+        post: operations["voidIncome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Payments in and out */
+        get: operations["listPayments"];
+        put?: never;
+        /**
+         * Record a payment against a document
+         * @description Customer invoices need sales.invoice or finance.manage; supplier invoices and expenses finance.manage; payroll finance.manage or finance.payroll.manage. At most what is outstanding (422); a document with nothing to pay is 409 nothing_to_pay. In: Dr money, Cr receivables. Out: Dr payables or wages payable, Cr money.
+         */
+        post: operations["recordPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/payments/{payment}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                payment: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void a payment
+         * @description Reverses its entry and reopens the document.
+         */
+        post: operations["voidPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/payroll-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Payroll runs
+         * @description Wages need finance.values.view; others see days and hours only.
+         */
+        get: operations["listPayrollRuns"];
+        put?: never;
+        /**
+         * Prepare payroll for a period
+         * @description Each worker with a daily rate is paid for the days they checked in; wages are charged to the cost centres of the tasks verified in the period, by time. Periods do not overlap (409 overlapping_payroll) and end by today.
+         */
+        post: operations["preparePayroll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/payroll-runs/{payrollRun}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                payrollRun: string;
+            };
+            cookie?: never;
+        };
+        /** A payroll run with its lines */
+        get: operations["getPayrollRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/payroll-runs/{payrollRun}/recalculate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                payrollRun: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recompute a draft from attendance and tasks
+         * @description Keeps bonuses, deductions and notes.
+         */
+        post: operations["recalculatePayroll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/payroll-runs/{payrollRun}/lines/{payrollLine}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                payrollRun: string;
+                payrollLine: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Bonus, deductions or a note on a draft line */
+        patch: operations["updatePayrollLine"];
+        trace?: never;
+    };
+    "/farms/{farm}/payroll-runs/{payrollRun}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                payrollRun: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve payroll
+         * @description Not by its preparer (unless the owner). Posts Dr wages (by cost centre), Cr wages payable and deductions payable.
+         */
+        post: operations["approvePayroll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/payroll-runs/{payrollRun}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                payrollRun: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel payroll
+         * @description A draft, or an approved run without payments (reversing its entry).
+         */
+        post: operations["cancelPayroll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/budgets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Budgets with actual figures */
+        get: operations["listBudgets"];
+        put?: never;
+        /** Create a budget */
+        post: operations["createBudget"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/budgets/{budget}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                budget: string;
+            };
+            cookie?: never;
+        };
+        /** A budget against actual */
+        get: operations["getBudget"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a budget
+         * @description Sending `lines` replaces them. Send `version`.
+         */
+        patch: operations["updateBudget"];
+        trace?: never;
+    };
+    "/farms/{farm}/supplier-invoices/{supplierInvoice}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                supplierInvoice: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a supplier invoice recorded wrongly
+         * @description Reverses its entry and makes the quantities invoiceable again; an order that closed when fully invoiced reopens. Void its payments first (409 has_payments).
+         */
+        post: operations["cancelSupplierInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Customers */
+        get: operations["listCustomers"];
+        put?: never;
+        /** Add a customer */
+        post: operations["createCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/customers/{customer}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                customer: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update a customer
+         * @description Send `version`.
+         */
+        patch: operations["updateCustomer"];
+        trace?: never;
+    };
+    "/farms/{farm}/customer-invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Customer invoices */
+        get: operations["listCustomerInvoices"];
+        put?: never;
+        /**
+         * Draft an invoice
+         * @description Drafts post nothing.
+         */
+        post: operations["createCustomerInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/customer-invoices/billable/livestock-sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Completed livestock sales not yet invoiced */
+        get: operations["listBillableLivestockSales"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/customer-invoices/{customerInvoice}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                customerInvoice: string;
+            };
+            cookie?: never;
+        };
+        /** A customer invoice */
+        get: operations["getCustomerInvoice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a draft
+         * @description Drafts only (409 otherwise). Sending `lines` replaces them.
+         */
+        patch: operations["updateCustomerInvoice"];
+        trace?: never;
+    };
+    "/farms/{farm}/customer-invoices/{customerInvoice}/issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                customerInvoice: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue an invoice
+         * @description Posts Dr receivables, Cr each line's income account (cost centre). Due by the customer's terms unless set.
+         */
+        post: operations["issueCustomerInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/customer-invoices/{customerInvoice}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                customerInvoice: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void an invoice
+         * @description A draft, or an issued invoice without payments (reversing its entry); frees any livestock sale it billed.
+         */
+        post: operations["voidCustomerInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/reports/profit-and-loss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Profit and loss
+         * @description This year to date by default; `monthly` covers the last 12 months.
+         */
+        get: operations["getProfitAndLoss"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/reports/cash-flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Cash flow and 13-week forecast
+         * @description Money accounts only. The forecast adds open customer invoices, supplier invoices, approved expenses and payroll by due date; overdue items fall in the first week.
+         */
+        get: operations["getCashFlow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/reports/cost-per-crop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Cost and margin per crop cycle
+         * @description Inputs issued from stock, labour from payroll and other expenses charged to each cycle; per hectare, acre and kilogram harvested.
+         */
+        get: operations["getCostPerCrop"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/reports/cost-per-animal-group": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Cost and margin per animal group
+         * @description Lines charged to an animal count for its group.
+         */
+        get: operations["getCostPerAnimalGroup"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6855,6 +7556,8 @@ export interface components {
             /** Format: date */
             due_on?: string | null;
             amount?: number;
+            paid_amount?: number;
+            cancel_reason?: string | null;
             /** @enum {string} */
             status?: "recorded" | "paid" | "cancelled";
             lines?: {
@@ -6889,7 +7592,13 @@ export interface components {
             name?: string;
             /** @enum {string} */
             type?: "asset" | "liability" | "equity" | "income" | "expense";
+            description?: string | null;
             is_system?: boolean;
+            /** @description Kept by its documents; manual entries cannot post to it */
+            is_control?: boolean;
+            /** @description A money account (cash, mobile money, bank) */
+            is_cash?: boolean;
+            is_active?: boolean;
             debit?: number;
             credit?: number;
             /** @description Positive in the account's normal direction */
@@ -6939,6 +7648,505 @@ export interface components {
             } | null;
             /** Format: date-time */
             created_at?: string;
+        };
+        LedgerAccountRef: {
+            /** Format: uuid */
+            id?: string;
+            code?: string;
+            name?: string;
+            type?: string;
+            description?: string | null;
+            is_cash?: boolean;
+            is_system?: boolean;
+            is_active?: boolean;
+        };
+        Expense: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "expense";
+            code?: string;
+            /** @enum {string} */
+            status?: "requested" | "approved" | "paid" | "rejected" | "cancelled" | "void";
+            account?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            amount?: number;
+            paid_amount?: number;
+            /** Format: date */
+            spent_on?: string;
+            payee?: string | null;
+            description?: string;
+            /** @description Cost centre; null for general */
+            cost_center?: {
+                /** @enum {string} */
+                type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group";
+                /** Format: uuid */
+                id?: string;
+                label?: string | null;
+            } | null;
+            paid_from?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            } | null;
+            /** Format: uuid */
+            media_id?: string | null;
+            /** Format: uuid */
+            ledger_entry_id?: string | null;
+            requested_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            decided_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            /** Format: date-time */
+            decided_at?: string | null;
+            decision_note?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        Income: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "income";
+            code?: string;
+            /** @enum {string} */
+            status?: "recorded" | "void";
+            account?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            received_into?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            amount?: number;
+            /** Format: date */
+            received_on?: string;
+            payer?: string | null;
+            description?: string;
+            /** @description Cost centre; null for general */
+            cost_center?: {
+                /** @enum {string} */
+                type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group";
+                /** Format: uuid */
+                id?: string;
+                label?: string | null;
+            } | null;
+            /** Format: uuid */
+            media_id?: string | null;
+            /** Format: uuid */
+            ledger_entry_id?: string | null;
+            recorded_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            /** Format: date-time */
+            voided_at?: string | null;
+            void_reason?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        Payment: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "payment";
+            code?: string;
+            /** @enum {string} */
+            direction?: "in" | "out";
+            /** @enum {string} */
+            status?: "posted" | "void";
+            payable?: {
+                type?: string;
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+            };
+            party?: string | null;
+            amount?: number;
+            /** Format: date */
+            paid_on?: string;
+            method?: string;
+            account?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            reference?: string | null;
+            note?: string | null;
+            /** Format: uuid */
+            ledger_entry_id?: string | null;
+            recorded_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            /** Format: date-time */
+            voided_at?: string | null;
+            void_reason?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        PayrollRun: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "payroll_run";
+            code?: string;
+            /** @enum {string} */
+            status?: "draft" | "approved" | "paid" | "cancelled";
+            /** Format: date */
+            period_start?: string;
+            /** Format: date */
+            period_end?: string;
+            workers?: number;
+            notes?: string | null;
+            lines?: {
+                /** Format: uuid */
+                id?: string;
+                worker?: {
+                    /** Format: uuid */
+                    id?: string;
+                    worker_code?: string;
+                    full_name?: string;
+                };
+                days_worked?: number;
+                minutes_worked?: number;
+                tasks_verified?: number;
+                note?: string | null;
+                /** @description Money fields need finance.values.view */
+                daily_rate?: number;
+                bonus?: number;
+                gross?: number;
+                deductions?: number;
+                net?: number;
+                allocation?: {
+                    type?: string | null;
+                    /** Format: uuid */
+                    id?: string | null;
+                    label?: string | null;
+                    amount?: number;
+                }[];
+            }[];
+            /** @description Money fields need finance.values.view */
+            total_gross?: number;
+            total_deductions?: number;
+            total_net?: number;
+            paid_amount?: number;
+            /** Format: uuid */
+            ledger_entry_id?: string | null;
+            prepared_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            approved_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            /** Format: date-time */
+            approved_at?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        Budget: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "budget";
+            code?: string;
+            name?: string;
+            /** @enum {string} */
+            status?: "active" | "archived";
+            /** Format: date */
+            period_start?: string;
+            /** Format: date */
+            period_end?: string;
+            /** @description Cost centre; null for general */
+            scope?: {
+                /** @enum {string} */
+                type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group";
+                /** Format: uuid */
+                id?: string;
+                label?: string | null;
+            } | null;
+            notes?: string | null;
+            lines?: {
+                /** Format: uuid */
+                line_id?: string;
+                /** Format: uuid */
+                account_id?: string;
+                code?: string;
+                name?: string;
+                /** @enum {string} */
+                type?: "income" | "expense";
+                budget?: number;
+                actual?: number;
+                /** @description Budget less actual */
+                variance?: number;
+                used_pct?: number | null;
+                note?: string | null;
+            }[];
+            totals?: {
+                expense_budget?: number;
+                expense_actual?: number;
+                income_budget?: number;
+                income_actual?: number;
+            };
+            created_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        Customer: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "customer";
+            code?: string;
+            name?: string;
+            contact_person?: string | null;
+            phone?: string | null;
+            email?: string | null;
+            address?: string | null;
+            tax_id?: string | null;
+            payment_terms_days?: number | null;
+            is_active?: boolean;
+            notes?: string | null;
+            version?: number;
+        };
+        CustomerInput: {
+            name?: string;
+            contact_person?: string | null;
+            phone?: string | null;
+            /** Format: email */
+            email?: string | null;
+            address?: string | null;
+            tax_id?: string | null;
+            payment_terms_days?: number | null;
+            is_active?: boolean;
+            notes?: string | null;
+            version?: number;
+        };
+        CustomerInvoice: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "customer_invoice";
+            code?: string;
+            /** @enum {string} */
+            status?: "draft" | "issued" | "paid" | "void";
+            customer?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            /** Format: date */
+            invoice_date?: string;
+            /** Format: date */
+            due_on?: string | null;
+            overdue?: boolean;
+            amount?: number;
+            paid_amount?: number;
+            lines?: {
+                /** Format: uuid */
+                id?: string;
+                description?: string;
+                quantity?: number;
+                unit?: string | null;
+                unit_price?: number;
+                amount?: number;
+                account?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                } | null;
+                /** @description Cost centre; null for general */
+                cost_center?: {
+                    /** @enum {string} */
+                    type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group";
+                    /** Format: uuid */
+                    id?: string;
+                    label?: string | null;
+                } | null;
+                /** Format: uuid */
+                animal_sale_id?: string | null;
+            }[];
+            notes?: string | null;
+            /** Format: uuid */
+            ledger_entry_id?: string | null;
+            created_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            issued_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            /** Format: date-time */
+            issued_at?: string | null;
+            /** Format: date-time */
+            voided_at?: string | null;
+            void_reason?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        BillableSale: {
+            /** Format: uuid */
+            id?: string;
+            code?: string;
+            /** Format: date */
+            sold_on?: string | null;
+            buyer?: string | null;
+            sale_price?: number | null;
+            animal?: {
+                /** Format: uuid */
+                id?: string;
+                animal_code?: string;
+                tag_number?: string | null;
+                name?: string | null;
+                group?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                } | null;
+            };
+        };
+        ProfitAndLoss: {
+            period?: {
+                /** Format: date */
+                from?: string;
+                /** Format: date */
+                to?: string;
+            };
+            cost_center?: {
+                type?: string;
+                /** Format: uuid */
+                id?: string;
+            } | null;
+            income?: {
+                /** Format: uuid */
+                account_id?: string;
+                code?: string;
+                name?: string;
+                amount?: number;
+            }[];
+            expenses?: {
+                /** Format: uuid */
+                account_id?: string;
+                code?: string;
+                name?: string;
+                amount?: number;
+            }[];
+            totals?: {
+                income?: number;
+                expenses?: number;
+                net?: number;
+            };
+            monthly?: {
+                labels?: string[];
+                income?: number[];
+                expenses?: number[];
+                net?: number[];
+            };
+        };
+        CashFlow: {
+            period?: {
+                /** Format: date */
+                from?: string;
+                /** Format: date */
+                to?: string;
+            };
+            opening?: number;
+            inflows?: {
+                source?: string;
+                amount?: number;
+            }[];
+            outflows?: {
+                source?: string;
+                amount?: number;
+            }[];
+            net?: number;
+            closing?: number;
+            accounts?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+                balance?: number;
+            }[];
+            forecast?: {
+                /** Format: date */
+                today?: string;
+                balance?: number;
+                weeks?: {
+                    /** Format: date */
+                    week_start?: string;
+                    in?: number;
+                    out?: number;
+                    balance?: number;
+                }[];
+            };
+        };
+        CropCycleCost: {
+            /** Format: uuid */
+            id?: string;
+            code?: string;
+            crop?: string | null;
+            plot?: string | null;
+            stage?: string;
+            area_ha?: number;
+            harvested_kg?: number;
+            inputs?: number;
+            labour?: number;
+            other?: number;
+            cost?: number;
+            revenue?: number;
+            margin?: number;
+            cost_per_ha?: number | null;
+            cost_per_acre?: number | null;
+            cost_per_kg?: number | null;
+        };
+        AnimalGroupCost: {
+            /** Format: uuid */
+            id?: string | null;
+            label?: string;
+            inputs?: number;
+            labour?: number;
+            other?: number;
+            cost?: number;
+            revenue?: number;
+            margin?: number;
         };
     };
     responses: {
@@ -14932,6 +16140,45 @@ export interface operations {
             422: components["responses"]["Problem"];
         };
     };
+    createLedgerAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Starts with the type digit: 1 asset, 2 liability, 3 equity, 4 income, 5 expense */
+                    code: string;
+                    name: string;
+                    /** @enum {string} */
+                    type: "asset" | "liability" | "equity" | "income" | "expense";
+                    description?: string | null;
+                    /** @description A money account (asset only) */
+                    is_cash?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["LedgerAccountRef"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
     listLedgerEntries: {
         parameters: {
             query?: {
@@ -14959,6 +16206,51 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CursorPage"] & {
                         data?: components["schemas"]["LedgerEntry"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    createLedgerEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    posted_on: string;
+                    memo: string;
+                    lines: {
+                        /** Format: uuid */
+                        account_id: string;
+                        debit?: number | null;
+                        credit?: number | null;
+                        /** @enum {string|null} */
+                        cost_center_type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group" | "general" | null;
+                        /** Format: uuid */
+                        cost_center_id?: string | null;
+                        memo?: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Posted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["LedgerEntry"];
                     };
                 };
             };
@@ -15025,6 +16317,1416 @@ export interface operations {
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    updateLedgerAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                ledgerAccount: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string | null;
+                    is_cash?: boolean;
+                    is_active?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["LedgerAccountRef"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listExpenses: {
+        parameters: {
+            query?: {
+                "filter[status]"?: string;
+                "filter[from]"?: string;
+                "filter[to]"?: string;
+                "filter[cost_center_id]"?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["Expense"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    createExpense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description An expense account
+                     */
+                    account_id: string;
+                    amount: number;
+                    /** Format: date */
+                    spent_on: string;
+                    payee?: string | null;
+                    description: string;
+                    /** @enum {string|null} */
+                    cost_center_type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group" | "general" | null;
+                    /** Format: uuid */
+                    cost_center_id?: string | null;
+                    /**
+                     * Format: uuid
+                     * @description Already paid from this money account
+                     */
+                    paid_from_account_id?: string | null;
+                    /**
+                     * Format: uuid
+                     * @description The receipt
+                     */
+                    media_id?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Expense"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getExpense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                expense: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Expense"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    approveExpense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                expense: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Expense"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    rejectExpense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                expense: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Expense"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    cancelExpense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                expense: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Expense"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    voidExpense: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                expense: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Expense"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listIncome: {
+        parameters: {
+            query?: {
+                "filter[status]"?: "recorded" | "void";
+                "filter[from]"?: string;
+                "filter[to]"?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["Income"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    recordIncome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description An income account
+                     */
+                    account_id: string;
+                    /**
+                     * Format: uuid
+                     * @description A money account
+                     */
+                    received_into_account_id: string;
+                    amount: number;
+                    /** Format: date */
+                    received_on: string;
+                    payer?: string | null;
+                    description: string;
+                    /** @enum {string|null} */
+                    cost_center_type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group" | "general" | null;
+                    /** Format: uuid */
+                    cost_center_id?: string | null;
+                    /** Format: uuid */
+                    media_id?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Income"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    voidIncome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                income: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Income"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listPayments: {
+        parameters: {
+            query?: {
+                "filter[direction]"?: "in" | "out";
+                "filter[payable_type]"?: string;
+                "filter[payable_id]"?: string;
+                "filter[from]"?: string;
+                "filter[to]"?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["Payment"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    recordPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    payable_type: "customer_invoice" | "supplier_invoice" | "expense" | "payroll_run";
+                    /** Format: uuid */
+                    payable_id: string;
+                    amount: number;
+                    /** Format: date */
+                    paid_on?: string;
+                    /** @enum {string} */
+                    method: "cash" | "mobile_money" | "bank" | "cheque" | "other";
+                    /**
+                     * Format: uuid
+                     * @description The money account
+                     */
+                    account_id: string;
+                    reference?: string | null;
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Posted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Payment"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    voidPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                payment: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Payment"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listPayrollRuns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PayrollRun"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    preparePayroll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    period_start: string;
+                    /** Format: date */
+                    period_end: string;
+                    notes?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Draft */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PayrollRun"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getPayrollRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                payrollRun: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PayrollRun"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    recalculatePayroll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                payrollRun: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PayrollRun"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    updatePayrollLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                payrollRun: string;
+                payrollLine: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    bonus?: number;
+                    deductions?: number;
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PayrollRun"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    approvePayroll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                payrollRun: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PayrollRun"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    cancelPayroll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                payrollRun: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PayrollRun"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listBudgets: {
+        parameters: {
+            query?: {
+                "filter[status]"?: "active" | "archived";
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Budget"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    createBudget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    /** Format: date */
+                    period_start: string;
+                    /** Format: date */
+                    period_end: string;
+                    /** @enum {string|null} */
+                    scope_type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group" | "general" | null;
+                    /** Format: uuid */
+                    scope_id?: string | null;
+                    notes?: string | null;
+                    lines: {
+                        /**
+                         * Format: uuid
+                         * @description An income or expense account
+                         */
+                        account_id: string;
+                        amount: number;
+                        note?: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Budget"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getBudget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                budget: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Budget"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    updateBudget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                budget: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    /** Format: date */
+                    period_start?: string;
+                    /** Format: date */
+                    period_end?: string;
+                    /** @enum {string} */
+                    status?: "active" | "archived";
+                    notes?: string | null;
+                    lines?: {
+                        /**
+                         * Format: uuid
+                         * @description An income or expense account
+                         */
+                        account_id: string;
+                        amount: number;
+                        note?: string | null;
+                    }[];
+                    version?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Budget"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    cancelSupplierInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                supplierInvoice: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SupplierInvoice"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listCustomers: {
+        parameters: {
+            query?: {
+                include_inactive?: boolean;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Customer"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    createCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Customer"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    updateCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                customer: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Customer"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listCustomerInvoices: {
+        parameters: {
+            query?: {
+                "filter[status]"?: string;
+                "filter[customer_id]"?: string;
+                "filter[overdue]"?: boolean;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["CustomerInvoice"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    createCustomerInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    customer_id: string;
+                    /** Format: date */
+                    invoice_date?: string;
+                    /** Format: date */
+                    due_on?: string | null;
+                    notes?: string | null;
+                    lines: {
+                        /** @description Required unless the line bills a livestock sale */
+                        description?: string | null;
+                        quantity: number;
+                        unit?: string | null;
+                        unit_price: number;
+                        /**
+                         * Format: uuid
+                         * @description An income account
+                         */
+                        account_id: string;
+                        /** @enum {string|null} */
+                        cost_center_type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group" | "general" | null;
+                        /** Format: uuid */
+                        cost_center_id?: string | null;
+                        /**
+                         * Format: uuid
+                         * @description A completed livestock sale; billed at most once; charged to the animal
+                         */
+                        animal_sale_id?: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Draft */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CustomerInvoice"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listBillableLivestockSales: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["BillableSale"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    getCustomerInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                customerInvoice: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CustomerInvoice"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    updateCustomerInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                customerInvoice: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    customer_id?: string;
+                    /** Format: date */
+                    invoice_date?: string;
+                    /** Format: date */
+                    due_on?: string | null;
+                    notes?: string | null;
+                    lines?: {
+                        /** @description Required unless the line bills a livestock sale */
+                        description?: string | null;
+                        quantity: number;
+                        unit?: string | null;
+                        unit_price: number;
+                        /**
+                         * Format: uuid
+                         * @description An income account
+                         */
+                        account_id: string;
+                        /** @enum {string|null} */
+                        cost_center_type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group" | "general" | null;
+                        /** Format: uuid */
+                        cost_center_id?: string | null;
+                        /**
+                         * Format: uuid
+                         * @description A completed livestock sale; billed at most once; charged to the animal
+                         */
+                        animal_sale_id?: string | null;
+                    }[];
+                    version?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CustomerInvoice"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    issueCustomerInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                customerInvoice: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CustomerInvoice"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    voidCustomerInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                customerInvoice: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CustomerInvoice"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getProfitAndLoss: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                cost_center_type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group";
+                cost_center_id?: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["ProfitAndLoss"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getCashFlow: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CashFlow"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getCostPerCrop: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropCycleCost"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getCostPerAnimalGroup: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalGroupCost"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
     };

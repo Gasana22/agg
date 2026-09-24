@@ -33,7 +33,7 @@ class DashboardTest extends TestCase
 
         $this->assertSame('owner', $data['dashboard']);
         $this->assertSame('7d', $data['period']['key']);
-        $this->assertSame(['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'inventory.value', 'payables.open', 'farm.members', 'trace.open_batches', 'trace.events'], array_column($data['kpis'], 'key'));
+        $this->assertSame(['farm.area', 'finance.revenue', 'finance.expenses', 'finance.net_profit', 'approvals.pending', 'finance.receivables', 'finance.payables', 'inventory.value', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'farm.members', 'trace.open_batches', 'trace.events'], array_column($data['kpis'], 'key'));
 
         $kpis = collect($data['kpis'])->keyBy('key');
         $this->assertSame(['value' => '120.0000', 'unit' => 'ha'], $kpis['farm.area']['value']);
@@ -47,7 +47,7 @@ class DashboardTest extends TestCase
         $this->assertFalse($widgets['trace_activity']['inline']);
         $this->assertStringContainsString('/widgets/trace_activity?period=7d', $widgets['trace_activity']['href']);
 
-        $this->assertSame(['invite_member', 'view_map', 'new_batch', 'view_audit_log'], array_column($data['quick_actions'], 'key'));
+        $this->assertSame(['view_pnl', 'invite_member', 'view_map', 'new_batch', 'view_audit_log'], array_column($data['quick_actions'], 'key'));
     }
 
     public function test_chart_widgets_are_fetched_separately(): void
@@ -91,8 +91,12 @@ class DashboardTest extends TestCase
 
         $accountant = $this->memberWithRole($this->farm, 'accountant');
         $books = $this->dashboard('accountant', $accountant)->assertOk()->json('data');
-        $this->assertSame(['payables.open', 'payables.not_invoiced', 'inventory.value', 'trace.open_batches'], array_column($books['kpis'], 'key'));
-        $this->assertContains('invoices_due', array_column($books['widgets'], 'key'));
+        $this->assertSame(['finance.revenue', 'finance.expenses', 'finance.net_profit', 'finance.cash_balance', 'finance.receivables', 'finance.payables', 'finance.not_invoiced', 'payroll.current', 'budget.total', 'budget.variance', 'inventory.value'], array_column($books['kpis'], 'key'));
+        $this->assertSame(['expenses_to_approve', 'invoices_due', 'customer_invoices_overdue', 'payroll_pending', 'recent_transactions', 'income_vs_expenses', 'budget_vs_actual', 'cash_flow_forecast', 'inventory_value'], array_column($books['widgets'], 'key'));
+        $this->assertSame(['record_expense', 'record_income', 'new_invoice', 'pay_supplier', 'receive_payment', 'run_payroll', 'new_budget', 'view_pnl', 'view_cash_flow', 'view_ledger'], array_column($books['quick_actions'], 'key'));
+        foreach (['income_vs_expenses', 'budget_vs_actual', 'cash_flow_forecast'] as $chart) {
+            $this->asUser($accountant)->getJson("/api/v1/farms/{$this->farm->id}/dashboards/accountant/widgets/{$chart}")->assertOk()->assertJsonPath('data.chart', 'bar');
+        }
     }
 
     public function test_periods_are_validated(): void

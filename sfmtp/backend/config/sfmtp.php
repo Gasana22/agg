@@ -33,6 +33,7 @@ return [
         'Procurement',
         'Crops',
         'Livestock',
+        'Sales',
         'Sync',
         'Support',
         'Traceability',

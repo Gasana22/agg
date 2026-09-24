@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SFMTP API
-  version: 1.6.0-phase7
+  version: 1.7.0-phase8
   description: |
     Smart Farm Management & Traceability Platform REST API.
 
@@ -37,7 +37,11 @@ tags:
   - name: Procurement
     description: Suppliers, purchase requests, purchase orders with approval, deliveries into stock lots, and supplier invoices matched to what was received.
   - name: Finance
-    description: The double-entry ledger (ADR-0011) that stock and purchases post to.
+    description: The double-entry ledger (ADR-0011, ADR-0012), accounts, manual entries, expenses, other income, payments, payroll from attendance and tasks, and budgets.
+  - name: Sales
+    description: Customers and customer invoices, including invoices for completed livestock sales.
+  - name: Reports
+    description: Profit and loss, cash flow with a forecast, and cost per crop cycle and animal group.
   - name: Livestock
     description: Groups, animals, health and vaccination with withdrawal periods, feeding, weights, production into daily product lots, movements, breeding and sale requests. Records are append-only; mistakes are voided.
   - name: Crops
@@ -7817,6 +7821,58 @@ paths:
           $ref: '#/components/responses/Problem'
         '422':
           $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Finance
+      operationId: createLedgerAccount
+      summary: Add an account
+      x-permission: finance.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - code
+              - name
+              - type
+              properties:
+                code:
+                  type: string
+                  pattern: ^[1-5][0-9]{3}$
+                  description: 'Starts with the type digit: 1 asset, 2 liability, 3 equity, 4 income, 5 expense'
+                name:
+                  type: string
+                type:
+                  type: string
+                  enum:
+                  - asset
+                  - liability
+                  - equity
+                  - income
+                  - expense
+                description:
+                  type:
+                  - string
+                  - 'null'
+                is_cash:
+                  type: boolean
+                  description: A money account (asset only)
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LedgerAccountRef'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
   /farms/{farm}/ledger/entries:
     parameters:
     - $ref: '#/components/parameters/Farm'
@@ -7867,6 +7923,84 @@ paths:
                       type: array
                       items:
                         $ref: '#/components/schemas/LedgerEntry'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Finance
+      operationId: createLedgerEntry
+      summary: Post a manual journal entry
+      description: 'Debits must equal credits; each line has a debit or a credit. Control accounts (receivables, inventory, payables, goods received not invoiced, wages payable, deductions payable) are refused: record the document instead.'
+      x-permission: finance.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - posted_on
+              - memo
+              - lines
+              properties:
+                posted_on:
+                  type: string
+                  format: date
+                memo:
+                  type: string
+                lines:
+                  type: array
+                  minItems: 2
+                  maxItems: 50
+                  items:
+                    type: object
+                    required:
+                    - account_id
+                    properties:
+                      account_id:
+                        type: string
+                        format: uuid
+                      debit:
+                        type:
+                        - number
+                        - 'null'
+                      credit:
+                        type:
+                        - number
+                        - 'null'
+                      cost_center_type:
+                        type:
+                        - string
+                        - 'null'
+                        enum:
+                        - crop_cycle
+                        - plot
+                        - location
+                        - animal
+                        - animal_group
+                        - general
+                        - null
+                      cost_center_id:
+                        type:
+                        - string
+                        - 'null'
+                        format: uuid
+                      memo:
+                        type:
+                        - string
+                        - 'null'
+      responses:
+        '201':
+          description: Posted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LedgerEntry'
         '403':
           $ref: '#/components/responses/Problem'
         '422':
@@ -7944,6 +8078,1890 @@ paths:
         '404':
           $ref: '#/components/responses/Problem'
         '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+
+  /farms/{farm}/ledger/accounts/{ledgerAccount}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: ledgerAccount
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    patch:
+      tags:
+      - Finance
+      operationId: updateLedgerAccount
+      summary: Rename or (de)activate an account
+      description: System accounts keep their code, type and money flag, and stay active.
+      x-permission: finance.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type:
+                  - string
+                  - 'null'
+                is_cash:
+                  type: boolean
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LedgerAccountRef'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/expenses:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Finance
+      operationId: listExpenses
+      summary: Expenses
+      description: Without finance.view, only your own requests.
+      x-permission: finance.view | finance.expenses.request
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          description: 'Comma-separated: requested, approved, paid, rejected, cancelled, void'
+      - name: filter[from]
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: filter[to]
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: filter[cost_center_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/CursorPage'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Expense'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Finance
+      operationId: createExpense
+      summary: Record or request an expense
+      description: 'Posted at once when the owner records it, or finance within the farm''s expense threshold; otherwise it waits for approval. Posting: Dr the expense (cost centre), Cr the money account or payables.'
+      x-permission: finance.expenses.request | finance.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - account_id
+              - amount
+              - spent_on
+              - description
+              properties:
+                account_id:
+                  type: string
+                  format: uuid
+                  description: An expense account
+                amount:
+                  type: number
+                  exclusiveMinimum: 0
+                spent_on:
+                  type: string
+                  format: date
+                payee:
+                  type:
+                  - string
+                  - 'null'
+                description:
+                  type: string
+                  minLength: 3
+                cost_center_type:
+                  type:
+                  - string
+                  - 'null'
+                  enum:
+                  - crop_cycle
+                  - plot
+                  - location
+                  - animal
+                  - animal_group
+                  - general
+                  - null
+                cost_center_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                paid_from_account_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                  description: Already paid from this money account
+                media_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                  description: The receipt
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Expense'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/expenses/{expense}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: expense
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Finance
+      operationId: getExpense
+      summary: An expense
+      x-permission: finance.view | finance.expenses.request
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Expense'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/expenses/{expense}/approve:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: expense
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Finance
+      operationId: approveExpense
+      summary: Approve an expense
+      description: Not your own (unless the owner). Above the expense threshold, finance.approve (the owner) only.
+      x-permission: finance.manage | finance.approve
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Expense'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/expenses/{expense}/reject:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: expense
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Finance
+      operationId: rejectExpense
+      summary: Reject an expense
+      x-permission: finance.manage | finance.approve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - note
+              properties:
+                note:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Expense'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/expenses/{expense}/cancel:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: expense
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Finance
+      operationId: cancelExpense
+      summary: Withdraw a request
+      description: The requester, or finance, before it is decided.
+      x-permission: finance.expenses.request | finance.manage
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Expense'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/expenses/{expense}/void:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: expense
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Finance
+      operationId: voidExpense
+      summary: Void a posted expense
+      description: Reverses its entry. Void its payments first (409 has_payments).
+      x-permission: finance.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 300
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Expense'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/income:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Finance
+      operationId: listIncome
+      summary: Other income
+      x-permission: finance.view
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          enum:
+          - recorded
+          - void
+      - name: filter[from]
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: filter[to]
+        in: query
+        schema:
+          type: string
+          format: date
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/CursorPage'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Income'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Finance
+      operationId: recordIncome
+      summary: Record money received without an invoice
+      description: Dr the money account, Cr the income account (cost centre).
+      x-permission: finance.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - account_id
+              - received_into_account_id
+              - amount
+              - received_on
+              - description
+              properties:
+                account_id:
+                  type: string
+                  format: uuid
+                  description: An income account
+                received_into_account_id:
+                  type: string
+                  format: uuid
+                  description: A money account
+                amount:
+                  type: number
+                  exclusiveMinimum: 0
+                received_on:
+                  type: string
+                  format: date
+                payer:
+                  type:
+                  - string
+                  - 'null'
+                description:
+                  type: string
+                cost_center_type:
+                  type:
+                  - string
+                  - 'null'
+                  enum:
+                  - crop_cycle
+                  - plot
+                  - location
+                  - animal
+                  - animal_group
+                  - general
+                  - null
+                cost_center_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                media_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+      responses:
+        '201':
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Income'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/income/{income}/void:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: income
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Finance
+      operationId: voidIncome
+      summary: Void income
+      description: Reverses its entry.
+      x-permission: finance.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 300
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Income'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/payments:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Finance
+      operationId: listPayments
+      summary: Payments in and out
+      x-permission: finance.view | sales.invoice
+      parameters:
+      - name: filter[direction]
+        in: query
+        schema:
+          type: string
+          enum:
+          - in
+          - out
+      - name: filter[payable_type]
+        in: query
+        schema:
+          type: string
+      - name: filter[payable_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[from]
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: filter[to]
+        in: query
+        schema:
+          type: string
+          format: date
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/CursorPage'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Payment'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Finance
+      operationId: recordPayment
+      summary: Record a payment against a document
+      description: 'Customer invoices need sales.invoice or finance.manage; supplier invoices and expenses finance.manage; payroll finance.manage or finance.payroll.manage. At most what is outstanding (422); a document with nothing to pay is 409 nothing_to_pay. In: Dr money, Cr receivables. Out: Dr payables or wages payable, Cr money.'
+      x-permission: finance.manage | finance.payroll.manage | sales.invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - payable_type
+              - payable_id
+              - amount
+              - method
+              - account_id
+              properties:
+                payable_type:
+                  type: string
+                  enum:
+                  - customer_invoice
+                  - supplier_invoice
+                  - expense
+                  - payroll_run
+                payable_id:
+                  type: string
+                  format: uuid
+                amount:
+                  type: number
+                  exclusiveMinimum: 0
+                paid_on:
+                  type: string
+                  format: date
+                method:
+                  type: string
+                  enum:
+                  - cash
+                  - mobile_money
+                  - bank
+                  - cheque
+                  - other
+                account_id:
+                  type: string
+                  format: uuid
+                  description: The money account
+                reference:
+                  type:
+                  - string
+                  - 'null'
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '201':
+          description: Posted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Payment'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/payments/{payment}/void:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: payment
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Finance
+      operationId: voidPayment
+      summary: Void a payment
+      description: Reverses its entry and reopens the document.
+      x-permission: finance.manage | finance.payroll.manage | sales.invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 300
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Payment'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/payroll-runs:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Finance
+      operationId: listPayrollRuns
+      summary: Payroll runs
+      description: Wages need finance.values.view; others see days and hours only.
+      x-permission: finance.payroll.manage | finance.payroll.approve | finance.payroll.view_hours | finance.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PayrollRun'
+        '403':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Finance
+      operationId: preparePayroll
+      summary: Prepare payroll for a period
+      description: Each worker with a daily rate is paid for the days they checked in; wages are charged to the cost centres of the tasks verified in the period, by time. Periods do not overlap (409 overlapping_payroll) and end by today.
+      x-permission: finance.payroll.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - period_start
+              - period_end
+              properties:
+                period_start:
+                  type: string
+                  format: date
+                period_end:
+                  type: string
+                  format: date
+                notes:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '201':
+          description: Draft
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PayrollRun'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/payroll-runs/{payrollRun}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: payrollRun
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Finance
+      operationId: getPayrollRun
+      summary: A payroll run with its lines
+      x-permission: finance.payroll.manage | finance.payroll.approve | finance.payroll.view_hours | finance.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PayrollRun'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/payroll-runs/{payrollRun}/recalculate:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: payrollRun
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Finance
+      operationId: recalculatePayroll
+      summary: Recompute a draft from attendance and tasks
+      description: Keeps bonuses, deductions and notes.
+      x-permission: finance.payroll.manage
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PayrollRun'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/payroll-runs/{payrollRun}/lines/{payrollLine}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: payrollRun
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: payrollLine
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    patch:
+      tags:
+      - Finance
+      operationId: updatePayrollLine
+      summary: Bonus, deductions or a note on a draft line
+      x-permission: finance.payroll.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bonus:
+                  type: number
+                  minimum: 0
+                deductions:
+                  type: number
+                  minimum: 0
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PayrollRun'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/payroll-runs/{payrollRun}/approve:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: payrollRun
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Finance
+      operationId: approvePayroll
+      summary: Approve payroll
+      description: Not by its preparer (unless the owner). Posts Dr wages (by cost centre), Cr wages payable and deductions payable.
+      x-permission: finance.payroll.approve
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PayrollRun'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/payroll-runs/{payrollRun}/cancel:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: payrollRun
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Finance
+      operationId: cancelPayroll
+      summary: Cancel payroll
+      description: A draft, or an approved run without payments (reversing its entry).
+      x-permission: finance.payroll.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 300
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PayrollRun'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/budgets:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Finance
+      operationId: listBudgets
+      summary: Budgets with actual figures
+      x-permission: finance.view | finance.budgets.manage
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          enum:
+          - active
+          - archived
+          default: active
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Budget'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Finance
+      operationId: createBudget
+      summary: Create a budget
+      x-permission: finance.budgets.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              - period_start
+              - period_end
+              - lines
+              properties:
+                name:
+                  type: string
+                period_start:
+                  type: string
+                  format: date
+                period_end:
+                  type: string
+                  format: date
+                scope_type:
+                  type:
+                  - string
+                  - 'null'
+                  enum:
+                  - crop_cycle
+                  - plot
+                  - location
+                  - animal
+                  - animal_group
+                  - general
+                  - null
+                scope_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                notes:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    required:
+                    - account_id
+                    - amount
+                    properties:
+                      account_id:
+                        type: string
+                        format: uuid
+                        description: An income or expense account
+                      amount:
+                        type: number
+                        minimum: 0
+                      note:
+                        type:
+                        - string
+                        - 'null'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Budget'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/budgets/{budget}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: budget
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Finance
+      operationId: getBudget
+      summary: A budget against actual
+      x-permission: finance.view | finance.budgets.manage
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Budget'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags:
+      - Finance
+      operationId: updateBudget
+      summary: Change a budget
+      description: Sending `lines` replaces them. Send `version`.
+      x-permission: finance.budgets.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                period_start:
+                  type: string
+                  format: date
+                period_end:
+                  type: string
+                  format: date
+                status:
+                  type: string
+                  enum:
+                  - active
+                  - archived
+                notes:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    required:
+                    - account_id
+                    - amount
+                    properties:
+                      account_id:
+                        type: string
+                        format: uuid
+                        description: An income or expense account
+                      amount:
+                        type: number
+                        minimum: 0
+                      note:
+                        type:
+                        - string
+                        - 'null'
+                version:
+                  type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Budget'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/supplier-invoices/{supplierInvoice}/cancel:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: supplierInvoice
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Procurement
+      operationId: cancelSupplierInvoice
+      summary: Cancel a supplier invoice recorded wrongly
+      description: Reverses its entry and makes the quantities invoiceable again; an order that closed when fully invoiced reopens. Void its payments first (409 has_payments).
+      x-permission: procurement.orders.manage | finance.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 300
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SupplierInvoice'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/customers:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Sales
+      operationId: listCustomers
+      summary: Customers
+      x-permission: customers.view | sales.invoice
+      parameters:
+      - name: include_inactive
+        in: query
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Customer'
+        '403':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Sales
+      operationId: createCustomer
+      summary: Add a customer
+      x-permission: customers.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Customer'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/customers/{customer}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: customer
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    patch:
+      tags:
+      - Sales
+      operationId: updateCustomer
+      summary: Update a customer
+      description: Send `version`.
+      x-permission: customers.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Customer'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/customer-invoices:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Sales
+      operationId: listCustomerInvoices
+      summary: Customer invoices
+      x-permission: sales.invoice | finance.view
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          description: 'Comma-separated: draft, issued, paid, void'
+      - name: filter[customer_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[overdue]
+        in: query
+        schema:
+          type: boolean
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/CursorPage'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/CustomerInvoice'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Sales
+      operationId: createCustomerInvoice
+      summary: Draft an invoice
+      description: Drafts post nothing.
+      x-permission: sales.invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - customer_id
+              - lines
+              properties:
+                customer_id:
+                  type: string
+                  format: uuid
+                invoice_date:
+                  type: string
+                  format: date
+                due_on:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                notes:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    required:
+                    - quantity
+                    - unit_price
+                    - account_id
+                    properties:
+                      description:
+                        type:
+                        - string
+                        - 'null'
+                        description: Required unless the line bills a livestock sale
+                      quantity:
+                        type: number
+                        exclusiveMinimum: 0
+                      unit:
+                        type:
+                        - string
+                        - 'null'
+                      unit_price:
+                        type: number
+                        minimum: 0
+                      account_id:
+                        type: string
+                        format: uuid
+                        description: An income account
+                      cost_center_type:
+                        type:
+                        - string
+                        - 'null'
+                        enum:
+                        - crop_cycle
+                        - plot
+                        - location
+                        - animal
+                        - animal_group
+                        - general
+                        - null
+                      cost_center_id:
+                        type:
+                        - string
+                        - 'null'
+                        format: uuid
+                      animal_sale_id:
+                        type:
+                        - string
+                        - 'null'
+                        format: uuid
+                        description: A completed livestock sale; billed at most once; charged to the animal
+      responses:
+        '201':
+          description: Draft
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CustomerInvoice'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/customer-invoices/billable/livestock-sales:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Sales
+      operationId: listBillableLivestockSales
+      summary: Completed livestock sales not yet invoiced
+      x-permission: sales.invoice
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BillableSale'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/customer-invoices/{customerInvoice}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: customerInvoice
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Sales
+      operationId: getCustomerInvoice
+      summary: A customer invoice
+      x-permission: sales.invoice | finance.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CustomerInvoice'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags:
+      - Sales
+      operationId: updateCustomerInvoice
+      summary: Change a draft
+      description: Drafts only (409 otherwise). Sending `lines` replaces them.
+      x-permission: sales.invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  format: uuid
+                invoice_date:
+                  type: string
+                  format: date
+                due_on:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                notes:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    required:
+                    - quantity
+                    - unit_price
+                    - account_id
+                    properties:
+                      description:
+                        type:
+                        - string
+                        - 'null'
+                        description: Required unless the line bills a livestock sale
+                      quantity:
+                        type: number
+                        exclusiveMinimum: 0
+                      unit:
+                        type:
+                        - string
+                        - 'null'
+                      unit_price:
+                        type: number
+                        minimum: 0
+                      account_id:
+                        type: string
+                        format: uuid
+                        description: An income account
+                      cost_center_type:
+                        type:
+                        - string
+                        - 'null'
+                        enum:
+                        - crop_cycle
+                        - plot
+                        - location
+                        - animal
+                        - animal_group
+                        - general
+                        - null
+                      cost_center_id:
+                        type:
+                        - string
+                        - 'null'
+                        format: uuid
+                      animal_sale_id:
+                        type:
+                        - string
+                        - 'null'
+                        format: uuid
+                        description: A completed livestock sale; billed at most once; charged to the animal
+                version:
+                  type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CustomerInvoice'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/customer-invoices/{customerInvoice}/issue:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: customerInvoice
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Sales
+      operationId: issueCustomerInvoice
+      summary: Issue an invoice
+      description: Posts Dr receivables, Cr each line's income account (cost centre). Due by the customer's terms unless set.
+      x-permission: sales.invoice
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CustomerInvoice'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/customer-invoices/{customerInvoice}/void:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: customerInvoice
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Sales
+      operationId: voidCustomerInvoice
+      summary: Void an invoice
+      description: A draft, or an issued invoice without payments (reversing its entry); frees any livestock sale it billed.
+      x-permission: sales.invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 300
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CustomerInvoice'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/reports/profit-and-loss:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Reports
+      operationId: getProfitAndLoss
+      summary: Profit and loss
+      description: This year to date by default; `monthly` covers the last 12 months.
+      x-permission: reports.finance.view | finance.view
+      parameters:
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: cost_center_type
+        in: query
+        schema:
+          type: string
+          enum:
+          - crop_cycle
+          - plot
+          - location
+          - animal
+          - animal_group
+      - name: cost_center_id
+        in: query
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ProfitAndLoss'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/reports/cash-flow:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Reports
+      operationId: getCashFlow
+      summary: Cash flow and 13-week forecast
+      description: Money accounts only. The forecast adds open customer invoices, supplier invoices, approved expenses and payroll by due date; overdue items fall in the first week.
+      x-permission: reports.finance.view | finance.view
+      parameters:
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CashFlow'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/reports/cost-per-crop:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Reports
+      operationId: getCostPerCrop
+      summary: Cost and margin per crop cycle
+      description: Inputs issued from stock, labour from payroll and other expenses charged to each cycle; per hectare, acre and kilogram harvested.
+      x-permission: reports.finance.view | finance.view
+      parameters:
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CropCycleCost'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/reports/cost-per-animal-group:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Reports
+      operationId: getCostPerAnimalGroup
+      summary: Cost and margin per animal group
+      description: Lines charged to an animal count for its group.
+      x-permission: reports.finance.view | finance.view
+      parameters:
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AnimalGroupCost'
+        '403':
           $ref: '#/components/responses/Problem'
         '422':
           $ref: '#/components/responses/Problem'
@@ -12047,6 +14065,12 @@ components:
           format: date
         amount:
           type: number
+        paid_amount:
+          type: number
+        cancel_reason:
+          type:
+          - string
+          - 'null'
         status:
           type: string
           enum:
@@ -12119,7 +14143,19 @@ components:
           - equity
           - income
           - expense
+        description:
+          type:
+          - string
+          - 'null'
         is_system:
+          type: boolean
+        is_control:
+          type: boolean
+          description: Kept by its documents; manual entries cannot post to it
+        is_cash:
+          type: boolean
+          description: A money account (cash, mobile money, bank)
+        is_active:
           type: boolean
         debit:
           type: number
@@ -12217,3 +14253,1077 @@ components:
         created_at:
           type: string
           format: date-time
+    LedgerAccountRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        description:
+          type:
+          - string
+          - 'null'
+        is_cash:
+          type: boolean
+        is_system:
+          type: boolean
+        is_active:
+          type: boolean
+    Expense:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: expense
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - requested
+          - approved
+          - paid
+          - rejected
+          - cancelled
+          - void
+        account:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        amount:
+          type: number
+        paid_amount:
+          type: number
+        spent_on:
+          type: string
+          format: date
+        payee:
+          type:
+          - string
+          - 'null'
+        description:
+          type: string
+        cost_center:
+          oneOf:
+          - type: object
+            properties:
+              type:
+                type: string
+                enum:
+                - crop_cycle
+                - plot
+                - location
+                - animal
+                - animal_group
+              id:
+                type: string
+                format: uuid
+              label:
+                type:
+                - string
+                - 'null'
+          - type: 'null'
+          description: Cost centre; null for general
+        paid_from:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
+          - type: 'null'
+        media_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        ledger_entry_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        requested_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        decided_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        decided_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        decision_note:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    Income:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: income
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - recorded
+          - void
+        account:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        received_into:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        amount:
+          type: number
+        received_on:
+          type: string
+          format: date
+        payer:
+          type:
+          - string
+          - 'null'
+        description:
+          type: string
+        cost_center:
+          oneOf:
+          - type: object
+            properties:
+              type:
+                type: string
+                enum:
+                - crop_cycle
+                - plot
+                - location
+                - animal
+                - animal_group
+              id:
+                type: string
+                format: uuid
+              label:
+                type:
+                - string
+                - 'null'
+          - type: 'null'
+          description: Cost centre; null for general
+        media_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        ledger_entry_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        recorded_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        voided_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        void_reason:
+          type:
+          - string
+          - 'null'
+        created_at:
+          type: string
+          format: date-time
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: payment
+        code:
+          type: string
+        direction:
+          type: string
+          enum:
+          - in
+          - out
+        status:
+          type: string
+          enum:
+          - posted
+          - void
+        payable:
+          type: object
+          properties:
+            type:
+              type: string
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+        party:
+          type:
+          - string
+          - 'null'
+        amount:
+          type: number
+        paid_on:
+          type: string
+          format: date
+        method:
+          type: string
+        account:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        reference:
+          type:
+          - string
+          - 'null'
+        note:
+          type:
+          - string
+          - 'null'
+        ledger_entry_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        recorded_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        voided_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        void_reason:
+          type:
+          - string
+          - 'null'
+        created_at:
+          type: string
+          format: date-time
+    PayrollRun:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: payroll_run
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - draft
+          - approved
+          - paid
+          - cancelled
+        period_start:
+          type: string
+          format: date
+        period_end:
+          type: string
+          format: date
+        workers:
+          type: integer
+        notes:
+          type:
+          - string
+          - 'null'
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              worker:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  worker_code:
+                    type: string
+                  full_name:
+                    type: string
+              days_worked:
+                type: integer
+              minutes_worked:
+                type: integer
+              tasks_verified:
+                type: integer
+              note:
+                type:
+                - string
+                - 'null'
+              daily_rate:
+                type: number
+                description: Money fields need finance.values.view
+              bonus:
+                type: number
+              gross:
+                type: number
+              deductions:
+                type: number
+              net:
+                type: number
+              allocation:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type:
+                      - string
+                      - 'null'
+                    id:
+                      type:
+                      - string
+                      - 'null'
+                      format: uuid
+                    label:
+                      type:
+                      - string
+                      - 'null'
+                    amount:
+                      type: number
+        total_gross:
+          type: number
+          description: Money fields need finance.values.view
+        total_deductions:
+          type: number
+        total_net:
+          type: number
+        paid_amount:
+          type: number
+        ledger_entry_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        prepared_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        approved_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        approved_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    Budget:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: budget
+        code:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+          - active
+          - archived
+        period_start:
+          type: string
+          format: date
+        period_end:
+          type: string
+          format: date
+        scope:
+          oneOf:
+          - type: object
+            properties:
+              type:
+                type: string
+                enum:
+                - crop_cycle
+                - plot
+                - location
+                - animal
+                - animal_group
+              id:
+                type: string
+                format: uuid
+              label:
+                type:
+                - string
+                - 'null'
+          - type: 'null'
+          description: Cost centre; null for general
+        notes:
+          type:
+          - string
+          - 'null'
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              line_id:
+                type: string
+                format: uuid
+              account_id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
+              type:
+                type: string
+                enum:
+                - income
+                - expense
+              budget:
+                type: number
+              actual:
+                type: number
+              variance:
+                type: number
+                description: Budget less actual
+              used_pct:
+                type:
+                - number
+                - 'null'
+              note:
+                type:
+                - string
+                - 'null'
+        totals:
+          type: object
+          properties:
+            expense_budget:
+              type: number
+            expense_actual:
+              type: number
+            income_budget:
+              type: number
+            income_actual:
+              type: number
+        created_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: customer
+        code:
+          type: string
+        name:
+          type: string
+        contact_person:
+          type:
+          - string
+          - 'null'
+        phone:
+          type:
+          - string
+          - 'null'
+        email:
+          type:
+          - string
+          - 'null'
+        address:
+          type:
+          - string
+          - 'null'
+        tax_id:
+          type:
+          - string
+          - 'null'
+        payment_terms_days:
+          type:
+          - integer
+          - 'null'
+        is_active:
+          type: boolean
+        notes:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+    CustomerInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 150
+        contact_person:
+          type:
+          - string
+          - 'null'
+        phone:
+          type:
+          - string
+          - 'null'
+        email:
+          type:
+          - string
+          - 'null'
+          format: email
+        address:
+          type:
+          - string
+          - 'null'
+        tax_id:
+          type:
+          - string
+          - 'null'
+        payment_terms_days:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 365
+        is_active:
+          type: boolean
+        notes:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+    CustomerInvoice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: customer_invoice
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - draft
+          - issued
+          - paid
+          - void
+        customer:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        invoice_date:
+          type: string
+          format: date
+        due_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        overdue:
+          type: boolean
+        amount:
+          type: number
+        paid_amount:
+          type: number
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              description:
+                type: string
+              quantity:
+                type: number
+              unit:
+                type:
+                - string
+                - 'null'
+              unit_price:
+                type: number
+              amount:
+                type: number
+              account:
+                oneOf:
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    code:
+                      type: string
+                    name:
+                      type: string
+                - type: 'null'
+              cost_center:
+                oneOf:
+                - type: object
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                      - crop_cycle
+                      - plot
+                      - location
+                      - animal
+                      - animal_group
+                    id:
+                      type: string
+                      format: uuid
+                    label:
+                      type:
+                      - string
+                      - 'null'
+                - type: 'null'
+                description: Cost centre; null for general
+              animal_sale_id:
+                type:
+                - string
+                - 'null'
+                format: uuid
+        notes:
+          type:
+          - string
+          - 'null'
+        ledger_entry_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        created_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        issued_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        issued_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        voided_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        void_reason:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    BillableSale:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        sold_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        buyer:
+          type:
+          - string
+          - 'null'
+        sale_price:
+          type:
+          - number
+          - 'null'
+        animal:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            animal_code:
+              type: string
+            tag_number:
+              type:
+              - string
+              - 'null'
+            name:
+              type:
+              - string
+              - 'null'
+            group:
+              oneOf:
+              - type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+              - type: 'null'
+    ProfitAndLoss:
+      type: object
+      properties:
+        period:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+        cost_center:
+          oneOf:
+          - type: object
+            properties:
+              type:
+                type: string
+              id:
+                type: string
+                format: uuid
+          - type: 'null'
+        income:
+          type: array
+          items:
+            type: object
+            properties:
+              account_id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
+              amount:
+                type: number
+        expenses:
+          type: array
+          items:
+            type: object
+            properties:
+              account_id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
+              amount:
+                type: number
+        totals:
+          type: object
+          properties:
+            income:
+              type: number
+            expenses:
+              type: number
+            net:
+              type: number
+        monthly:
+          type: object
+          properties:
+            labels:
+              type: array
+              items:
+                type: string
+            income:
+              type: array
+              items:
+                type: number
+            expenses:
+              type: array
+              items:
+                type: number
+            net:
+              type: array
+              items:
+                type: number
+    CashFlow:
+      type: object
+      properties:
+        period:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+        opening:
+          type: number
+        inflows:
+          type: array
+          items:
+            type: object
+            properties:
+              source:
+                type: string
+              amount:
+                type: number
+        outflows:
+          type: array
+          items:
+            type: object
+            properties:
+              source:
+                type: string
+              amount:
+                type: number
+        net:
+          type: number
+        closing:
+          type: number
+        accounts:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
+              balance:
+                type: number
+        forecast:
+          type: object
+          properties:
+            today:
+              type: string
+              format: date
+            balance:
+              type: number
+            weeks:
+              type: array
+              items:
+                type: object
+                properties:
+                  week_start:
+                    type: string
+                    format: date
+                  in:
+                    type: number
+                  out:
+                    type: number
+                  balance:
+                    type: number
+    CropCycleCost:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        crop:
+          type:
+          - string
+          - 'null'
+        plot:
+          type:
+          - string
+          - 'null'
+        stage:
+          type: string
+        area_ha:
+          type: number
+        harvested_kg:
+          type: number
+        inputs:
+          type: number
+        labour:
+          type: number
+        other:
+          type: number
+        cost:
+          type: number
+        revenue:
+          type: number
+        margin:
+          type: number
+        cost_per_ha:
+          type:
+          - number
+          - 'null'
+        cost_per_acre:
+          type:
+          - number
+          - 'null'
+        cost_per_kg:
+          type:
+          - number
+          - 'null'
+    AnimalGroupCost:
+      type: object
+      properties:
+        id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        label:
+          type: string
+        inputs:
+          type: number
+        labour:
+          type: number
+        other:
+          type: number
+        cost:
+          type: number
+        revenue:
+          type: number
+        margin:
+          type: number

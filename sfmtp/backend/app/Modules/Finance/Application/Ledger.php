@@ -2,6 +2,7 @@
 
 namespace App\Modules\Finance\Application;
 
+use App\Modules\Finance\Domain\Models\LedgerAccount;
 use App\Modules\Finance\Domain\Models\LedgerEntry;
 use App\Modules\Tenancy\TenantContext;
 use App\Support\Http\ApiException;
@@ -67,14 +68,60 @@ class Ledger
 
     /**
      * Post the mirror image of a manual entry. Entries posted by a document
-     * (a stock movement, a delivery, a supplier invoice) are corrected through
-     * that document, a count or a return, so the books and the stock agree.
+     * (a stock movement, a delivery, an invoice, a payment) are corrected
+     * through that document, which voids it and calls reverseDocument(), so
+     * the books and the sub-ledgers stay in step.
      */
     public function reverse(LedgerEntry $entry, string $reason): LedgerEntry
     {
         if ($entry->source_type !== self::MANUAL) {
-            throw ApiException::conflict('posted_by_document', "{$entry->number} was posted by a ".str_replace('_', ' ', $entry->source_type).'; correct it there (a stock count or a return), so stock and books stay in step.');
+            throw ApiException::conflict('posted_by_document', "{$entry->number} was posted by a ".str_replace('_', ' ', $entry->source_type).'; correct it there (void the document, or count the stock), so the books and the documents stay in step.');
         }
+
+        return $this->mirror($entry, $reason);
+    }
+
+    /** Reverse the entry of a document being voided; for the document's own service. */
+    public function reverseDocument(LedgerEntry $entry, string $reason, ?CarbonImmutable $postedOn = null): LedgerEntry
+    {
+        return $this->mirror($entry, $reason, $postedOn);
+    }
+
+    /**
+     * A journal entry typed in by finance. Control accounts (stock,
+     * receivables, payables, wages) and inactive accounts are refused.
+     *
+     * @param  array<int, array{account_id:string, debit?:string|float|null, credit?:string|float|null, cost_center_type?:?string, cost_center_id?:?string, memo?:?string}>  $lines
+     */
+    public function postManual(string $memo, array $lines, CarbonImmutable $postedOn): LedgerEntry
+    {
+        $journal = [];
+        foreach ($lines as $i => $l) {
+            $account = LedgerAccount::find($l['account_id']) ?? throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', ["lines.{$i}.account_id" => ['Unknown account.']]);
+            if ($account->isControl()) {
+                throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', ["lines.{$i}.account_id" => ["{$account->code} {$account->name} is kept by its documents; record the document instead."]]);
+            }
+            if (! $account->is_active) {
+                throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', ["lines.{$i}.account_id" => ["{$account->code} {$account->name} is inactive."]]);
+            }
+            $debit = Money::cents($l['debit'] ?? 0);
+            $credit = Money::cents($l['credit'] ?? 0);
+            if (($debit > 0) === ($credit > 0) || $debit < 0 || $credit < 0) {
+                throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', ["lines.{$i}.debit" => ['Enter a debit or a credit, not both.']]);
+            }
+            $journal[] = new JournalLine($account->code, Money::fromCents($debit), Money::fromCents($credit), $l['cost_center_type'] ?? null, $l['cost_center_id'] ?? null, $l['memo'] ?? null);
+        }
+        $debits = array_sum(array_map(fn (JournalLine $l) => Money::cents($l->debit), $journal));
+        $credits = array_sum(array_map(fn (JournalLine $l) => Money::cents($l->credit), $journal));
+        if ($debits !== $credits) {
+            throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', ['lines' => ['Debits ('.Money::fromCents($debits).') and credits ('.Money::fromCents($credits).') must be equal.']]);
+        }
+
+        return $this->post(self::MANUAL, null, $memo, $journal, $postedOn);
+    }
+
+    private function mirror(LedgerEntry $entry, string $reason, ?CarbonImmutable $postedOn = null): LedgerEntry
+    {
         if ($entry->reverses_entry_id) {
             throw ApiException::conflict('invalid_state_transition', 'A reversal cannot itself be reversed; post a new entry.');
         }
@@ -83,7 +130,7 @@ class Ledger
         }
         $lines = $entry->lines()->with('account')->get()->map(fn ($l) => new JournalLine($l->account->code, (string) $l->credit, (string) $l->debit, $l->cost_center_type, $l->cost_center_id, $l->memo))->all();
 
-        return $this->post($entry->source_type, $entry->source_id, "Reversal of {$entry->number}: {$reason}", $lines, null, $entry->id);
+        return $this->post($entry->source_type, $entry->source_id, "Reversal of {$entry->number}: {$reason}", $lines, $postedOn, $entry->id);
     }
 
     /** The next number from the farm's counter; the row lock serialises concurrent postings. */

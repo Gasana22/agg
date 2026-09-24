@@ -43,4 +43,5 @@ Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api', 'farm'])
         Route::post('purchase-orders/{order}/approve', [PurchaseOrderController::class, 'approve'])->middleware('farm.can:procurement.orders.approve')->name('orders.approve');
         Route::post('purchase-orders/{order}/deliveries', [PurchaseOrderController::class, 'receive'])->middleware('farm.can:procurement.deliveries.receive')->name('orders.receive');
         Route::get('supplier-invoices', [PurchaseOrderController::class, 'invoices'])->middleware('farm.can:procurement.orders.manage|finance.view')->name('invoices.index');
+        Route::post('supplier-invoices/{supplierInvoice}/cancel', [PurchaseOrderController::class, 'cancelInvoice'])->middleware('farm.can:procurement.orders.manage|finance.manage')->whereUuid('supplierInvoice')->name('invoices.cancel');
     });

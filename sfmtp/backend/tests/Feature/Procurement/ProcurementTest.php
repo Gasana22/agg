@@ -134,6 +134,25 @@ class ProcurementTest extends TestCase
         $b = $this->balances();
         $this->assertEquals([0, 2350000, 50000], [$b['2100'], $b['2000'], $b['5200']]);
         $this->as($this->accountant)->getJson($this->url("/purchase-orders/{$po['id']}"))->assertJsonPath('data.status', 'closed')->assertJsonPath('data.invoices.0.code', $inv['code']);
+
+        // Paying part of it clears payables; a paid invoice cannot be cancelled.
+        $cash = collect($this->as($this->accountant)->getJson($this->url('/ledger/accounts'))->json('data'))->firstWhere('code', '1010')['id'];
+        $payment = $this->as($this->accountant)->postJson($this->url('/payments'), ['payable_type' => 'supplier_invoice', 'payable_id' => $inv['id'], 'amount' => 1000000, 'method' => 'bank', 'account_id' => $cash])
+            ->assertCreated()->assertJsonPath('data.party', 'Kakiri Agro Inputs')->json('data');
+        $this->assertEquals([1350000, -1000000], [$this->balances()['2000'], $this->balances()['1010']]);
+        $this->as($this->store)->postJson($this->url('/payments'), ['payable_type' => 'supplier_invoice', 'payable_id' => $inv['id'], 'amount' => 1, 'method' => 'cash', 'account_id' => $cash])->assertForbidden();
+        $this->as($this->accountant)->postJson($this->url("/supplier-invoices/{$inv['id']}/cancel"), ['reason' => 'Wrong price'])->assertStatus(409)->assertJsonPath('code', 'has_payments');
+
+        // Cancelled: the entry is reversed, the order can be invoiced again.
+        $this->as($this->accountant)->postJson($this->url("/payments/{$payment['id']}/void"), ['reason' => 'Paid in error'])->assertOk();
+        $this->as($this->accountant)->postJson($this->url("/supplier-invoices/{$inv['id']}/cancel"), ['reason' => 'Supplier sent a corrected invoice'])->assertOk()->assertJsonPath('data.status', 'cancelled');
+        $b = $this->balances();
+        $this->assertEquals([2300000, 0, 0], [$b['2100'], $b['2000'], $b['5200']]);
+        $this->as($this->accountant)->getJson($this->url("/purchase-orders/{$po['id']}"))->assertJsonPath('data.status', 'received')->assertJsonPath('data.lines.0.invoiced_quantity', 0);
+        $this->as($this->accountant)->postJson($this->url("/purchase-orders/{$po['id']}/invoices"), ['invoice_number' => 'INV-88A', 'invoice_date' => now()->toDateString(), 'lines' => [
+            ['order_line_id' => $npkLine['id'], 'quantity' => 500, 'unit_price' => 3000], ['order_line_id' => $seedLine['id'], 'quantity' => 100, 'unit_price' => 8000],
+        ]])->assertCreated()->assertJsonPath('data.amount', 2300000);
+        $this->assertEquals([0, 2300000], [$this->balances()['2100'], $this->balances()['2000']]);
     }
 
     public function test_four_eyes_cancellation_and_boundaries(): void

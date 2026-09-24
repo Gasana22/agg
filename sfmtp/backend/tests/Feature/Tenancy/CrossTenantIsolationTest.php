@@ -12,6 +12,14 @@ use App\Modules\Crops\Application\CropOperations;
 use App\Modules\Crops\Application\CropPlans;
 use App\Modules\Crops\Application\CropSetup;
 use App\Modules\FarmStructure\Application\StructureService;
+use App\Modules\Finance\Application\Accounts;
+use App\Modules\Finance\Application\Budgets;
+use App\Modules\Finance\Application\ChartOfAccounts;
+use App\Modules\Finance\Application\Expenses;
+use App\Modules\Finance\Application\IncomeBook;
+use App\Modules\Finance\Application\PaymentDesk;
+use App\Modules\Finance\Application\Payroll;
+use App\Modules\Finance\Domain\Models\LedgerAccount;
 use App\Modules\Inventory\Application\Items;
 use App\Modules\Inventory\Application\StockDesk;
 use App\Modules\Livestock\Application\AnimalRecords;
@@ -20,6 +28,9 @@ use App\Modules\Livestock\Application\Breedings;
 use App\Modules\Livestock\Application\Herd;
 use App\Modules\Media\Domain\Models\Media;
 use App\Modules\Procurement\Application\Purchasing;
+use App\Modules\Procurement\Application\Receiving;
+use App\Modules\Procurement\Domain\Models\PurchaseOrder;
+use App\Modules\Sales\Application\Invoicing;
 use App\Modules\Tenancy\Domain\Models\Farm;
 use App\Modules\Tenancy\Domain\Models\FarmUser;
 use App\Modules\Tenancy\TenantContext;
@@ -95,6 +106,42 @@ class CrossTenantIsolationTest extends TestCase
         $this->victimRecords += $this->victimLivestockRecords();
         $this->victimRecords += $this->victimWorkforceRecords();
         $this->victimRecords += $this->victimStockRecords($this->victimRecords['location']);
+        $this->victimRecords += $this->victimFinanceRecords($this->victimRecords['location'], $this->victimRecords['order']);
+    }
+
+    /** One of each finance and sales document, as the victim's owner. */
+    private function victimFinanceRecords(string $storeId, string $orderId): array
+    {
+        $owner = FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail();
+        $this->actingAs($owner->user, 'api');
+
+        return $this->app->make(TenantContext::class)->run($this->victim, function () use ($storeId, $orderId) {
+            $this->app->make(ChartOfAccounts::class)->ensure();
+            $code = fn (string $c) => LedgerAccount::where('code', $c)->value('id');
+            $account = $this->app->make(Accounts::class)->create(['code' => '5010', 'name' => 'Victim costs', 'type' => 'expense']);
+            $expense = $this->app->make(Expenses::class)->create(['account_id' => $account->id, 'amount' => 1000, 'spent_on' => now()->toDateString(), 'description' => 'Victim fuel']);
+            $income = $this->app->make(IncomeBook::class)->record(['account_id' => $code('4100'), 'received_into_account_id' => $code('1000'), 'amount' => 500, 'received_on' => now()->toDateString(), 'description' => 'Victim manure']);
+            $payment = $this->app->make(PaymentDesk::class)->record(['payable_type' => 'expense', 'payable_id' => $expense->id, 'amount' => 100, 'method' => 'cash', 'account_id' => $code('1000')]);
+            $worker = $this->app->make(Workers::class)->create(['full_name' => 'Victim Casual', 'employment_type' => 'casual', 'daily_rate' => 10000]);
+            Attendance::create(['worker_id' => $worker->id, 'work_date' => now()->subDays(2)->toDateString(), 'check_in_at' => now()->subDays(2), 'source' => 'manual']);
+            $run = $this->app->make(Payroll::class)->prepare(['period_start' => now()->subDays(3)->toDateString(), 'period_end' => now()->subDay()->toDateString()]);
+            $budget = $this->app->make(Budgets::class)->create(['name' => 'Victim budget', 'period_start' => now()->startOfYear()->toDateString(), 'period_end' => now()->endOfYear()->toDateString(),
+                'lines' => [['account_id' => $account->id, 'amount' => 5000]]]);
+            $sales = $this->app->make(Invoicing::class);
+            $customer = $sales->createCustomer(['name' => 'Victim buyer']);
+            $invoice = $sales->create(['customer_id' => $customer->id, 'lines' => [['description' => 'Eggs', 'quantity' => 1, 'unit_price' => 100, 'account_id' => $code('4100')]]]);
+            $order = PurchaseOrder::with('lines')->findOrFail($orderId);
+            $this->app->make(Purchasing::class)->approveOrder($order);
+            $this->app->make(Receiving::class)->receive($order->refresh(), ['location_id' => $storeId, 'lines' => [['order_line_id' => $order->lines[0]->id, 'quantity' => 5]]]);
+            $supplierInvoice = $this->app->make(Receiving::class)->invoice($order->refresh(), ['invoice_number' => 'V-1', 'invoice_date' => now()->toDateString(),
+                'lines' => [['order_line_id' => $order->lines[0]->id, 'quantity' => 5, 'unit_price' => 100]]]);
+
+            return [
+                'ledgerAccount' => $account->id, 'expense' => $expense->id, 'income' => $income->id, 'payment' => $payment->id,
+                'payrollRun' => $run->id, 'payrollLine' => $run->lines()->value('id'), 'budget' => $budget->id,
+                'customer' => $customer->id, 'customerInvoice' => $invoice->id, 'supplierInvoice' => $supplierInvoice->id,
+            ];
+        }, $owner);
     }
 
     /** Stock, a count, a request, a supplier, a purchase request and order, and a ledger entry, as the victim's owner. */
@@ -245,6 +292,12 @@ class CrossTenantIsolationTest extends TestCase
             'structure' => DB::table('farm_blocks')->whereNull('deleted_at')->count() + DB::table('farm_sections')->whereNull('deleted_at')->count()
                 + DB::table('farm_plots')->whereNull('deleted_at')->count() + DB::table('farm_locations')->whereNull('deleted_at')->count(),
             'structure_versions' => DB::table('farm_plots')->sum('version'),
+            'finance_rows' => collect(['ledger_accounts', 'expenses', 'income_records', 'payments', 'payroll_runs', 'payroll_lines', 'budgets', 'budget_lines', 'customers', 'customer_invoices', 'customer_invoice_lines'])
+                ->mapWithKeys(fn ($t) => [$t => DB::table($t)->count()])->all(),
+            'finance_versions' => DB::table('expenses')->sum('version') + DB::table('income_records')->sum('version') + DB::table('payroll_runs')->sum('version')
+                + DB::table('budgets')->sum('version') + DB::table('customers')->sum('version') + DB::table('customer_invoices')->sum('version') + DB::table('supplier_invoices')->sum('version'),
+            'finance_statuses' => DB::table('expenses')->orderBy('id')->pluck('status')->merge(DB::table('payments')->orderBy('id')->pluck('status'))->merge(DB::table('customer_invoices')->orderBy('id')->pluck('status'))
+                ->merge(DB::table('payroll_runs')->orderBy('id')->pluck('status'))->merge(DB::table('supplier_invoices')->orderBy('id')->pluck('status'))->all(),
             'stock_rows' => collect(['inventory_items', 'stock_lots', 'stock_balances', 'stock_movements', 'stock_transfers', 'stock_adjustments', 'inventory_requests', 'suppliers', 'purchase_requests', 'purchase_orders', 'purchase_order_lines', 'deliveries', 'supplier_invoices', 'ledger_entries', 'ledger_lines'])
                 ->mapWithKeys(fn ($t) => [$t => DB::table($t)->count()])->all(),
             'stock_versions' => DB::table('inventory_items')->sum('version') + DB::table('stock_adjustments')->sum('version') + DB::table('inventory_requests')->sum('version')
@@ -328,6 +381,13 @@ class CrossTenantIsolationTest extends TestCase
             ->assertStatus(422);
         $this->asUser($attacker)->postJson("{$farm}/inventory/requests", ['lines' => [['item_id' => $this->victimRecords['item'], 'quantity' => 1]]])
             ->assertStatus(422)->assertJsonValidationErrors('lines.0.item_id');
+        // Paying another farm's invoice, spending from its accounts, invoicing its customer.
+        $this->asUser($attacker)->postJson("{$farm}/payments", ['payable_type' => 'customer_invoice', 'payable_id' => $this->victimRecords['customerInvoice'], 'amount' => 1, 'method' => 'cash',
+            'account_id' => $this->victimRecords['ledgerAccount']])->assertStatus(422);
+        $this->asUser($attacker)->postJson("{$farm}/expenses", ['account_id' => $this->victimRecords['ledgerAccount'], 'amount' => 1, 'spent_on' => now()->toDateString(), 'description' => 'Borrowed account'])
+            ->assertStatus(422)->assertJsonValidationErrors('account_id');
+        $this->asUser($attacker)->postJson("{$farm}/customer-invoices", ['customer_id' => $this->victimRecords['customer'], 'lines' => [['description' => 'x', 'quantity' => 1, 'unit_price' => 1, 'account_id' => $this->victimRecords['ledgerAccount']]]])
+            ->assertStatus(422)->assertJsonValidationErrors('customer_id');
         $this->asUser($attacker)->postJson("{$farm}/purchase-orders", ['supplier_id' => $this->victimRecords['supplier'], 'lines' => [['item_id' => $this->victimRecords['item'], 'quantity' => 1, 'unit_price' => 1]]])
             ->assertStatus(422)->assertJsonValidationErrors('supplier_id');
     }

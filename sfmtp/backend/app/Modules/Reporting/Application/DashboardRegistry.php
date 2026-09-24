@@ -3,6 +3,7 @@
 namespace App\Modules\Reporting\Application;
 
 use App\Modules\Access\Application\FarmPermissions;
+use App\Modules\Finance\Application\Money;
 use App\Modules\Tenancy\TenantContext;
 use App\Support\Http\ApiException;
 use Closure;
@@ -24,6 +25,7 @@ class DashboardRegistry
         private readonly LivestockMetrics $livestock,
         private readonly WorkforceMetrics $workforce,
         private readonly InventoryMetrics $inventory,
+        private readonly FinanceMetrics $finance,
         private readonly FarmPermissions $permissions,
         private readonly TenantContext $context,
     ) {}
@@ -34,11 +36,11 @@ class DashboardRegistry
         $trace = ['trace.open_batches', 'trace.events'];
 
         return match ($dashboard) {
-            'owner' => ['kpis' => ['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'inventory.value', 'payables.open', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'orders_to_approve', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'view_map', 'new_batch', 'view_audit_log']],
+            'owner' => ['kpis' => ['farm.area', 'finance.revenue', 'finance.expenses', 'finance.net_profit', 'approvals.pending', 'finance.receivables', 'finance.payables', 'inventory.value', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'expenses_to_approve', 'payroll_pending', 'orders_to_approve', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'recent_trace_events', 'income_vs_expenses', 'trace_activity'], 'quick_actions' => ['view_pnl', 'invite_member', 'view_map', 'new_batch', 'view_audit_log']],
             'manager' => [
                 'kpis' => ['tasks.today', 'tasks.completed', 'tasks.pending', 'tasks.overdue', 'workers.present', 'workers.absent', 'activities.active', 'crop.active_cycles', 'livestock.head_count', 'inventory.requests_pending', 'inventory.low'],
                 'widgets' => ['verification_queue', 'schedule', 'overdue_tasks', 'leave_requests', 'pending_requests', 'purchase_requests_to_approve', 'worker_activity', 'operations_to_verify', 'pest_disease_alerts', 'vaccinations_due', 'recent_trace_events'],
-                'quick_actions' => ['new_task', 'view_workers', 'invite_member', 'start_cycle', 'register_animal', 'view_map'],
+                'quick_actions' => ['new_task', 'view_workers', 'request_expense', 'invite_member', 'start_cycle', 'register_animal', 'view_map'],
             ],
             'agronomist' => [
                 'kpis' => ['crop.active_cycles', 'crop.planted_area', 'crop.near_harvest', 'crop.expected_yield', 'crop.actual_yield', 'crop.yield_per_ha', 'crop.incidents_open', 'crop.treatments_active'],
@@ -56,9 +58,9 @@ class DashboardRegistry
                 'quick_actions' => ['stock_in', 'issue_stock', 'transfer_stock', 'receive_delivery', 'purchase_request', 'stock_count'],
             ],
             'accountant' => [
-                'kpis' => ['payables.open', 'payables.not_invoiced', 'inventory.value', 'trace.open_batches'],
-                'widgets' => ['invoices_due', 'orders_to_approve', 'inventory_value', 'recent_trace_events'],
-                'quick_actions' => ['view_ledger', 'view_orders', 'view_audit_log'],
+                'kpis' => ['finance.revenue', 'finance.expenses', 'finance.net_profit', 'finance.cash_balance', 'finance.receivables', 'finance.payables', 'finance.not_invoiced', 'payroll.current', 'budget.total', 'budget.variance', 'inventory.value'],
+                'widgets' => ['expenses_to_approve', 'invoices_due', 'customer_invoices_overdue', 'payroll_pending', 'recent_transactions', 'income_vs_expenses', 'budget_vs_actual', 'cash_flow_forecast', 'inventory_value'],
+                'quick_actions' => ['record_expense', 'record_income', 'new_invoice', 'pay_supplier', 'receive_payment', 'run_payroll', 'new_budget', 'view_pnl', 'view_cash_flow', 'view_ledger'],
             ],
             'worker' => ['kpis' => ['tasks.today', 'tasks.done_today', 'attendance.status'], 'widgets' => ['today_tasks', 'attendance_week'], 'quick_actions' => ['my_day', 'request_leave']],
         };
@@ -153,10 +155,31 @@ class DashboardRegistry
                 'value' => fn () => $this->inventory->requestsPending()],
             'deliveries.expected' => ['label' => 'Orders awaiting delivery', 'format' => 'number', 'permission' => 'procurement.deliveries.receive',
                 'value' => fn () => $this->inventory->deliveriesExpected()],
-            'payables.open' => ['label' => 'Supplier invoices unpaid', 'format' => 'money', 'permission' => 'finance.values.view',
-                'value' => fn () => ['amount' => $this->inventory->payablesOpen(), 'currency' => $farm->currency]],
-            'payables.not_invoiced' => ['label' => 'Received, not invoiced', 'format' => 'money', 'permission' => 'finance.values.view',
-                'value' => fn () => ['amount' => $this->inventory->receivedNotInvoiced(), 'currency' => $farm->currency]],
+            'finance.revenue' => ['label' => 'Revenue', 'format' => 'money', 'permission' => 'finance.values.view',
+                'value' => fn (Period $p) => $this->money($this->finance->profit($p)['income']),
+                'previous' => fn (Period $p) => $this->money($this->finance->profit($p->previous())['income'])],
+            'finance.expenses' => ['label' => 'Expenses', 'format' => 'money', 'permission' => 'finance.values.view',
+                'value' => fn (Period $p) => $this->money($this->finance->profit($p)['expenses']),
+                'previous' => fn (Period $p) => $this->money($this->finance->profit($p->previous())['expenses'])],
+            'finance.net_profit' => ['label' => 'Net profit', 'format' => 'money', 'permission' => 'finance.values.view',
+                'value' => fn (Period $p) => $this->money($this->finance->profit($p)['net']),
+                'previous' => fn (Period $p) => $this->money($this->finance->profit($p->previous())['net'])],
+            'finance.cash_balance' => ['label' => 'Cash, mobile money and bank', 'format' => 'money', 'permission' => 'finance.values.view',
+                'value' => fn () => $this->money($this->finance->cashBalance())],
+            'finance.receivables' => ['label' => 'Customers owe', 'format' => 'money', 'permission' => 'finance.values.view',
+                'value' => fn () => $this->money($this->finance->receivables())],
+            'finance.payables' => ['label' => 'Owed to suppliers', 'format' => 'money', 'permission' => 'finance.values.view',
+                'value' => fn () => $this->money($this->finance->payables())],
+            'finance.not_invoiced' => ['label' => 'Received, not invoiced', 'format' => 'money', 'permission' => 'finance.values.view',
+                'value' => fn () => $this->money($this->inventory->receivedNotInvoiced())],
+            'payroll.current' => ['label' => 'Wages to pay', 'format' => 'money', 'permission' => 'finance.values.view',
+                'value' => fn () => $this->money($this->finance->wagesToPay())],
+            'budget.total' => ['label' => 'Expense budget (running)', 'format' => 'money', 'permission' => 'finance.values.view',
+                'value' => fn () => $this->money(Money::fromCents($this->finance->budgetToday()['budget']))],
+            'budget.variance' => ['label' => 'Budget left', 'format' => 'money', 'permission' => 'finance.values.view',
+                'value' => fn () => $this->money(Money::fromCents($this->finance->budgetToday()['budget'] - $this->finance->budgetToday()['actual']))],
+            'approvals.pending' => ['label' => 'Waiting for your approval', 'format' => 'number', 'permission' => 'finance.approve',
+                'value' => fn () => $this->finance->approvalsPending()],
             'trace.open_batches' => ['label' => 'Open batches', 'format' => 'number', 'permission' => 'trace.batches.view',
                 'value' => fn () => $this->metrics->openBatches()],
             'trace.events' => ['label' => 'Traceability events', 'format' => 'number', 'permission' => 'trace.batches.view',
@@ -276,6 +299,50 @@ class DashboardRegistry
                         'series' => [['key' => 'value', 'label' => 'Stock value', 'unit' => $farm->currency, 'values' => $d['values']]],
                     ];
                 }],
+            'expenses_to_approve' => ['type' => 'action_list', 'permission' => 'finance.manage|finance.approve', 'inline' => true,
+                'data' => fn () => ['items' => $this->finance->expensesToApprove()]],
+            'customer_invoices_overdue' => ['type' => 'action_list', 'permission' => 'sales.invoice|finance.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->finance->customerInvoicesOverdue()]],
+            'payroll_pending' => ['type' => 'action_list', 'permission' => 'finance.values.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->finance->payrollPending()]],
+            'recent_transactions' => ['type' => 'action_list', 'permission' => 'finance.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->finance->recentTransactions()]],
+            'income_vs_expenses' => ['type' => 'chart', 'permission' => 'finance.values.view', 'inline' => false,
+                'data' => function () use ($farm) {
+                    $d = app(FinanceReports::class)->monthly();
+
+                    return [
+                        'chart' => 'bar',
+                        'x' => ['type' => 'category', 'values' => $d['labels']],
+                        'series' => [
+                            ['key' => 'income', 'label' => 'Income', 'unit' => $farm->currency, 'values' => $d['income']],
+                            ['key' => 'expenses', 'label' => 'Expenses', 'unit' => $farm->currency, 'values' => $d['expenses']],
+                        ],
+                    ];
+                }],
+            'budget_vs_actual' => ['type' => 'chart', 'permission' => 'finance.values.view', 'inline' => false,
+                'data' => function () use ($farm) {
+                    $d = $this->finance->budgetVsActual();
+
+                    return [
+                        'chart' => 'bar',
+                        'x' => ['type' => 'category', 'values' => $d['labels']],
+                        'series' => [
+                            ['key' => 'budget', 'label' => 'Budget', 'unit' => $farm->currency, 'values' => $d['budget']],
+                            ['key' => 'actual', 'label' => 'Spent', 'unit' => $farm->currency, 'values' => $d['actual']],
+                        ],
+                    ];
+                }],
+            'cash_flow_forecast' => ['type' => 'chart', 'permission' => 'finance.values.view', 'inline' => false,
+                'data' => function () use ($farm) {
+                    $weeks = app(FinanceReports::class)->forecast()['weeks'];
+
+                    return [
+                        'chart' => 'bar',
+                        'x' => ['type' => 'date', 'values' => array_column($weeks, 'week_start')],
+                        'series' => [['key' => 'balance', 'label' => 'Expected cash', 'unit' => $farm->currency, 'values' => array_column($weeks, 'balance')]],
+                    ];
+                }],
             'recent_trace_events' => ['type' => 'action_list', 'permission' => 'trace.batches.view', 'inline' => true,
                 'data' => fn () => ['items' => $this->metrics->recentTraceEvents()]],
             'trace_activity' => ['type' => 'chart', 'permission' => 'trace.batches.view', 'inline' => false,
@@ -322,6 +389,16 @@ class DashboardRegistry
             'purchase_request' => ['label' => 'Purchase request', 'permission' => 'procurement.requests.create', 'target' => "/farms/{$id}/procurement?tab=requests&new=1"],
             'view_orders' => ['label' => 'Purchase orders', 'permission' => 'procurement.orders.manage', 'target' => "/farms/{$id}/procurement"],
             'view_ledger' => ['label' => 'Ledger', 'permission' => 'finance.view', 'target' => "/farms/{$id}/ledger"],
+            'request_expense' => ['label' => 'Request an expense', 'permission' => 'finance.expenses.request', 'target' => "/farms/{$id}/finance?tab=expenses&new=1"],
+            'record_expense' => ['label' => 'Expense', 'permission' => 'finance.manage', 'target' => "/farms/{$id}/finance?tab=expenses&new=1"],
+            'record_income' => ['label' => 'Income', 'permission' => 'finance.manage', 'target' => "/farms/{$id}/finance?tab=income&new=1"],
+            'new_invoice' => ['label' => 'Invoice', 'permission' => 'sales.invoice', 'target' => "/farms/{$id}/finance?tab=invoices&new=1"],
+            'pay_supplier' => ['label' => 'Pay a supplier', 'permission' => 'finance.manage', 'target' => "/farms/{$id}/finance?tab=payments&new=supplier_invoice"],
+            'receive_payment' => ['label' => 'Customer payment', 'permission' => 'sales.invoice', 'target' => "/farms/{$id}/finance?tab=payments&new=customer_invoice"],
+            'run_payroll' => ['label' => 'Payroll', 'permission' => 'finance.payroll.manage', 'target' => "/farms/{$id}/finance?tab=payroll&new=1"],
+            'new_budget' => ['label' => 'Budget', 'permission' => 'finance.budgets.manage', 'target' => "/farms/{$id}/finance?tab=budgets&new=1"],
+            'view_pnl' => ['label' => 'Profit & loss', 'permission' => 'reports.finance.view|finance.view', 'target' => "/farms/{$id}/reports"],
+            'view_cash_flow' => ['label' => 'Cash flow', 'permission' => 'reports.finance.view|finance.view', 'target' => "/farms/{$id}/reports?tab=cash-flow"],
             'view_audit_log' => ['label' => 'Audit log', 'permission' => 'audit.view', 'target' => "/farms/{$id}/audit-log"],
         ];
     }
@@ -420,6 +497,12 @@ class DashboardRegistry
         if (! $this->can("dashboard.{$dashboard}.view")) {
             throw ApiException::forbidden('dashboard_not_available', 'Your role does not include this dashboard.');
         }
+    }
+
+    /** @return array{amount: string, currency: string} */
+    private function money(string|float $amount): array
+    {
+        return ['amount' => Money::of($amount), 'currency' => $this->context->farm()->currency];
     }
 
     private function can(?string $permission): bool
