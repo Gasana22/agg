@@ -69,7 +69,8 @@ class ChainVerifier
             'check_type' => 'hash_chain',
             'result' => $result['result'],
             'details' => json_encode($result),
-            'created_at' => now(),
+            // With microseconds, so two checks in one second keep their order.
+            'created_at' => now()->format('Y-m-d H:i:s.u'),
         ]);
 
         return $result;

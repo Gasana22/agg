@@ -23,6 +23,9 @@ class FinanceBoundaryTest extends TestCase
 {
     private const FINANCE = '#^api/v1/farms/\{farm\}/(ledger|expenses|income|payments|payroll-runs|budgets|customers|customer-invoices|supplier-invoices|reports)(/|$)#';
 
+    /** The store dispatches shipments, so it sees the customer list (names and contacts, no money). */
+    private const ALLOWED = ['store_manager' => ['GET api/v1/farms/{farm}/customers']];
+
     private Farm $farm;
 
     /** @var array<string, string> route parameter => a real record id */
@@ -86,6 +89,9 @@ class FinanceBoundaryTest extends TestCase
             foreach ($routes as $route) {
                 $uri = preg_replace_callback('/\{(\w+)\}/', fn ($m) => $m[1] === 'farm' ? $this->farm->id : ($this->ids[$m[1]] ?? 'missing'), $route->uri());
                 foreach (array_diff($route->methods(), ['HEAD']) as $method) {
+                    if (in_array("{$method} {$route->uri()}", self::ALLOWED[$role] ?? [], true)) {
+                        continue;
+                    }
                     $status = $this->asUser($user)->json($method, "/{$uri}", ['reason' => 'x x x', 'note' => 'x x x'])->status();
                     $this->assertContains($status, [403], "{$role}: {$method} {$route->uri()} answered {$status}");
                 }

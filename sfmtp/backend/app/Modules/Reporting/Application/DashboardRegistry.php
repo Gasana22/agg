@@ -5,6 +5,7 @@ namespace App\Modules\Reporting\Application;
 use App\Modules\Access\Application\FarmPermissions;
 use App\Modules\Finance\Application\Money;
 use App\Modules\Tenancy\TenantContext;
+use App\Modules\Traceability\Application\TraceAlerts;
 use App\Support\Http\ApiException;
 use Closure;
 use Illuminate\Support\Facades\Auth;
@@ -36,10 +37,10 @@ class DashboardRegistry
         $trace = ['trace.open_batches', 'trace.events'];
 
         return match ($dashboard) {
-            'owner' => ['kpis' => ['farm.area', 'finance.revenue', 'finance.expenses', 'finance.net_profit', 'approvals.pending', 'finance.receivables', 'finance.payables', 'inventory.value', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'expenses_to_approve', 'payroll_pending', 'orders_to_approve', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'recent_trace_events', 'income_vs_expenses', 'trace_activity'], 'quick_actions' => ['view_pnl', 'invite_member', 'view_map', 'new_batch', 'view_audit_log']],
+            'owner' => ['kpis' => ['farm.area', 'finance.revenue', 'finance.expenses', 'finance.net_profit', 'approvals.pending', 'finance.receivables', 'finance.payables', 'inventory.value', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'expenses_to_approve', 'payroll_pending', 'orders_to_approve', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'trace_alerts', 'recent_trace_events', 'income_vs_expenses', 'trace_activity'], 'quick_actions' => ['view_pnl', 'invite_member', 'view_map', 'new_batch', 'view_audit_log']],
             'manager' => [
                 'kpis' => ['tasks.today', 'tasks.completed', 'tasks.pending', 'tasks.overdue', 'workers.present', 'workers.absent', 'activities.active', 'crop.active_cycles', 'livestock.head_count', 'inventory.requests_pending', 'inventory.low'],
-                'widgets' => ['verification_queue', 'schedule', 'overdue_tasks', 'leave_requests', 'pending_requests', 'purchase_requests_to_approve', 'worker_activity', 'operations_to_verify', 'pest_disease_alerts', 'vaccinations_due', 'recent_trace_events'],
+                'widgets' => ['verification_queue', 'schedule', 'overdue_tasks', 'leave_requests', 'pending_requests', 'purchase_requests_to_approve', 'worker_activity', 'operations_to_verify', 'pest_disease_alerts', 'vaccinations_due', 'trace_alerts', 'recent_trace_events'],
                 'quick_actions' => ['new_task', 'view_workers', 'request_expense', 'invite_member', 'start_cycle', 'register_animal', 'view_map'],
             ],
             'agronomist' => [
@@ -344,6 +345,15 @@ class DashboardRegistry
                         'series' => [['key' => 'balance', 'label' => 'Expected cash', 'unit' => $farm->currency, 'values' => array_column($weeks, 'balance')]],
                     ];
                 }],
+            'trace_alerts' => ['type' => 'action_list', 'permission' => 'trace.batches.view', 'inline' => true,
+                'data' => fn () => ['items' => array_map(fn (array $a) => [
+                    'id' => $a['code'],
+                    'title' => $a['title'],
+                    'subtitle' => implode(', ', array_filter(array_map(fn ($i) => $i['batch']['batch_code'] ?? null, array_slice($a['items'], 0, 3))))
+                        .($a['count'] > 3 ? ' and '.($a['count'] - 3).' more' : ''),
+                    'href' => "/farms/{$farm->id}/traceability?tab=alerts",
+                    'badge' => ['label' => $a['count'] > 1 ? "{$a['count']}" : ucfirst($a['severity']), 'tone' => ['critical' => 'danger', 'warning' => 'warning', 'info' => 'info'][$a['severity']]],
+                ], app(TraceAlerts::class)->all())]],
             'recent_trace_events' => ['type' => 'action_list', 'permission' => 'trace.batches.view', 'inline' => true,
                 'data' => fn () => ['items' => $this->metrics->recentTraceEvents()]],
             'trace_activity' => ['type' => 'chart', 'permission' => 'trace.batches.view', 'inline' => false,

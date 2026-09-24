@@ -20,11 +20,11 @@ own routes, migrations, domain, application services and HTTP layer
 | `Workforce` | Workers, activities and tasks (state machine, logs, verification), attendance, GPS points, task photos, leave; the `assigned` scope for crops and livestock |
 | `Media` | Photo and document uploads, stored once per farm by SHA-256 (local disk or S3 / MinIO) |
 | `Sync` | Offline push (ordered mutations through the normal services) and pull (snapshot or change feed) for the mobile app (ADR-0010) |
-| `Sales` | Customers and customer invoices, including completed livestock sales; registers invoices as payable |
+| `Sales` | Customers and customer invoices, including completed livestock sales; registers invoices as payable; shipments that end a batch's journey |
 | `Livestock` | Animals and groups, breeding and births, health and vaccinations with withdrawal periods, feeding, weights, milk and egg production, movements, exits and sale requests; writes the animal trace history |
 | `FarmStructure` | Blocks, sections, plots and locations with GeoJSON boundaries, soil profiles, geometry warnings (ADR-0009) |
 | `Support` | Tickets, internal notes, owner-granted read-only support access |
-| `Traceability` | Batch graph, hash-chained events, recorder, journeys, chain verification |
+| `Traceability` | Batch graph, hash-chained events, recorder, split / merge / process / package and recall (ADR-0013), journey views and the `product_journeys` projection, chain verification and alerts |
 | `Reporting` | Server-driven role dashboards, "My farms" overview, the admin dashboard, financial reports (P&L, cash flow and forecast, cost per crop and animal group) |
 
 Shared plumbing is in `app/Support` (problem+json errors, request IDs,
@@ -89,6 +89,17 @@ Both farms have a mapped layout: paddocks and livestock buildings on the mixed
 farm near Kakiri, and two blocks of three plots (with a soil test on B-3, the
 origin of the demo maize batches) on the crop farm near Seeta. Invitation
 emails go to the log with `MAIL_MAILER=log`.
+
+The B-3 maize has a full journey:
+- 1,020 kg harvested;
+- 520 kg split off, dried to 500 kg and packed in 50 kg bags;
+- 300 kg shipped to Kampala Millers and delivered;
+- 100 kg dispatched to a market trader nine days ago and not yet
+  confirmed, which raises a traceability alert.
+
+The harvest's moisture reading is corrected. `trace:refresh-journeys`
+rebuilds the journey projection, and `trace:verify-chain` runs the tamper
+check.
 
 ## Test
 

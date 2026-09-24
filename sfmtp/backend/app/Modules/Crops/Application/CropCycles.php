@@ -117,7 +117,7 @@ class CropCycles
                 $nursery = $this->recorder->createBatch(BatchKind::Nursery, ['name' => $this->batchName('Nursery', $crop, $plot, $cycle), 'source_type' => 'crop_cycle', 'source_id' => $cycle->id],
                     $event + ['subject_id' => $cycle->id, 'payload' => ['cycle' => $cycle->code, 'seeds_sown' => $cycle->seeds_sown]]);
                 if ($seed) {
-                    $this->recorder->link($seed, $nursery, LinkType::Derived);
+                    $this->recorder->link($seed, $nursery, LinkType::Derived, event: array_intersect_key($event, ['occurred_at' => true]));
                 }
                 $this->recorder->record($nursery, 'sown', $event + ['subject_id' => $cycle->id, 'payload' => array_filter(['seeds_sown' => $cycle->seeds_sown])]);
                 $cycle->forceFill(['nursery_batch_id' => $nursery->id])->saveQuietly();
@@ -239,7 +239,7 @@ class CropCycles
         ], $event + ['subject_id' => $cycle->id, 'payload' => ['cycle' => $cycle->code, 'plot' => $plot->code, 'area_ha' => (string) $cycle->area_ha]]);
 
         if ($parent) {
-            $this->recorder->link($parent, $lot, LinkType::Derived);
+            $this->recorder->link($parent, $lot, LinkType::Derived, event: array_intersect_key($event, ['occurred_at' => true]));
         }
         $this->recorder->record($lot, 'planted', $event + ['subject_id' => $cycle->id, 'payload' => array_filter(['crop' => $crop->label(), 'plot' => $plot->code, 'area_ha' => (string) $cycle->area_ha] + $payload)]);
 

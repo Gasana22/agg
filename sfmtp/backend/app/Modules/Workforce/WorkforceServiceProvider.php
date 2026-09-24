@@ -3,7 +3,9 @@
 namespace App\Modules\Workforce;
 
 use App\Modules\Access\Contracts\Assignments;
+use App\Modules\Traceability\Contracts\WorkerNames;
 use App\Modules\Workforce\Application\TaskAssignments;
+use App\Modules\Workforce\Application\TraceWorkerNames;
 use App\Modules\Workforce\Application\WorkSubjects;
 use App\Modules\Workforce\Domain\Models\Activity;
 use App\Modules\Workforce\Domain\Models\Attendance;
@@ -20,6 +22,7 @@ class WorkforceServiceProvider extends ServiceProvider
         // Tasks decide the `assigned` scope for crops, livestock and the map.
         $this->app->bind(Assignments::class, TaskAssignments::class);
         $this->app->singleton(WorkSubjects::class);
+        $this->app->bind(WorkerNames::class, TraceWorkerNames::class);
     }
 
     public function boot(): void

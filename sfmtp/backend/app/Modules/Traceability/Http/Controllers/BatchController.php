@@ -2,6 +2,8 @@
 
 namespace App\Modules\Traceability\Http\Controllers;
 
+use App\Modules\Access\Application\FarmPermissions;
+use App\Modules\Traceability\Application\BatchOperations;
 use App\Modules\Traceability\Application\Recorder;
 use App\Modules\Traceability\Domain\Enums\BatchKind;
 use App\Modules\Traceability\Domain\Enums\BatchStatus;
@@ -13,6 +15,7 @@ use App\Support\Http\ApiException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class BatchController
@@ -93,7 +96,14 @@ class BatchController
             ]);
         }
 
-        $link = $this->recorder->link($parent, $batch, LinkType::from($data['link_type']), isset($data['quantity']) ? (string) $data['quantity'] : null, $data['unit'] ?? null);
+        $type = LinkType::from($data['link_type']);
+        $quantity = isset($data['quantity']) ? (string) $data['quantity'] : null;
+        $link = DB::transaction(function () use ($parent, $batch, $type, $quantity, $data) {
+            // Links that take quantity must not take more than is left.
+            app(BatchOperations::class)->assertCanTake($parent, $type, $quantity, $data['unit'] ?? null);
+
+            return $this->recorder->link($parent, $batch, $type, $quantity, $data['unit'] ?? null);
+        });
 
         return new JsonResponse(['data' => [
             'id' => $link->id,
@@ -113,6 +123,20 @@ class BatchController
             'reason' => ['required', 'string', 'max:500'],
         ]);
 
-        return new TraceBatchResource($this->recorder->changeStatus($batch, BatchStatus::from($data['status']), $data['reason']));
+        $status = BatchStatus::from($data['status']);
+        if ($status === BatchStatus::Recalled) {
+            // A recall cascades downstream; only people who publish may do it.
+            if (! app(FarmPermissions::class)->allows('trace.publish')) {
+                throw ApiException::forbidden('forbidden', 'Only people who publish traceability can recall a batch.');
+            }
+            app(BatchOperations::class)->recall($batch, $data['reason']);
+
+            return new TraceBatchResource($batch->refresh());
+        }
+        if ($batch->status === BatchStatus::Recalled) {
+            throw ApiException::conflict('invalid_state_transition', 'A recalled batch stays recalled.');
+        }
+
+        return new TraceBatchResource($this->recorder->changeStatus($batch, $status, $data['reason']));
     }
 }

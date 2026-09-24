@@ -6,6 +6,7 @@ use App\Modules\Finance\Application\Payables;
 use App\Modules\Sales\Application\Invoicing;
 use App\Modules\Sales\Domain\Models\Customer;
 use App\Modules\Sales\Domain\Models\CustomerInvoice;
+use App\Modules\Sales\Domain\Models\Shipment;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,5 +21,6 @@ class SalesServiceProvider extends ServiceProvider
     {
         Route::model('customer', Customer::class);
         Route::model('customerInvoice', CustomerInvoice::class);
+        Route::model('shipment', Shipment::class);
     }
 }

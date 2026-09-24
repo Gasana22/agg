@@ -140,6 +140,7 @@ class Recorder
             $row['hash'] = EventHasher::hash($row['prev_hash'], $row);
 
             $event = TraceEvent::create($row);
+            app(JourneyProjector::class)->touch($farmId, $batch->id);
 
             DB::table('trace_sequences')->where('farm_id', $farmId)->update([
                 'last_seq' => $row['farm_seq'],
@@ -173,17 +174,18 @@ class Recorder
         ]);
     }
 
-    public function changeStatus(TraceBatch $batch, BatchStatus $status, string $reason): TraceBatch
+    /** @param  array<string,mixed>  $event  optional details for the `status_changed` event (occurred_at …) */
+    public function changeStatus(TraceBatch $batch, BatchStatus $status, string $reason, array $event = []): TraceBatch
     {
         if ($batch->status === $status) {
             throw ApiException::conflict('invalid_state_transition', "The batch is already {$status->value}.");
         }
 
-        return DB::transaction(function () use ($batch, $status, $reason) {
+        return DB::transaction(function () use ($batch, $status, $reason, $event) {
             $from = $batch->status;
             $batch->status = $status;
             $batch->save();
-            $this->record($batch, 'status_changed', ['payload' => ['from' => $from->value, 'to' => $status->value, 'reason' => $reason]]);
+            $this->record($batch, 'status_changed', $event + ['payload' => ['from' => $from->value, 'to' => $status->value, 'reason' => $reason]]);
 
             return $batch;
         });

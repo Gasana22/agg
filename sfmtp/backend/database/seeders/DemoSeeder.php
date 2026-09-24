@@ -40,15 +40,20 @@ use App\Modules\Procurement\Application\Receiving;
 use App\Modules\Procurement\Domain\Models\Supplier;
 use App\Modules\Procurement\Domain\Models\SupplierInvoice;
 use App\Modules\Sales\Application\Invoicing;
+use App\Modules\Sales\Application\Shipments;
 use App\Modules\Tenancy\Application\FarmService;
 use App\Modules\Tenancy\Application\FarmSettings;
 use App\Modules\Tenancy\Domain\Enums\FarmStatus;
 use App\Modules\Tenancy\Domain\Models\Farm;
 use App\Modules\Tenancy\Domain\Models\FarmUser;
 use App\Modules\Tenancy\TenantContext;
+use App\Modules\Traceability\Application\BatchOperations;
+use App\Modules\Traceability\Application\ChainVerifier;
+use App\Modules\Traceability\Application\JourneyProjector;
 use App\Modules\Traceability\Application\Recorder;
 use App\Modules\Traceability\Domain\Enums\BatchKind;
-use App\Modules\Traceability\Domain\Enums\LinkType;
+use App\Modules\Traceability\Domain\Models\TraceBatch;
+use App\Modules\Traceability\Domain\Models\TraceEvent;
 use App\Modules\Workforce\Application\Activities;
 use App\Modules\Workforce\Application\AttendanceBook;
 use App\Modules\Workforce\Application\LeaveDesk;
@@ -96,6 +101,7 @@ class DemoSeeder extends Seeder
             return;
         }
 
+        app(JourneyProjector::class)->pause();
         $mixed = $farms->create($owner, ['name' => 'AGG Mixed Farm', 'organization_name' => 'AGG Farms', 'district' => 'Wakiso', 'village' => 'Kakiri', 'size_ha' => 120]);
         $crop = $farms->create($owner, ['name' => 'AGG Crop Farm', 'district' => 'Mukono', 'village' => 'Seeta', 'size_ha' => 80]);
 
@@ -178,6 +184,41 @@ class DemoSeeder extends Seeder
         $this->seedWorkforce($mixed, $crop, $context);
         $this->seedInventory($mixed, $context);
         $this->seedFinance($mixed, $context);
+        $this->seedShipments($crop, $context);
+
+        // Project every journey once, and check both chains so the integrity page starts green.
+        app(JourneyProjector::class)->resume();
+        foreach ([$mixed, $crop] as $farm) {
+            $context->run($farm, function () {
+                TraceBatch::query()->orderBy('id')->each(fn (TraceBatch $b) => app(JourneyProjector::class)->project($b));
+                app(ChainVerifier::class)->verify();
+            });
+        }
+    }
+
+    /**
+     * The B-3 maize leaves the crop farm: 300 kg of the bags to a miller,
+     * delivered, and 100 kg to a market trader, dispatched nine days ago
+     * and not yet confirmed (a traceability alert).
+     */
+    private function seedShipments(Farm $farm, TenantContext $context): void
+    {
+        $owner = FarmUser::where('farm_id', $farm->id)->where('is_owner', true)->firstOrFail();
+        Auth::setUser($owner->user);
+        $context->run($farm, function () {
+            $sales = app(Invoicing::class);
+            $miller = $sales->createCustomer(['name' => 'Kampala Millers Ltd', 'contact_person' => 'Joseph Okot', 'phone' => '+256772100200', 'address' => 'Plot 4, Industrial Area, Kampala']);
+            $trader = $sales->createCustomer(['name' => 'Seeta Market Traders', 'phone' => '+256701555010', 'address' => 'Seeta market, stall 12']);
+            $bags = TraceBatch::where('kind', BatchKind::Packaged->value)->where('name', 'like', 'Maize grain 50 kg%')->firstOrFail();
+
+            $shipments = app(Shipments::class);
+            $first = $shipments->dispatch(['customer_id' => $miller->id, 'vehicle' => 'UBA 123X', 'driver' => 'Peter Mugisha',
+                'dispatched_at' => now()->subDays(3)->setTime(9, 30)->toIso8601String(), 'lines' => [['batch_id' => $bags->id, 'quantity' => 300]]]);
+            $shipments->deliver($first, ['received_by' => 'Joseph Okot', 'delivered_at' => now()->subDays(3)->setTime(14, 10)->toIso8601String()]);
+            $shipments->dispatch(['customer_id' => $trader->id, 'dispatched_at' => now()->subDays(9)->setTime(8, 0)->toIso8601String(),
+                'lines' => [['batch_id' => $bags->id, 'quantity' => 100]]]);
+        }, $owner);
+        Auth::forgetGuards();
     }
 
     /**
@@ -539,10 +580,15 @@ class DemoSeeder extends Seeder
             $harvest = $harvests->record($b3->refresh(), ['harvested_on' => $day(20)->toDateString(), 'quantity' => 1020, 'unit' => 'kg', 'quality_grade' => 'A', 'moisture_pct' => 17.5]);
             $cycles->close($b3->refresh(), CloseReason::Harvested, 'Stover left as mulch', $day(18)->toDateString());
 
-            $dried = $recorder->createBatch(BatchKind::Processed, ['name' => 'Dried & graded maize', 'quantity' => '520', 'unit' => 'kg'], ['occurred_at' => $day(10)]);
-            $recorder->link($harvest->batch, $dried, LinkType::Split, '520', 'kg');
-            $packs = $recorder->createBatch(BatchKind::Packaged, ['name' => 'Maize grain 50 kg bags ×10', 'quantity' => '500', 'unit' => 'kg'], ['occurred_at' => $day(5)]);
-            $recorder->link($dried, $packs, LinkType::Package, '500', 'kg');
+            // 520 kg split off for drying (500 kg stays in the store), dried and graded to 500 kg, packed in 50 kg bags.
+            $batches = app(BatchOperations::class);
+            [$forDrying] = $batches->split($harvest->batch, [['quantity' => 520, 'name' => 'Maize B-3 for drying']], ['occurred_at' => $day(12)]);
+            $dried = $batches->process([['batch' => $forDrying]], ['name' => 'Dried & graded maize', 'quantity' => 500, 'unit' => 'kg', 'method' => 'Sun-dried to 13% moisture, graded'],
+                ['occurred_at' => $day(10)]);
+            $batches->package([['batch' => $dried]], ['name' => 'Maize grain 50 kg bags ×10', 'package_count' => 10, 'package_size' => '50 kg'], ['occurred_at' => $day(5)]);
+            // The moisture meter was recalibrated after harvest: corrected, not edited.
+            $harvested = TraceEvent::where('batch_id', $harvest->trace_batch_id)->where('event_type', 'harvested')->firstOrFail();
+            $recorder->correct($harvested, ['moisture_pct' => '16.8'], 'Moisture meter recalibrated; re-read the retained sample');
 
             // Season B, in progress.
             [$a1] = $cycles->start(['plot_id' => $plots['A-1']->id, 'crop_id' => $maize->id, 'plan_id' => $planB->id, 'seed_batch_id' => $seed->id, 'planted_on' => $day(40)->toDateString(), 'expected_yield' => 3000]);

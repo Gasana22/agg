@@ -1809,10 +1809,16 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
             cookie?: never;
         };
-        /** Get batch journey */
+        /**
+         * Get batch journey
+         * @description Served from the product_journey projection (refreshed by a queued job after each event or link). `fresh=true`, a depth or a single direction walk the graph live.
+         */
         get: operations["getBatchJourney"];
         put?: never;
         post?: never;
@@ -4830,6 +4836,376 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/farms/{farm}/traceability/batches/{batch}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Events of the batch and its lineage, in the order they happened
+         * @description Corrections are folded into the event they correct: `payload` shows the corrected values, `original_payload` and `corrections` keep the history.
+         */
+        get: operations["getBatchTimeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/batches/{batch}/workers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Workers and recorders involved
+         * @description Worker names need workers.view.
+         */
+        get: operations["getBatchWorkers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/batches/{batch}/inputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        /** Seed and input lots, and inputs applied along the way */
+        get: operations["getBatchInputs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/batches/{batch}/sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Shipments downstream: customers and deliveries
+         * @description No prices: amounts stay on the Sales pages.
+         */
+        get: operations["getBatchSales"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/batches/{batch}/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        /** Geographic trail: plots, GPS points and moves */
+        get: operations["getBatchLocations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/batches/{batch}/split": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Split part of a batch into new batches of the same kind
+         * @description Inputs are row-locked; each gives at most what it has left (422 trace_quantity_exceeded, with `available`). Closed, recalled and shipment batches cannot be used (409 trace_batch_not_open). An input that is used up is closed.
+         */
+        post: operations["splitBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/batches/{batch}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge batches of one kind and unit
+         * @description Inputs are row-locked; each gives at most what it has left (422 trace_quantity_exceeded, with `available`). Closed, recalled and shipment batches cannot be used (409 trace_batch_not_open). An input that is used up is closed. Mixed kinds are 422 trace_merge_mixed; mixed units 422 trace_unit_mismatch.
+         */
+        post: operations["mergeBatches"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/batches/{batch}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process batches into a new product (dried, graded, milled …)
+         * @description Inputs are row-locked; each gives at most what it has left (422 trace_quantity_exceeded, with `available`). Closed, recalled and shipment batches cannot be used (409 trace_batch_not_open). An input that is used up is closed.
+         */
+        post: operations["processBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/batches/{batch}/package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pack batches into a packaged product
+         * @description Inputs are row-locked; each gives at most what it has left (422 trace_quantity_exceeded, with `available`). Closed, recalled and shipment batches cannot be used (409 trace_batch_not_open). An input that is used up is closed.
+         */
+        post: operations["packageBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/batches/{batch}/recall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recall a batch and everything made from it
+         * @description Every downstream batch becomes `recalled` with a `status_changed` event naming the recall. Upstream batches are not touched.
+         */
+        post: operations["recallBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/integrity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Hash chain head and recent checks */
+        get: operations["getTraceIntegrity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/integrity/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-verify the hash chain now
+         * @description Recomputes every event hash in order and records the result. The same check runs nightly (trace:verify-chain) and emails the owner on failure.
+         */
+        post: operations["verifyTraceChain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Traceability alerts */
+        get: operations["listTraceAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/shipments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Shipments to customers */
+        get: operations["listShipments"];
+        put?: never;
+        /**
+         * Dispatch goods to a customer
+         * @description Creates a `shipment` trace batch linked `ship` from each batch sent (taking the quantity) and records `dispatched` with the customer.
+         */
+        post: operations["dispatchShipment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/shipments/{shipment}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                shipment: string;
+            };
+            cookie?: never;
+        };
+        /** A shipment */
+        get: operations["getShipment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/shipments/{shipment}/deliver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                shipment: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm delivery
+         * @description Records `delivered` and closes the shipment batch.
+         */
+        post: operations["deliverShipment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/shipments/{shipment}/fail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                shipment: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a failed delivery */
+        post: operations["failShipment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5146,6 +5522,8 @@ export interface components {
             name?: string | null;
             status?: components["schemas"]["BatchStatus"];
             quantity?: components["schemas"]["Quantity"] | null;
+            /** @description What splits, merges, processing, packing and shipments have not taken */
+            available?: components["schemas"]["Quantity"] | null;
             origin_plot_id?: string | null;
             source?: null | {
                 type?: string;
@@ -8147,6 +8525,315 @@ export interface components {
             cost?: number;
             revenue?: number;
             margin?: number;
+        };
+        Journey: {
+            batch?: components["schemas"]["Batch"];
+            backward?: components["schemas"]["Graph"] | null;
+            forward?: components["schemas"]["Graph"] | null;
+            evidence_summary?: {
+                events?: number;
+                gps_points?: number;
+                workers?: number;
+                corrections?: number;
+                sources?: number | null;
+                destinations?: number | null;
+            };
+            projection?: {
+                /** @enum {string} */
+                source?: "projection" | "live";
+                /** Format: date-time */
+                refreshed_at?: string;
+            };
+        };
+        TimelineEvent: {
+            /** Format: uuid */
+            id?: string;
+            event_type?: string;
+            batch?: {
+                /** Format: uuid */
+                id?: string;
+                batch_code?: string;
+                kind?: components["schemas"]["BatchKind"];
+                name?: string | null;
+            } | null;
+            /** Format: date-time */
+            occurred_at?: string;
+            /** Format: date-time */
+            recorded_at?: string;
+            recorded_late?: boolean;
+            actor?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string | null;
+            } | null;
+            /** Format: uuid */
+            worker_id?: string | null;
+            /** Format: uuid */
+            plot_id?: string | null;
+            location?: {
+                lat?: number;
+                lng?: number;
+                accuracy_m?: number | null;
+            } | null;
+            subject?: {
+                type?: string;
+                id?: string;
+            } | null;
+            payload?: {
+                [key: string]: unknown;
+            };
+            corrected?: boolean;
+            original_payload?: {
+                [key: string]: unknown;
+            } | null;
+            corrections?: {
+                /** Format: uuid */
+                id?: string;
+                reason?: string | null;
+                corrected?: {
+                    [key: string]: unknown;
+                };
+                /** Format: date-time */
+                recorded_at?: string;
+                /** Format: uuid */
+                actor_user_id?: string | null;
+            }[];
+            seq?: number;
+        };
+        JourneyWorkers: {
+            workers?: {
+                /** Format: uuid */
+                worker_id?: string;
+                worker_code?: string | null;
+                /** @description Needs workers.view */
+                name?: string | null;
+                events?: number;
+                /** Format: date-time */
+                first_at?: string;
+                /** Format: date-time */
+                last_at?: string;
+                activities?: {
+                    /** Format: uuid */
+                    event_id?: string;
+                    event_type?: string;
+                    activity_type?: string;
+                    task?: string;
+                    batch_code?: string;
+                    /** Format: date-time */
+                    occurred_at?: string;
+                    has_gps?: boolean;
+                }[];
+            }[];
+            recorders?: {
+                /** Format: uuid */
+                user_id?: string;
+                name?: string | null;
+                events?: number;
+                event_types?: {
+                    [key: string]: number;
+                };
+            }[];
+        };
+        JourneyInputs: {
+            lots?: {
+                batch?: {
+                    /** Format: uuid */
+                    id?: string;
+                    batch_code?: string;
+                    kind?: components["schemas"]["BatchKind"];
+                    name?: string | null;
+                    status?: components["schemas"]["BatchStatus"];
+                };
+                /** @enum {string} */
+                role?: "source" | "applied";
+                item?: string | null;
+                lot_number?: string | null;
+                supplier?: string | null;
+                order?: string | null;
+                expires_on?: string | null;
+                /** Format: date-time */
+                received_at?: string | null;
+            }[];
+            applications?: {
+                /** Format: uuid */
+                event_id?: string;
+                /** @enum {string} */
+                event_type?: "input_applied" | "fed" | "treated" | "vaccinated" | "dewormed";
+                /** Format: date-time */
+                occurred_at?: string;
+                applied_to?: string | null;
+                product?: string | null;
+                quantity?: string | null;
+                unit?: string | null;
+                input_batch?: {
+                    batch_code?: string;
+                    /** Format: uuid */
+                    id?: string | null;
+                } | null;
+                withholding_days?: number | null;
+                meat_withdrawal_days?: number | null;
+                milk_withdrawal_days?: number | null;
+            }[];
+        };
+        JourneySale: {
+            shipment_batch?: {
+                /** Format: uuid */
+                id?: string;
+                batch_code?: string;
+                name?: string | null;
+                status?: components["schemas"]["BatchStatus"];
+                quantity?: components["schemas"]["Quantity"] | null;
+            };
+            shipment?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string | null;
+            } | null;
+            customer?: string | null;
+            destination?: string | null;
+            invoice?: string | null;
+            /** Format: date-time */
+            dispatched_at?: string | null;
+            /** Format: date-time */
+            delivered_at?: string | null;
+            received_by?: string | null;
+            from?: {
+                /** Format: uuid */
+                batch_id?: string;
+                batch_code?: string | null;
+                quantity?: string | null;
+                unit?: string | null;
+            }[];
+        };
+        JourneyLocations: {
+            plots?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string | null;
+                area_ha?: number | string | null;
+                centroid?: {
+                    lat?: number;
+                    lng?: number;
+                } | null;
+                /** @description GeoJSON Polygon */
+                boundary?: Record<string, never> | null;
+                batches?: string[];
+            }[];
+            points?: {
+                /** Format: uuid */
+                event_id?: string;
+                event_type?: string;
+                batch_code?: string;
+                /** Format: date-time */
+                occurred_at?: string;
+                lat?: number;
+                lng?: number;
+                accuracy_m?: number | null;
+                /** Format: uuid */
+                worker_id?: string | null;
+            }[];
+            moves?: {
+                /** Format: uuid */
+                event_id?: string;
+                batch_code?: string;
+                /** Format: date-time */
+                occurred_at?: string;
+                from?: string | null;
+                to?: string | null;
+            }[];
+        };
+        ChainCheck: {
+            /** @enum {string} */
+            result?: "pass" | "fail";
+            events?: number;
+            first_bad_seq?: number | null;
+            /** @enum {string|null} */
+            reason?: "sequence_gap" | "broken_link" | "hash_mismatch" | "head_mismatch" | null;
+            /** Format: date-time */
+            checked_at?: string;
+        };
+        TraceIntegrity: {
+            events?: number;
+            head_hash?: string | null;
+            latest?: components["schemas"]["ChainCheckRecord"] | null;
+            history?: components["schemas"]["ChainCheckRecord"][];
+        };
+        ChainCheckRecord: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            result?: "pass" | "fail";
+            events?: number | null;
+            first_bad_seq?: number | null;
+            reason?: string | null;
+            /** Format: date-time */
+            checked_at?: string;
+        };
+        TraceAlert: {
+            /** @enum {string} */
+            code?: "chain_failed" | "chain_unverified" | "recalled_shipped" | "shipment_undelivered" | "missing_origin" | "unknown_seed_source";
+            /** @enum {string} */
+            severity?: "critical" | "warning" | "info";
+            title?: string;
+            count?: number;
+            items?: {
+                [key: string]: unknown;
+            }[];
+        };
+        Shipment: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "shipment";
+            code?: string;
+            /** @enum {string} */
+            status?: "dispatched" | "delivered" | "failed";
+            customer?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            invoice?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string | null;
+            } | null;
+            trace_batch?: {
+                /** Format: uuid */
+                id?: string;
+                batch_code?: string;
+                status?: components["schemas"]["BatchStatus"];
+            };
+            destination?: string | null;
+            vehicle?: string | null;
+            driver?: string | null;
+            notes?: string | null;
+            /** Format: date-time */
+            dispatched_at?: string;
+            /** Format: uuid */
+            dispatched_by?: string | null;
+            /** Format: date-time */
+            delivered_at?: string | null;
+            received_by?: string | null;
+            failure_reason?: string | null;
+            lines?: {
+                /** Format: uuid */
+                id?: string;
+                batch?: {
+                    /** Format: uuid */
+                    id?: string;
+                    batch_code?: string;
+                    kind?: components["schemas"]["BatchKind"];
+                    name?: string | null;
+                } | null;
+                quantity?: components["schemas"]["Quantity"] | null;
+                description?: string | null;
+            }[];
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
         };
     };
     responses: {
@@ -12118,6 +12805,7 @@ export interface operations {
             query?: {
                 direction?: "backward" | "forward" | "both";
                 depth?: number;
+                fresh?: boolean;
             };
             header?: never;
             path: {
@@ -12128,25 +12816,20 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Upstream and/or downstream graph */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data?: {
-                            batch?: components["schemas"]["Batch"];
-                            backward?: components["schemas"]["Graph"] | null;
-                            forward?: components["schemas"]["Graph"] | null;
-                            evidence_summary?: {
-                                events?: number;
-                                gps_points?: number;
-                            };
-                        };
+                        data?: components["schemas"]["Journey"];
                     };
                 };
             };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     linkBatch: {
@@ -17727,6 +18410,650 @@ export interface operations {
                 };
             };
             403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getBatchTimeline: {
+        parameters: {
+            query?: {
+                direction?: "backward" | "forward" | "both";
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["TimelineEvent"][];
+                        meta?: {
+                            truncated?: boolean;
+                            limit?: number;
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getBatchWorkers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["JourneyWorkers"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    getBatchInputs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["JourneyInputs"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    getBatchSales: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["JourneySale"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    getBatchLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["JourneyLocations"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    splitBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    parts: {
+                        quantity: number;
+                        name?: string | null;
+                    }[];
+                    /** Format: date-time */
+                    occurred_at?: string;
+                    notes?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Split */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            source?: components["schemas"]["Batch"];
+                            parts?: components["schemas"]["Batch"][];
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    mergeBatches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string | null;
+                    /** @description From this batch; all that is left when omitted */
+                    quantity?: number | null;
+                    /** @description Other input batches */
+                    with: {
+                        /** Format: uuid */
+                        batch_id: string;
+                        quantity?: number | null;
+                    }[];
+                    /** Format: date-time */
+                    occurred_at?: string;
+                    notes?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Batch"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    processBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    output: {
+                        name: string;
+                        /** @description Defaults to what went in when the units agree */
+                        quantity?: number | null;
+                        unit?: string | null;
+                        method?: string | null;
+                    };
+                    /** @description From this batch; all that is left when omitted */
+                    quantity?: number | null;
+                    /** @description Other input batches */
+                    with?: {
+                        /** Format: uuid */
+                        batch_id: string;
+                        quantity?: number | null;
+                    }[];
+                    /** Format: date-time */
+                    occurred_at?: string;
+                    notes?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Batch"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    packageBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    output: {
+                        name: string;
+                        /** @description Defaults to what went in when the units agree */
+                        quantity?: number | null;
+                        unit?: string | null;
+                        package_count?: number | null;
+                        package_size?: string | null;
+                    };
+                    /** @description From this batch; all that is left when omitted */
+                    quantity?: number | null;
+                    /** @description Other input batches */
+                    with?: {
+                        /** Format: uuid */
+                        batch_id: string;
+                        quantity?: number | null;
+                    }[];
+                    /** Format: date-time */
+                    occurred_at?: string;
+                    notes?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Batch"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    recallBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            batch?: components["schemas"]["Batch"];
+                            affected?: components["schemas"]["Batch"][];
+                            /** @description Shipments reached by the recall */
+                            shipments?: number;
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getTraceIntegrity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["TraceIntegrity"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    verifyTraceChain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Checked */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["ChainCheck"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    listTraceAlerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["TraceAlert"][];
+                        meta?: {
+                            counts?: {
+                                critical?: number;
+                                warning?: number;
+                                info?: number;
+                            };
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    listShipments: {
+        parameters: {
+            query?: {
+                "filter[status]"?: "dispatched" | "delivered" | "failed";
+                "filter[customer_id]"?: string;
+                q?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["Shipment"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    dispatchShipment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    customer_id: string;
+                    /**
+                     * Format: uuid
+                     * @description An invoice of the same customer
+                     */
+                    customer_invoice_id?: string | null;
+                    /** @description Defaults to the customer's address */
+                    destination?: string | null;
+                    vehicle?: string | null;
+                    driver?: string | null;
+                    notes?: string | null;
+                    /** Format: date-time */
+                    dispatched_at?: string;
+                    lines: {
+                        /** Format: uuid */
+                        batch_id: string;
+                        /** @description All that is left when omitted */
+                        quantity?: number | null;
+                        description?: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Dispatched */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Shipment"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getShipment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                shipment: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Shipment"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    deliverShipment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                shipment: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: date-time */
+                    delivered_at?: string;
+                    received_by?: string | null;
+                    notes?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Shipment"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    failShipment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                shipment: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Shipment"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
     };

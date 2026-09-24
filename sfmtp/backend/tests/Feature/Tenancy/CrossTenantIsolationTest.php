@@ -31,6 +31,7 @@ use App\Modules\Procurement\Application\Purchasing;
 use App\Modules\Procurement\Application\Receiving;
 use App\Modules\Procurement\Domain\Models\PurchaseOrder;
 use App\Modules\Sales\Application\Invoicing;
+use App\Modules\Sales\Application\Shipments;
 use App\Modules\Tenancy\Domain\Models\Farm;
 use App\Modules\Tenancy\Domain\Models\FarmUser;
 use App\Modules\Tenancy\TenantContext;
@@ -135,11 +136,14 @@ class CrossTenantIsolationTest extends TestCase
             $this->app->make(Receiving::class)->receive($order->refresh(), ['location_id' => $storeId, 'lines' => [['order_line_id' => $order->lines[0]->id, 'quantity' => 5]]]);
             $supplierInvoice = $this->app->make(Receiving::class)->invoice($order->refresh(), ['invoice_number' => 'V-1', 'invoice_date' => now()->toDateString(),
                 'lines' => [['order_line_id' => $order->lines[0]->id, 'quantity' => 5, 'unit_price' => 100]]]);
+            $goods = $this->app->make(Recorder::class)->createBatch(BatchKind::Packaged, ['name' => 'Victim eggs', 'quantity' => 30, 'unit' => 'pcs']);
+            $shipment = $this->app->make(Shipments::class)->dispatch(['customer_id' => $customer->id, 'lines' => [['batch_id' => $goods->id, 'quantity' => 10]]]);
 
             return [
                 'ledgerAccount' => $account->id, 'expense' => $expense->id, 'income' => $income->id, 'payment' => $payment->id,
                 'payrollRun' => $run->id, 'payrollLine' => $run->lines()->value('id'), 'budget' => $budget->id,
                 'customer' => $customer->id, 'customerInvoice' => $invoice->id, 'supplierInvoice' => $supplierInvoice->id,
+                'shipment' => $shipment->id,
             ];
         }, $owner);
     }

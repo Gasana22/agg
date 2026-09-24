@@ -67,7 +67,7 @@ class CropHarvests
                 'source_type' => 'crop_cycle',
                 'source_id' => $cycle->id,
             ], $event);
-            $this->recorder->link($cycle->cropLot, $batch, LinkType::Derived, $quantity, $data['unit']);
+            $this->recorder->link($cycle->cropLot, $batch, LinkType::Derived, $quantity, $data['unit'], array_intersect_key($event, ['occurred_at' => true]));
             $this->recorder->record($batch, 'harvested', $event + ['payload' => array_filter([
                 'cycle' => $cycle->code,
                 'quantity' => $quantity,

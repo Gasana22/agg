@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SFMTP API
-  version: 1.7.0-phase8
+  version: 1.8.0-phase9
   description: |
     Smart Farm Management & Traceability Platform REST API.
 
@@ -49,7 +49,7 @@ tags:
   - name: Structure
     description: Blocks, sections, plots and locations with GeoJSON boundaries (ADR-0009).
   - name: Traceability
-    description: Batches, append-only events, links and journeys.
+    description: Batches, append-only events, links, split / merge / process / package, recall, journeys with their timeline, worker, input, sales and location views, the hash-chain integrity check and alerts.
   - name: Dashboards
     description: Server-driven, permission-aware role dashboards.
   - name: Audit
@@ -3127,35 +3127,52 @@ paths:
         '422': { $ref: '#/components/responses/Problem' }
 
   /farms/{farm}/traceability/batches/{batch}/journey:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
     get:
-      tags: [Traceability]
+      tags:
+      - Traceability
       operationId: getBatchJourney
       summary: Get batch journey
+      description: Served from the product_journey projection (refreshed by a queued job after each event or link). `fresh=true`, a depth or a single direction walk the graph live.
       x-permission: trace.batches.view
       parameters:
-        - $ref: '#/components/parameters/Farm'
-        - $ref: '#/components/parameters/Batch'
-        - { name: direction, in: query, schema: { type: string, enum: [backward, forward, both], default: both } }
-        - { name: depth, in: query, schema: { type: integer, minimum: 1, maximum: 50 } }
+      - name: direction
+        in: query
+        schema:
+          type: string
+          enum:
+          - backward
+          - forward
+          - both
+          default: both
+      - name: depth
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+      - name: fresh
+        in: query
+        schema:
+          type: boolean
       responses:
         '200':
-          description: Upstream and/or downstream graph
+          description: OK
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data:
-                    type: object
-                    properties:
-                      batch: { $ref: '#/components/schemas/Batch' }
-                      backward: { oneOf: [{ $ref: '#/components/schemas/Graph' }, { type: 'null' }] }
-                      forward: { oneOf: [{ $ref: '#/components/schemas/Graph' }, { type: 'null' }] }
-                      evidence_summary:
-                        type: object
-                        properties:
-                          events: { type: integer }
-                          gps_points: { type: integer }
+                    $ref: '#/components/schemas/Journey'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
 
   /farms/{farm}/traceability/batches/{batch}/links:
     post:
@@ -9342,7 +9359,7 @@ paths:
       - Sales
       operationId: listCustomers
       summary: Customers
-      x-permission: customers.view | sales.invoice
+      x-permission: customers.view | sales.invoice | sales.fulfil
       parameters:
       - name: include_inactive
         in: query
@@ -9966,6 +9983,861 @@ paths:
         '422':
           $ref: '#/components/responses/Problem'
 
+  /farms/{farm}/traceability/batches/{batch}/timeline:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
+    get:
+      tags:
+      - Traceability
+      operationId: getBatchTimeline
+      summary: Events of the batch and its lineage, in the order they happened
+      description: 'Corrections are folded into the event they correct: `payload` shows the corrected values, `original_payload` and `corrections` keep the history.'
+      x-permission: trace.batches.view
+      parameters:
+      - name: direction
+        in: query
+        schema:
+          type: string
+          enum:
+          - backward
+          - forward
+          - both
+          default: backward
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TimelineEvent'
+                  meta:
+                    type: object
+                    properties:
+                      truncated:
+                        type: boolean
+                      limit:
+                        type: integer
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/batches/{batch}/workers:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
+    get:
+      tags:
+      - Traceability
+      operationId: getBatchWorkers
+      summary: Workers and recorders involved
+      description: Worker names need workers.view.
+      x-permission: trace.batches.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/JourneyWorkers'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/batches/{batch}/inputs:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
+    get:
+      tags:
+      - Traceability
+      operationId: getBatchInputs
+      summary: Seed and input lots, and inputs applied along the way
+      x-permission: trace.batches.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/JourneyInputs'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/batches/{batch}/sales:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
+    get:
+      tags:
+      - Traceability
+      operationId: getBatchSales
+      summary: 'Shipments downstream: customers and deliveries'
+      description: 'No prices: amounts stay on the Sales pages.'
+      x-permission: trace.batches.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/JourneySale'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/batches/{batch}/locations:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
+    get:
+      tags:
+      - Traceability
+      operationId: getBatchLocations
+      summary: 'Geographic trail: plots, GPS points and moves'
+      x-permission: trace.batches.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/JourneyLocations'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/batches/{batch}/split:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
+    post:
+      tags:
+      - Traceability
+      operationId: splitBatch
+      summary: Split part of a batch into new batches of the same kind
+      description: Inputs are row-locked; each gives at most what it has left (422 trace_quantity_exceeded, with `available`). Closed, recalled and shipment batches cannot be used (409 trace_batch_not_open). An input that is used up is closed.
+      x-permission: trace.batches.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - parts
+              properties:
+                parts:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items:
+                    type: object
+                    required:
+                    - quantity
+                    properties:
+                      quantity:
+                        type: number
+                        exclusiveMinimum: 0
+                      name:
+                        type:
+                        - string
+                        - 'null'
+                occurred_at:
+                  type: string
+                  format: date-time
+                notes:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '201':
+          description: Split
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      source:
+                        $ref: '#/components/schemas/Batch'
+                      parts:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Batch'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/batches/{batch}/merge:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
+    post:
+      tags:
+      - Traceability
+      operationId: mergeBatches
+      summary: Merge batches of one kind and unit
+      description: Inputs are row-locked; each gives at most what it has left (422 trace_quantity_exceeded, with `available`). Closed, recalled and shipment batches cannot be used (409 trace_batch_not_open). An input that is used up is closed. Mixed kinds are 422 trace_merge_mixed; mixed units 422 trace_unit_mismatch.
+      x-permission: trace.batches.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - with
+              properties:
+                name:
+                  type:
+                  - string
+                  - 'null'
+                quantity:
+                  type:
+                  - number
+                  - 'null'
+                  exclusiveMinimum: 0
+                  description: From this batch; all that is left when omitted
+                with:
+                  type: array
+                  maxItems: 20
+                  items:
+                    type: object
+                    required:
+                    - batch_id
+                    properties:
+                      batch_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type:
+                        - number
+                        - 'null'
+                        exclusiveMinimum: 0
+                  description: Other input batches
+                occurred_at:
+                  type: string
+                  format: date-time
+                notes:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Batch'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/batches/{batch}/process:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
+    post:
+      tags:
+      - Traceability
+      operationId: processBatch
+      summary: Process batches into a new product (dried, graded, milled …)
+      description: Inputs are row-locked; each gives at most what it has left (422 trace_quantity_exceeded, with `available`). Closed, recalled and shipment batches cannot be used (409 trace_batch_not_open). An input that is used up is closed.
+      x-permission: trace.batches.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - output
+              properties:
+                output:
+                  type: object
+                  required:
+                  - name
+                  properties:
+                    name:
+                      type: string
+                    quantity:
+                      type:
+                      - number
+                      - 'null'
+                      description: Defaults to what went in when the units agree
+                    unit:
+                      type:
+                      - string
+                      - 'null'
+                    method:
+                      type:
+                      - string
+                      - 'null'
+                quantity:
+                  type:
+                  - number
+                  - 'null'
+                  exclusiveMinimum: 0
+                  description: From this batch; all that is left when omitted
+                with:
+                  type: array
+                  maxItems: 20
+                  items:
+                    type: object
+                    required:
+                    - batch_id
+                    properties:
+                      batch_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type:
+                        - number
+                        - 'null'
+                        exclusiveMinimum: 0
+                  description: Other input batches
+                occurred_at:
+                  type: string
+                  format: date-time
+                notes:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Batch'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/batches/{batch}/package:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
+    post:
+      tags:
+      - Traceability
+      operationId: packageBatch
+      summary: Pack batches into a packaged product
+      description: Inputs are row-locked; each gives at most what it has left (422 trace_quantity_exceeded, with `available`). Closed, recalled and shipment batches cannot be used (409 trace_batch_not_open). An input that is used up is closed.
+      x-permission: trace.batches.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - output
+              properties:
+                output:
+                  type: object
+                  required:
+                  - name
+                  properties:
+                    name:
+                      type: string
+                    quantity:
+                      type:
+                      - number
+                      - 'null'
+                      description: Defaults to what went in when the units agree
+                    unit:
+                      type:
+                      - string
+                      - 'null'
+                    package_count:
+                      type:
+                      - integer
+                      - 'null'
+                    package_size:
+                      type:
+                      - string
+                      - 'null'
+                quantity:
+                  type:
+                  - number
+                  - 'null'
+                  exclusiveMinimum: 0
+                  description: From this batch; all that is left when omitted
+                with:
+                  type: array
+                  maxItems: 20
+                  items:
+                    type: object
+                    required:
+                    - batch_id
+                    properties:
+                      batch_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type:
+                        - number
+                        - 'null'
+                        exclusiveMinimum: 0
+                  description: Other input batches
+                occurred_at:
+                  type: string
+                  format: date-time
+                notes:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Batch'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/batches/{batch}/recall:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
+    post:
+      tags:
+      - Traceability
+      operationId: recallBatch
+      summary: Recall a batch and everything made from it
+      description: Every downstream batch becomes `recalled` with a `status_changed` event naming the recall. Upstream batches are not touched.
+      x-permission: trace.publish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      batch:
+                        $ref: '#/components/schemas/Batch'
+                      affected:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Batch'
+                      shipments:
+                        type: integer
+                        description: Shipments reached by the recall
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/integrity:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Traceability
+      operationId: getTraceIntegrity
+      summary: Hash chain head and recent checks
+      x-permission: trace.batches.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TraceIntegrity'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/integrity/verify:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    post:
+      tags:
+      - Traceability
+      operationId: verifyTraceChain
+      summary: Re-verify the hash chain now
+      description: Recomputes every event hash in order and records the result. The same check runs nightly (trace:verify-chain) and emails the owner on failure.
+      x-permission: trace.publish | audit.view
+      responses:
+        '201':
+          description: Checked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ChainCheck'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/alerts:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Traceability
+      operationId: listTraceAlerts
+      summary: Traceability alerts
+      x-permission: trace.batches.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TraceAlert'
+                  meta:
+                    type: object
+                    properties:
+                      counts:
+                        type: object
+                        properties:
+                          critical:
+                            type: integer
+                          warning:
+                            type: integer
+                          info:
+                            type: integer
+        '403':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/shipments:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Sales
+      operationId: listShipments
+      summary: Shipments to customers
+      x-permission: sales.view | sales.fulfil | sales.invoice
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          enum:
+          - dispatched
+          - delivered
+          - failed
+      - name: filter[customer_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: q
+        in: query
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/CursorPage'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Shipment'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Sales
+      operationId: dispatchShipment
+      summary: Dispatch goods to a customer
+      description: Creates a `shipment` trace batch linked `ship` from each batch sent (taking the quantity) and records `dispatched` with the customer.
+      x-permission: sales.fulfil
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - customer_id
+              - lines
+              properties:
+                customer_id:
+                  type: string
+                  format: uuid
+                customer_invoice_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                  description: An invoice of the same customer
+                destination:
+                  type:
+                  - string
+                  - 'null'
+                  description: Defaults to the customer's address
+                vehicle:
+                  type:
+                  - string
+                  - 'null'
+                driver:
+                  type:
+                  - string
+                  - 'null'
+                notes:
+                  type:
+                  - string
+                  - 'null'
+                dispatched_at:
+                  type: string
+                  format: date-time
+                lines:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items:
+                    type: object
+                    required:
+                    - batch_id
+                    properties:
+                      batch_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type:
+                        - number
+                        - 'null'
+                        exclusiveMinimum: 0
+                        description: All that is left when omitted
+                      description:
+                        type:
+                        - string
+                        - 'null'
+      responses:
+        '201':
+          description: Dispatched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Shipment'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/shipments/{shipment}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: shipment
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Sales
+      operationId: getShipment
+      summary: A shipment
+      x-permission: sales.view | sales.fulfil | sales.invoice
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Shipment'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/shipments/{shipment}/deliver:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: shipment
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Sales
+      operationId: deliverShipment
+      summary: Confirm delivery
+      description: Records `delivered` and closes the shipment batch.
+      x-permission: sales.fulfil
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                delivered_at:
+                  type: string
+                  format: date-time
+                received_by:
+                  type:
+                  - string
+                  - 'null'
+                notes:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Shipment'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/shipments/{shipment}/fail:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: shipment
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Sales
+      operationId: failShipment
+      summary: Record a failed delivery
+      x-permission: sales.fulfil
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 300
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Shipment'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+
 components:
   securitySchemes:
     bearer:
@@ -10496,6 +11368,7 @@ components:
         name: { type: [string, 'null'] }
         status: { $ref: '#/components/schemas/BatchStatus' }
         quantity: { oneOf: [{ $ref: '#/components/schemas/Quantity' }, { type: 'null' }] }
+        available: { oneOf: [{ $ref: '#/components/schemas/Quantity' }, { type: 'null' }], description: 'What splits, merges, processing, packing and shipments have not taken' }
         origin_plot_id: { type: [string, 'null'] }
         source:
           oneOf:
@@ -15327,3 +16200,726 @@ components:
           type: number
         margin:
           type: number
+    Journey:
+      type: object
+      properties:
+        batch:
+          $ref: '#/components/schemas/Batch'
+        backward:
+          oneOf:
+          - $ref: '#/components/schemas/Graph'
+          - type: 'null'
+        forward:
+          oneOf:
+          - $ref: '#/components/schemas/Graph'
+          - type: 'null'
+        evidence_summary:
+          type: object
+          properties:
+            events:
+              type: integer
+            gps_points:
+              type: integer
+            workers:
+              type: integer
+            corrections:
+              type: integer
+            sources:
+              type:
+              - integer
+              - 'null'
+            destinations:
+              type:
+              - integer
+              - 'null'
+        projection:
+          type: object
+          properties:
+            source:
+              type: string
+              enum:
+              - projection
+              - live
+            refreshed_at:
+              type: string
+              format: date-time
+    TimelineEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+        batch:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              batch_code:
+                type: string
+              kind:
+                $ref: '#/components/schemas/BatchKind'
+              name:
+                type:
+                - string
+                - 'null'
+          - type: 'null'
+        occurred_at:
+          type: string
+          format: date-time
+        recorded_at:
+          type: string
+          format: date-time
+        recorded_late:
+          type: boolean
+        actor:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type:
+                - string
+                - 'null'
+          - type: 'null'
+        worker_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        plot_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        location:
+          oneOf:
+          - type: object
+            properties:
+              lat:
+                type: number
+              lng:
+                type: number
+              accuracy_m:
+                type:
+                - number
+                - 'null'
+          - type: 'null'
+        subject:
+          oneOf:
+          - type: object
+            properties:
+              type:
+                type: string
+              id:
+                type: string
+          - type: 'null'
+        payload:
+          type: object
+          additionalProperties: true
+        corrected:
+          type: boolean
+        original_payload:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+        corrections:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              reason:
+                type:
+                - string
+                - 'null'
+              corrected:
+                type: object
+                additionalProperties: true
+              recorded_at:
+                type: string
+                format: date-time
+              actor_user_id:
+                type:
+                - string
+                - 'null'
+                format: uuid
+        seq:
+          type: integer
+    JourneyWorkers:
+      type: object
+      properties:
+        workers:
+          type: array
+          items:
+            type: object
+            properties:
+              worker_id:
+                type: string
+                format: uuid
+              worker_code:
+                type:
+                - string
+                - 'null'
+              name:
+                type:
+                - string
+                - 'null'
+                description: Needs workers.view
+              events:
+                type: integer
+              first_at:
+                type: string
+                format: date-time
+              last_at:
+                type: string
+                format: date-time
+              activities:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    event_id:
+                      type: string
+                      format: uuid
+                    event_type:
+                      type: string
+                    activity_type:
+                      type: string
+                    task:
+                      type: string
+                    batch_code:
+                      type: string
+                    occurred_at:
+                      type: string
+                      format: date-time
+                    has_gps:
+                      type: boolean
+        recorders:
+          type: array
+          items:
+            type: object
+            properties:
+              user_id:
+                type: string
+                format: uuid
+              name:
+                type:
+                - string
+                - 'null'
+              events:
+                type: integer
+              event_types:
+                type: object
+                additionalProperties:
+                  type: integer
+    JourneyInputs:
+      type: object
+      properties:
+        lots:
+          type: array
+          items:
+            type: object
+            properties:
+              batch:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  batch_code:
+                    type: string
+                  kind:
+                    $ref: '#/components/schemas/BatchKind'
+                  name:
+                    type:
+                    - string
+                    - 'null'
+                  status:
+                    $ref: '#/components/schemas/BatchStatus'
+              role:
+                type: string
+                enum:
+                - source
+                - applied
+              item:
+                type:
+                - string
+                - 'null'
+              lot_number:
+                type:
+                - string
+                - 'null'
+              supplier:
+                type:
+                - string
+                - 'null'
+              order:
+                type:
+                - string
+                - 'null'
+              expires_on:
+                type:
+                - string
+                - 'null'
+              received_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+        applications:
+          type: array
+          items:
+            type: object
+            properties:
+              event_id:
+                type: string
+                format: uuid
+              event_type:
+                type: string
+                enum:
+                - input_applied
+                - fed
+                - treated
+                - vaccinated
+                - dewormed
+              occurred_at:
+                type: string
+                format: date-time
+              applied_to:
+                type:
+                - string
+                - 'null'
+              product:
+                type:
+                - string
+                - 'null'
+              quantity:
+                type:
+                - string
+                - 'null'
+              unit:
+                type:
+                - string
+                - 'null'
+              input_batch:
+                oneOf:
+                - type: object
+                  properties:
+                    batch_code:
+                      type: string
+                    id:
+                      type:
+                      - string
+                      - 'null'
+                      format: uuid
+                - type: 'null'
+              withholding_days:
+                type:
+                - integer
+                - 'null'
+              meat_withdrawal_days:
+                type:
+                - integer
+                - 'null'
+              milk_withdrawal_days:
+                type:
+                - integer
+                - 'null'
+    JourneySale:
+      type: object
+      properties:
+        shipment_batch:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            batch_code:
+              type: string
+            name:
+              type:
+              - string
+              - 'null'
+            status:
+              $ref: '#/components/schemas/BatchStatus'
+            quantity:
+              oneOf:
+              - $ref: '#/components/schemas/Quantity'
+              - type: 'null'
+        shipment:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type:
+                - string
+                - 'null'
+          - type: 'null'
+        customer:
+          type:
+          - string
+          - 'null'
+        destination:
+          type:
+          - string
+          - 'null'
+        invoice:
+          type:
+          - string
+          - 'null'
+        dispatched_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        delivered_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        received_by:
+          type:
+          - string
+          - 'null'
+        from:
+          type: array
+          items:
+            type: object
+            properties:
+              batch_id:
+                type: string
+                format: uuid
+              batch_code:
+                type:
+                - string
+                - 'null'
+              quantity:
+                type:
+                - string
+                - 'null'
+              unit:
+                type:
+                - string
+                - 'null'
+    JourneyLocations:
+      type: object
+      properties:
+        plots:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type:
+                - string
+                - 'null'
+              area_ha:
+                type:
+                - number
+                - string
+                - 'null'
+              centroid:
+                oneOf:
+                - type: object
+                  properties:
+                    lat:
+                      type: number
+                    lng:
+                      type: number
+                - type: 'null'
+              boundary:
+                type:
+                - object
+                - 'null'
+                description: GeoJSON Polygon
+              batches:
+                type: array
+                items:
+                  type: string
+        points:
+          type: array
+          items:
+            type: object
+            properties:
+              event_id:
+                type: string
+                format: uuid
+              event_type:
+                type: string
+              batch_code:
+                type: string
+              occurred_at:
+                type: string
+                format: date-time
+              lat:
+                type: number
+              lng:
+                type: number
+              accuracy_m:
+                type:
+                - number
+                - 'null'
+              worker_id:
+                type:
+                - string
+                - 'null'
+                format: uuid
+        moves:
+          type: array
+          items:
+            type: object
+            properties:
+              event_id:
+                type: string
+                format: uuid
+              batch_code:
+                type: string
+              occurred_at:
+                type: string
+                format: date-time
+              from:
+                type:
+                - string
+                - 'null'
+              to:
+                type:
+                - string
+                - 'null'
+    ChainCheck:
+      type: object
+      properties:
+        result:
+          type: string
+          enum:
+          - pass
+          - fail
+        events:
+          type: integer
+        first_bad_seq:
+          type:
+          - integer
+          - 'null'
+        reason:
+          type:
+          - string
+          - 'null'
+          enum:
+          - sequence_gap
+          - broken_link
+          - hash_mismatch
+          - head_mismatch
+          - null
+        checked_at:
+          type: string
+          format: date-time
+    TraceIntegrity:
+      type: object
+      properties:
+        events:
+          type: integer
+        head_hash:
+          type:
+          - string
+          - 'null'
+        latest:
+          oneOf:
+          - $ref: '#/components/schemas/ChainCheckRecord'
+          - type: 'null'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChainCheckRecord'
+    ChainCheckRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        result:
+          type: string
+          enum:
+          - pass
+          - fail
+        events:
+          type:
+          - integer
+          - 'null'
+        first_bad_seq:
+          type:
+          - integer
+          - 'null'
+        reason:
+          type:
+          - string
+          - 'null'
+        checked_at:
+          type: string
+          format: date-time
+    TraceAlert:
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+          - chain_failed
+          - chain_unverified
+          - recalled_shipped
+          - shipment_undelivered
+          - missing_origin
+          - unknown_seed_source
+        severity:
+          type: string
+          enum:
+          - critical
+          - warning
+          - info
+        title:
+          type: string
+        count:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            description: A `batch` reference, plus details such as the customer
+    Shipment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: shipment
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - dispatched
+          - delivered
+          - failed
+        customer:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        invoice:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type:
+                - string
+                - 'null'
+          - type: 'null'
+        trace_batch:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            batch_code:
+              type: string
+            status:
+              $ref: '#/components/schemas/BatchStatus'
+        destination:
+          type:
+          - string
+          - 'null'
+        vehicle:
+          type:
+          - string
+          - 'null'
+        driver:
+          type:
+          - string
+          - 'null'
+        notes:
+          type:
+          - string
+          - 'null'
+        dispatched_at:
+          type: string
+          format: date-time
+        dispatched_by:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        delivered_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        received_by:
+          type:
+          - string
+          - 'null'
+        failure_reason:
+          type:
+          - string
+          - 'null'
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              batch:
+                oneOf:
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    batch_code:
+                      type: string
+                    kind:
+                      $ref: '#/components/schemas/BatchKind'
+                    name:
+                      type:
+                      - string
+                      - 'null'
+                - type: 'null'
+              quantity:
+                oneOf:
+                - $ref: '#/components/schemas/Quantity'
+                - type: 'null'
+              description:
+                type:
+                - string
+                - 'null'
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
