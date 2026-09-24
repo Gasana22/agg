@@ -19,6 +19,7 @@ class DashboardRegistry
 
     public function __construct(
         private readonly FarmMetrics $metrics,
+        private readonly CropMetrics $crops,
         private readonly FarmPermissions $permissions,
         private readonly TenantContext $context,
     ) {}
@@ -29,9 +30,13 @@ class DashboardRegistry
         $trace = ['trace.open_batches', 'trace.events'];
 
         return match ($dashboard) {
-            'owner' => ['kpis' => ['farm.area', 'structure.mapped_area', 'structure.plots', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'view_map', 'new_batch', 'view_audit_log']],
-            'manager' => ['kpis' => ['structure.plots', 'farm.members', ...$trace], 'widgets' => ['recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'view_map', 'new_batch']],
-            'agronomist' => ['kpis' => ['structure.plots', 'structure.mapped_area', ...$trace], 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_map', 'new_batch']],
+            'owner' => ['kpis' => ['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'pest_disease_alerts', 'upcoming_harvests', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'view_map', 'new_batch', 'view_audit_log']],
+            'manager' => ['kpis' => ['crop.active_cycles', 'crop.incidents_open', 'structure.plots', 'farm.members', ...$trace], 'widgets' => ['operations_to_verify', 'pest_disease_alerts', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'start_cycle', 'view_map', 'new_batch']],
+            'agronomist' => [
+                'kpis' => ['crop.active_cycles', 'crop.planted_area', 'crop.near_harvest', 'crop.expected_yield', 'crop.actual_yield', 'crop.yield_per_ha', 'crop.incidents_open', 'crop.treatments_active'],
+                'widgets' => ['pest_disease_alerts', 'operations_to_verify', 'upcoming_harvests', 'expected_vs_actual_yield', 'recent_trace_events'],
+                'quick_actions' => ['start_cycle', 'record_operation', 'report_observation', 'record_harvest', 'new_crop_plan', 'view_map'],
+            ],
             'livestock', 'store' => ['kpis' => $trace, 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_map', 'new_batch']],
             'accountant' => ['kpis' => ['trace.open_batches'], 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_audit_log']],
             'worker' => ['kpis' => [], 'widgets' => [], 'quick_actions' => []],
@@ -54,6 +59,23 @@ class DashboardRegistry
                 'value' => fn () => $this->metrics->plots()],
             'structure.mapped_area' => ['label' => 'Mapped area', 'format' => 'quantity', 'permission' => 'structure.view',
                 'value' => fn () => ['value' => number_format($this->metrics->mappedAreaHa(), 2, '.', ''), 'unit' => 'ha']],
+            'crop.active_cycles' => ['label' => 'Active crop cycles', 'format' => 'number', 'permission' => 'crops.plans.view',
+                'value' => fn () => $this->crops->activeCycles()],
+            'crop.planted_area' => ['label' => 'Planted area', 'format' => 'quantity', 'permission' => 'crops.plans.view',
+                'value' => fn () => ['value' => number_format($this->crops->plantedAreaHa(), 2, '.', ''), 'unit' => 'ha']],
+            'crop.near_harvest' => ['label' => 'Near harvest (14 days)', 'format' => 'number', 'permission' => 'crops.plans.view',
+                'value' => fn () => $this->crops->nearHarvest()],
+            'crop.expected_yield' => ['label' => 'Expected yield (open cycles)', 'format' => 'quantity', 'permission' => 'crops.plans.view',
+                'value' => fn () => ['value' => number_format($this->crops->expectedYieldKg(), 1, '.', ''), 'unit' => 'kg']],
+            'crop.actual_yield' => ['label' => 'Harvested', 'format' => 'quantity', 'permission' => 'crops.harvest.view',
+                'value' => fn (Period $p) => ['value' => number_format($this->crops->harvestedKg($p), 1, '.', ''), 'unit' => 'kg'],
+                'previous' => fn (Period $p) => ['value' => number_format($this->crops->harvestedKg($p->previous()), 1, '.', ''), 'unit' => 'kg']],
+            'crop.yield_per_ha' => ['label' => 'Yield per hectare', 'format' => 'quantity', 'permission' => 'crops.harvest.view',
+                'value' => fn (Period $p) => ($v = $this->crops->yieldPerHa($p)) === null ? null : ['value' => number_format($v, 1, '.', ''), 'unit' => 'kg/ha']],
+            'crop.incidents_open' => ['label' => 'Open pest & disease incidents', 'format' => 'number', 'permission' => 'crops.operations.view',
+                'value' => fn () => $this->crops->openIncidents()],
+            'crop.treatments_active' => ['label' => 'Cycles under withholding', 'format' => 'number', 'permission' => 'crops.operations.view',
+                'value' => fn () => $this->crops->cyclesUnderWithholding()],
             'trace.open_batches' => ['label' => 'Open batches', 'format' => 'number', 'permission' => 'trace.batches.view',
                 'value' => fn () => $this->metrics->openBatches()],
             'trace.events' => ['label' => 'Traceability events', 'format' => 'number', 'permission' => 'trace.batches.view',
@@ -74,9 +96,29 @@ class DashboardRegistry
                 'data' => fn () => ['items' => [
                     ['key' => 'profile', 'label' => 'Complete the farm profile', 'done' => $farm->district !== null && $farm->size_ha !== null, 'href' => "/farms/{$farm->id}/settings"],
                     ['key' => 'structure', 'label' => 'Map your blocks and plots', 'done' => $this->metrics->plots() > 0, 'href' => "/farms/{$farm->id}/structure"],
+                    ['key' => 'crops', 'label' => 'Start your first crop cycle', 'done' => $this->crops->anyCycle(), 'href' => "/farms/{$farm->id}/crops"],
                     ['key' => 'members', 'label' => 'Invite your team', 'done' => $this->metrics->membersActive() > 1, 'href' => "/farms/{$farm->id}/members"],
                     ['key' => 'approval', 'label' => 'Farm approved by SFMTP', 'done' => $farm->status->value === 'active', 'href' => null],
                 ]]],
+            'pest_disease_alerts' => ['type' => 'action_list', 'permission' => 'crops.operations.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->crops->incidentAlerts()]],
+            'operations_to_verify' => ['type' => 'action_list', 'permission' => 'crops.operations.approve', 'inline' => true,
+                'data' => fn () => ['items' => $this->crops->operationsToVerify()]],
+            'upcoming_harvests' => ['type' => 'action_list', 'permission' => 'crops.plans.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->crops->upcomingHarvests()]],
+            'expected_vs_actual_yield' => ['type' => 'chart', 'permission' => 'crops.harvest.view', 'inline' => false,
+                'data' => function (Period $p) {
+                    $d = $this->crops->expectedVsActual($p);
+
+                    return [
+                        'chart' => 'bar',
+                        'x' => ['type' => 'category', 'values' => $d['labels']],
+                        'series' => [
+                            ['key' => 'expected', 'label' => 'Expected', 'unit' => 'kg', 'values' => $d['expected']],
+                            ['key' => 'actual', 'label' => 'Harvested', 'unit' => 'kg', 'values' => $d['actual']],
+                        ],
+                    ];
+                }],
             'recent_trace_events' => ['type' => 'action_list', 'permission' => 'trace.batches.view', 'inline' => true,
                 'data' => fn () => ['items' => $this->metrics->recentTraceEvents()]],
             'trace_activity' => ['type' => 'chart', 'permission' => 'trace.batches.view', 'inline' => false,
@@ -100,6 +142,11 @@ class DashboardRegistry
         return [
             'invite_member' => ['label' => 'Invite member', 'permission' => 'members.invite_workers', 'target' => "/farms/{$id}/members?invite=1"],
             'view_map' => ['label' => 'Farm map', 'permission' => 'structure.view', 'target' => "/farms/{$id}/structure"],
+            'start_cycle' => ['label' => 'Start crop cycle', 'permission' => 'crops.plans.manage', 'target' => "/farms/{$id}/crops?new=cycle"],
+            'record_operation' => ['label' => 'Record field work', 'permission' => 'crops.operations.record', 'target' => "/farms/{$id}/crops?action=operation"],
+            'report_observation' => ['label' => 'Report pest / disease', 'permission' => 'crops.operations.record', 'target' => "/farms/{$id}/crops?action=observation"],
+            'record_harvest' => ['label' => 'Record harvest', 'permission' => 'crops.harvest.record', 'target' => "/farms/{$id}/crops?action=harvest"],
+            'new_crop_plan' => ['label' => 'New crop plan', 'permission' => 'crops.plans.manage', 'target' => "/farms/{$id}/crops?tab=plans&new=plan"],
             'new_batch' => ['label' => 'New batch', 'permission' => 'trace.batches.create', 'target' => "/farms/{$id}/traceability/batches/new"],
             'view_audit_log' => ['label' => 'Audit log', 'permission' => 'audit.view', 'target' => "/farms/{$id}/audit-log"],
         ];
@@ -203,6 +250,8 @@ class DashboardRegistry
 
     private function delta(mixed $current, mixed $previous): ?array
     {
+        // Quantities compare on their value.
+        [$current, $previous] = [is_array($current) ? ($current['value'] ?? null) : $current, is_array($previous) ? ($previous['value'] ?? null) : $previous];
         if (! is_numeric($current) || ! is_numeric($previous)) {
             return null;
         }

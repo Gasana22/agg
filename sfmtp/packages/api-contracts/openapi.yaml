@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SFMTP API
-  version: 1.2.0-phase3
+  version: 1.3.0-phase4
   description: |
     Smart Farm Management & Traceability Platform REST API.
 
@@ -26,6 +26,8 @@ tags:
     description: Farm (tenant) profile and lifecycle.
   - name: Access
     description: Members, invitations, roles and the permission registry.
+  - name: Crops
+    description: Farm crop list, seasons, plans, cycles, field operations, observations and harvests. Cycles, operations, observations and harvests write the trace history.
   - name: Structure
     description: Blocks, sections, plots and locations with GeoJSON boundaries (ADR-0009).
   - name: Traceability
@@ -122,7 +124,7 @@ paths:
       operationId: refresh
       security: []
       summary: Rotate a refresh token
-      description: Each refresh token works once. Replaying an old one revokes the whole session (`token_reuse_detected`).
+      description: 'Each refresh token works once. Replaying an old one revokes the whole session (`token_reuse_detected`).'
       requestBody:
         required: true
         content:
@@ -149,7 +151,7 @@ paths:
       operationId: logout
       summary: Revoke the current session (all its tokens)
       responses:
-        '204': { description: Signed out }
+        '204': { description: 'Signed out' }
         '401': { $ref: '#/components/responses/Problem' }
 
   /auth/password/forgot:
@@ -168,7 +170,7 @@ paths:
               properties:
                 email: { type: string, format: email }
       responses:
-        '202': { description: A reset link is emailed if the account exists }
+        '202': { description: 'A reset link is emailed if the account exists' }
 
   /auth/password/reset:
     post:
@@ -189,7 +191,7 @@ paths:
                 password: { type: string, minLength: 10 }
                 password_confirmation: { type: string }
       responses:
-        '204': { description: Password changed; every session is signed out }
+        '204': { description: 'Password changed; every session is signed out' }
         '422': { $ref: '#/components/responses/Problem' }
 
   /auth/mfa/setup:
@@ -284,7 +286,7 @@ paths:
               properties:
                 code: { type: string }
       responses:
-        '204': { description: MFA disabled }
+        '204': { description: 'MFA disabled' }
         '403': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
 
@@ -356,7 +358,7 @@ paths:
       parameters:
         - { name: device, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
-        '204': { description: Device signed out }
+        '204': { description: 'Device signed out' }
         '404': { $ref: '#/components/responses/Problem' }
 
   /farms:
@@ -466,7 +468,7 @@ paths:
       x-permission: farm.delete
       summary: Close (archive) the farm. Owner only; data is retained.
       responses:
-        '204': { description: Closed }
+        '204': { description: 'Closed' }
         '403': { $ref: '#/components/responses/Problem' }
 
   /me/farms/overview:
@@ -532,7 +534,7 @@ paths:
       tags: [Access]
       operationId: updateMember
       summary: Change a member's roles or status
-      description: The owner's membership and your own cannot be changed (403 guard_rail_owner / guard_rail_self).
+      description: 'The owner''s membership and your own cannot be changed (403 guard_rail_owner / guard_rail_self).'
       x-permission: members.manage
       requestBody:
         required: true
@@ -560,7 +562,7 @@ paths:
       summary: Remove a member from the farm
       x-permission: members.manage
       responses:
-        '204': { description: Removed }
+        '204': { description: 'Removed' }
         '403': { $ref: '#/components/responses/Problem' }
 
   /farms/{farm}/invitations:
@@ -633,7 +635,7 @@ paths:
         - $ref: '#/components/parameters/Farm'
         - { name: invitation, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
-        '204': { description: Revoked }
+        '204': { description: 'Revoked' }
         '409': { $ref: '#/components/responses/Problem' }
 
   /farms/{farm}/invitations/{invitation}/resend:
@@ -767,7 +769,7 @@ paths:
       tags: [Access]
       operationId: createRole
       summary: Create a custom role
-      description: Starts empty, from `grants`, or from a copy of another role's grants (owner-only permissions are never copied).
+      description: 'Starts empty, from `grants`, or from a copy of another role''s grants (owner-only permissions are never copied).'
       x-permission: roles.manage
       parameters:
         - $ref: '#/components/parameters/Farm'
@@ -829,10 +831,10 @@ paths:
       tags: [Access]
       operationId: deleteRole
       summary: Delete a custom role nobody holds
-      description: 403 system_role for built-in roles; 409 role_in_use while members or pending invitations use it.
+      description: '403 system_role for built-in roles; 409 role_in_use while members or pending invitations use it.'
       x-permission: roles.manage
       responses:
-        '204': { description: Deleted }
+        '204': { description: 'Deleted' }
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
 
@@ -893,7 +895,7 @@ paths:
       tags: [Structure]
       operationId: getFarmStructure
       summary: The farm layout (flat lists with parent ids) and totals
-      description: Filtered by the member's `structure.view` scope; an `assigned` scope sees only plots on their tasks (Phase 6).
+      description: 'Filtered by the member''s `structure.view` scope; an `assigned` scope sees only plots on their tasks (Phase 6).'
       x-permission: structure.view
       parameters:
         - $ref: '#/components/parameters/Farm'
@@ -957,7 +959,7 @@ paths:
       tags: [Structure]
       operationId: updateBlock
       summary: Update a block
-      description: Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.
+      description: 'Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.'
       x-permission: structure.manage
       requestBody:
         required: true
@@ -985,10 +987,10 @@ paths:
       tags: [Structure]
       operationId: archiveBlock
       summary: Archive a block
-      description: Soft delete. 409 has_active_children while it still contains active items.
+      description: 'Soft delete. 409 has_active_children while it still contains active items.'
       x-permission: structure.manage
       responses:
-        '204': { description: Archived }
+        '204': { description: 'Archived' }
         '409': { $ref: '#/components/responses/Problem' }
 
   /farms/{farm}/structure/sections:
@@ -1041,7 +1043,7 @@ paths:
       tags: [Structure]
       operationId: updateSection
       summary: Update a section
-      description: Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.
+      description: 'Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.'
       x-permission: structure.manage
       requestBody:
         required: true
@@ -1069,10 +1071,10 @@ paths:
       tags: [Structure]
       operationId: archiveSection
       summary: Archive a section
-      description: Soft delete. 409 has_active_children while it still contains active items.
+      description: 'Soft delete. 409 has_active_children while it still contains active items.'
       x-permission: structure.manage
       responses:
-        '204': { description: Archived }
+        '204': { description: 'Archived' }
         '409': { $ref: '#/components/responses/Problem' }
 
   /farms/{farm}/structure/plots:
@@ -1125,7 +1127,7 @@ paths:
       tags: [Structure]
       operationId: updatePlot
       summary: Update a plot
-      description: Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.
+      description: 'Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.'
       x-permission: structure.manage
       requestBody:
         required: true
@@ -1153,10 +1155,10 @@ paths:
       tags: [Structure]
       operationId: archivePlot
       summary: Archive a plot
-      description: Soft delete. 409 has_active_children while it still contains active items.
+      description: 'Soft delete. 409 has_active_children while it still contains active items.'
       x-permission: structure.manage
       responses:
-        '204': { description: Archived }
+        '204': { description: 'Archived' }
         '409': { $ref: '#/components/responses/Problem' }
 
   /farms/{farm}/structure/locations:
@@ -1209,7 +1211,7 @@ paths:
       tags: [Structure]
       operationId: updateLocation
       summary: Update a location
-      description: Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.
+      description: 'Send `version` (or `If-Match`) to detect concurrent edits. `boundary` null clears the drawn shape.'
       x-permission: structure.manage
       requestBody:
         required: true
@@ -1237,10 +1239,10 @@ paths:
       tags: [Structure]
       operationId: archiveLocation
       summary: Archive a location
-      description: Soft delete. 409 has_active_children while it still contains active items.
+      description: 'Soft delete. 409 has_active_children while it still contains active items.'
       x-permission: structure.manage
       responses:
-        '204': { description: Archived }
+        '204': { description: 'Archived' }
         '409': { $ref: '#/components/responses/Problem' }
 
   /farms/{farm}/structure/plots/{plot}/soil:
@@ -1267,6 +1269,755 @@ paths:
                 properties:
                   data: { $ref: '#/components/schemas/StructurePlot' }
         '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crops:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Crops]
+      operationId: listFarmCrops
+      summary: The farm's crop list
+      x-permission: crops.plans.view
+      parameters:
+        - { name: include_inactive, in: query, schema: { type: boolean } }
+      responses:
+        '200':
+          description: All results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/FarmCrop' }
+    post:
+      tags: [Crops]
+      operationId: addFarmCrop
+      summary: Add a crop, usually from the catalogue (variety → crop, name and maturity filled in)
+      x-permission: crops.plans.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FarmCropInput' }
+      responses:
+        '201':
+          description: Added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/FarmCrop' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crops/{crop}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: crop, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      tags: [Crops]
+      operationId: updateFarmCrop
+      summary: Edit or deactivate a crop
+      x-permission: crops.plans.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FarmCropInput' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/FarmCrop' }
+
+  /farms/{farm}/seasons:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Crops]
+      operationId: listSeasons
+      summary: Seasons, newest first
+      x-permission: crops.plans.view
+      responses:
+        '200':
+          description: All results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Season' }
+    post:
+      tags: [Crops]
+      operationId: createSeason
+      summary: Create a season
+      x-permission: crops.plans.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SeasonInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Season' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/seasons/{season}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: season, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      tags: [Crops]
+      operationId: updateSeason
+      summary: Edit a season
+      x-permission: crops.plans.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SeasonInput' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Season' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-plans:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Crops]
+      operationId: listCropPlans
+      summary: Crop plans
+      x-permission: crops.plans.view
+      parameters:
+        - { name: 'filter[status]', in: query, schema: { $ref: '#/components/schemas/CropPlanStatus' } }
+        - { name: 'filter[season_id]', in: query, schema: { type: string, format: uuid } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/CropPlan' }
+    post:
+      tags: [Crops]
+      operationId: createCropPlan
+      summary: Draft a crop plan
+      description: '`budget_amount` needs finance.values.view (403 money_field_forbidden).'
+      x-permission: crops.plans.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CropPlanInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropPlan' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-plans/{crop_plan}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: crop_plan, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Crops]
+      operationId: getCropPlan
+      summary: Get a crop plan
+      x-permission: crops.plans.view
+      responses:
+        '200':
+          description: The plan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropPlan' }
+    patch:
+      tags: [Crops]
+      operationId: updateCropPlan
+      summary: Edit a draft plan
+      x-permission: crops.plans.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CropPlanInput' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropPlan' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-plans/{crop_plan}/approve:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: crop_plan, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Crops]
+      operationId: approveCropPlan
+      summary: Approve a draft plan
+      description: 'Four-eyes: the author cannot approve their own plan unless they are the owner.'
+      x-permission: crops.plans.approve
+      responses:
+        '200':
+          description: Approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropPlan' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-plans/{crop_plan}/close:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: crop_plan, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Crops]
+      operationId: closeCropPlan
+      summary: Close a plan whose cycles are all closed
+      x-permission: crops.plans.manage
+      responses:
+        '200':
+          description: Closed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropPlan' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-cycles:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Crops]
+      operationId: listCropCycles
+      summary: Crop cycles
+      x-permission: crops.plans.view
+      parameters:
+        - { name: 'filter[stage]', in: query, schema: { type: string, enum: [open, nursery, planted, growing, harvesting, closed] } }
+        - { name: 'filter[plot_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[crop_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[season_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[plan_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: q, in: query, schema: { type: string } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/CropCycle' }
+    post:
+      tags: [Crops]
+      operationId: startCropCycle
+      summary: Start a crop cycle on a plot
+      description: 'Creates the crop lot (direct) or nursery batch (transplant), linked from the seed lot. 409 plot_occupied when the plot has an open cycle and intercropping is off; 422 plan_not_approved.'
+      x-permission: crops.plans.manage
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CropCycleInput' }
+      responses:
+        '201':
+          description: Started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropCycle' }
+                  meta:
+                    type: object
+                    properties:
+                      warnings:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code: { type: string }
+                            message: { type: string }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-cycles/{cycle}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: cycle, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Crops]
+      operationId: getCropCycle
+      summary: Get a crop cycle
+      x-permission: crops.plans.view
+      responses:
+        '200':
+          description: The cycle
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropCycle' }
+    patch:
+      tags: [Crops]
+      operationId: updateCropCycle
+      summary: Edit expected dates, yield, area or notes
+      x-permission: crops.plans.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expected_harvest_on: { type: [string, 'null'], format: date }
+                expected_yield: { type: [number, 'null'] }
+                yield_unit: { type: string }
+                area_ha: { type: number }
+                seedlings_germinated: { type: [integer, 'null'] }
+                notes: { type: [string, 'null'] }
+                version: { type: integer }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropCycle' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-cycles/{cycle}/transplant:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: cycle, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Crops]
+      operationId: transplantCropCycle
+      summary: Move seedlings from the nursery to the plot
+      x-permission: crops.plans.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planted_on]
+              properties:
+                planted_on: { type: string, format: date }
+                seedlings_germinated: { type: [integer, 'null'] }
+                seedlings_transplanted: { type: [integer, 'null'] }
+                expected_harvest_on: { type: [string, 'null'], format: date }
+      responses:
+        '200':
+          description: Planted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropCycle' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-cycles/{cycle}/stage:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: cycle, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Crops]
+      operationId: advanceCropCycle
+      summary: Move a cycle to growing or harvesting
+      x-permission: crops.plans.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stage]
+              properties:
+                stage: { type: string, enum: [growing, harvesting] }
+                note: { type: [string, 'null'] }
+      responses:
+        '200':
+          description: Moved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropCycle' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-cycles/{cycle}/close:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: cycle, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Crops]
+      operationId: closeCropCycle
+      summary: Close a cycle
+      description: '`harvested` needs at least one harvest (422 no_harvest). Closes the crop lot and nursery batches.'
+      x-permission: crops.plans.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, enum: [harvested, failed, abandoned, other] }
+                note: { type: [string, 'null'] }
+                closed_on: { type: [string, 'null'], format: date }
+      responses:
+        '200':
+          description: Closed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropCycle' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-operations:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Crops]
+      operationId: listCropOperations
+      summary: Field operations (filtered by the member's scope)
+      x-permission: crops.operations.view
+      parameters:
+        - { name: 'filter[cycle_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[status]', in: query, schema: { type: string, enum: [recorded, verified, rejected] } }
+        - { name: 'filter[type]', in: query, schema: { $ref: '#/components/schemas/CropOperationType' } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/CropOperation' }
+    post:
+      tags: [Crops]
+      operationId: recordCropOperation
+      summary: Record field work with the inputs used
+      description: 'Verified at once when the recorder holds crops.operations.approve, otherwise waits for verification. Verified work writes `operation` and `input_applied` trace events and starts withholding periods. 403 not_assigned for members with an `assigned` scope (tasks arrive in Phase 6); 403 money_field_forbidden for `cost_amount` without finance.values.view.'
+      x-permission: crops.operations.record
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CropOperationInput' }
+      responses:
+        '201':
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropOperation' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-operations/{operation}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: operation, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Crops]
+      operationId: getCropOperation
+      summary: Get an operation
+      x-permission: crops.operations.view
+      responses:
+        '200':
+          description: The operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropOperation' }
+
+  /farms/{farm}/crop-operations/{operation}/verify:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: operation, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Crops]
+      operationId: verifyCropOperation
+      summary: Verify recorded work
+      description: 'Four-eyes: not your own record unless you are the owner.'
+      x-permission: crops.operations.approve
+      responses:
+        '200':
+          description: Verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropOperation' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-operations/{operation}/reject:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: operation, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Crops]
+      operationId: rejectCropOperation
+      summary: Reject recorded work
+      x-permission: crops.operations.approve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropOperation' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-observations:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Crops]
+      operationId: listCropObservations
+      summary: Pest, disease and other scouting findings
+      x-permission: crops.operations.view
+      parameters:
+        - { name: 'filter[cycle_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[status]', in: query, schema: { type: string, enum: [open, monitoring, resolved, unresolved] } }
+        - { name: 'filter[kind]', in: query, schema: { $ref: '#/components/schemas/CropObservationKind' } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/CropObservation' }
+    post:
+      tags: [Crops]
+      operationId: reportCropObservation
+      summary: Report a finding on a cycle
+      x-permission: crops.operations.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CropObservationInput' }
+      responses:
+        '201':
+          description: Reported
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropObservation' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/crop-observations/{observation}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: observation, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      tags: [Crops]
+      operationId: updateCropObservation
+      summary: Change severity or status (resolve)
+      x-permission: crops.operations.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                severity: { $ref: '#/components/schemas/Severity' }
+                status: { type: string, enum: [open, monitoring, resolved] }
+                description: { type: [string, 'null'] }
+                affected_pct: { type: [number, 'null'] }
+                resolution_note: { type: [string, 'null'] }
+                version: { type: integer }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropObservation' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/harvests:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Crops]
+      operationId: listHarvests
+      summary: Harvests
+      x-permission: crops.harvest.view
+      parameters:
+        - { name: 'filter[cycle_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[from]', in: query, schema: { type: string, format: date } }
+        - { name: 'filter[to]', in: query, schema: { type: string, format: date } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/CropHarvest' }
+    post:
+      tags: [Crops]
+      operationId: recordHarvest
+      summary: Record a harvest
+      description: 'Creates a harvest batch derived from the crop lot. Inside a withholding period: 422 withholding_period unless `withholding_override_reason` is given by a member holding crops.operations.approve. Harvests are append-only.'
+      x-permission: crops.harvest.record
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CropHarvestInput' }
+      responses:
+        '201':
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropHarvest' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/harvests/{harvest}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: harvest, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Crops]
+      operationId: getHarvest
+      summary: Get a harvest
+      x-permission: crops.harvest.view
+      responses:
+        '200':
+          description: The harvest
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/CropHarvest' }
 
   /farms/{farm}/audit-logs:
     get:
@@ -1353,7 +2104,7 @@ paths:
         - $ref: '#/components/parameters/PerPage'
         - { name: 'filter[kind]', in: query, schema: { $ref: '#/components/schemas/BatchKind' } }
         - { name: 'filter[status]', in: query, schema: { $ref: '#/components/schemas/BatchStatus' } }
-        - { name: q, in: query, schema: { type: string }, description: Search batch code or name }
+        - { name: q, in: query, schema: { type: string }, description: 'Search batch code or name' }
         - { name: sort, in: query, schema: { type: string, enum: [created_at, -created_at, batch_code, -batch_code] } }
       responses:
         '200':
@@ -1716,7 +2467,7 @@ paths:
       x-capability: farms.reset_owner_password
       parameters: [{ $ref: '#/components/parameters/Farm' }]
       responses:
-        '202': { description: Link sent. The admin never sees or sets the password. }
+        '202': { description: 'Link sent. The admin never sees or sets the password.' }
 
   /admin/users:
     get:
@@ -1891,7 +2642,7 @@ paths:
       summary: Remove a provider configuration
       x-capability: integrations.manage
       responses:
-        '204': { description: Removed }
+        '204': { description: 'Removed' }
 
   /admin/system/health:
     get:
@@ -1930,7 +2681,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/PerPage'
-        - { name: 'filter[action]', in: query, schema: { type: string }, description: Prefix match }
+        - { name: 'filter[action]', in: query, schema: { type: string }, description: 'Prefix match' }
         - { name: 'filter[user_id]', in: query, schema: { type: string, format: uuid } }
       responses:
         '200':
@@ -2035,7 +2786,7 @@ paths:
         - $ref: '#/components/parameters/PerPage'
         - { name: 'filter[status]', in: query, schema: { $ref: '#/components/schemas/SubscriptionStatus' } }
         - { name: 'filter[expiring_within_days]', in: query, schema: { type: integer, minimum: 0 } }
-        - { name: q, in: query, schema: { type: string }, description: Organization name }
+        - { name: q, in: query, schema: { type: string }, description: 'Organization name' }
       responses:
         '200':
           description: Subscriptions
@@ -2343,7 +3094,7 @@ paths:
         - $ref: '#/components/parameters/Ticket'
         - { name: grant, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
-        '204': { description: Revoked }
+        '204': { description: 'Revoked' }
 
   /admin/support/tickets:
     get:
@@ -2356,7 +3107,7 @@ paths:
         - $ref: '#/components/parameters/PerPage'
         - { name: 'filter[status]', in: query, schema: { $ref: '#/components/schemas/TicketStatus' } }
         - { name: 'filter[assigned_to]', in: query, schema: { type: string, enum: [me, none] } }
-        - { name: q, in: query, schema: { type: string }, description: Subject or exact reference }
+        - { name: q, in: query, schema: { type: string }, description: 'Subject or exact reference' }
       responses:
         '200': { $ref: '#/components/responses/TicketPage' }
 
@@ -2493,13 +3244,13 @@ components:
 
   responses:
     Problem:
-      description: RFC 9457 problem details
+      description: 'RFC 9457 problem details'
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
 
     AdminFarm:
-      description: Farm metadata
+      description: 'Farm metadata'
       content:
         application/json:
           schema:
@@ -2507,7 +3258,7 @@ components:
             properties:
               data: { $ref: '#/components/schemas/AdminFarm' }
     Settings:
-      description: Settings
+      description: 'Settings'
       content:
         application/json:
           schema:
@@ -2523,7 +3274,7 @@ components:
                     value: {}
                     default: {}
     Integration:
-      description: Integration provider
+      description: 'Integration provider'
       content:
         application/json:
           schema:
@@ -2531,7 +3282,7 @@ components:
             properties:
               data: { $ref: '#/components/schemas/Integration' }
     Plan:
-      description: Plan
+      description: 'Plan'
       content:
         application/json:
           schema:
@@ -2539,7 +3290,7 @@ components:
             properties:
               data: { $ref: '#/components/schemas/Plan' }
     PlanList:
-      description: Plans
+      description: 'Plans'
       content:
         application/json:
           schema:
@@ -2547,7 +3298,7 @@ components:
             properties:
               data: { type: array, items: { $ref: '#/components/schemas/Plan' } }
     Subscription:
-      description: Subscription
+      description: 'Subscription'
       content:
         application/json:
           schema:
@@ -2559,7 +3310,7 @@ components:
                 properties:
                   payment_id: { type: string, format: uuid }
     CatalogList:
-      description: Catalogue entries
+      description: 'Catalogue entries'
       content:
         application/json:
           schema:
@@ -2567,7 +3318,7 @@ components:
             properties:
               data: { type: array, items: { $ref: '#/components/schemas/CatalogEntry' } }
     CatalogEntry:
-      description: Catalogue entry
+      description: 'Catalogue entry'
       content:
         application/json:
           schema:
@@ -2575,7 +3326,7 @@ components:
             properties:
               data: { $ref: '#/components/schemas/CatalogEntry' }
     Ticket:
-      description: Support ticket
+      description: 'Support ticket'
       content:
         application/json:
           schema:
@@ -2583,7 +3334,7 @@ components:
             properties:
               data: { $ref: '#/components/schemas/Ticket' }
     TicketPage:
-      description: Support tickets
+      description: 'Support tickets'
       content:
         application/json:
           schema:
@@ -2634,9 +3385,9 @@ components:
         mfa_required: { type: boolean, const: false }
         token_type: { type: string, const: Bearer }
         access_token: { type: string }
-        expires_in: { type: integer, description: seconds }
+        expires_in: { type: integer, description: 'seconds' }
         refresh_token: { type: string }
-        refresh_expires_in: { type: integer, description: seconds }
+        refresh_expires_in: { type: integer, description: 'seconds' }
 
     MfaPending:
       type: object
@@ -2742,7 +3493,7 @@ components:
         district: { type: [string, 'null'] }
         village: { type: [string, 'null'] }
         country: { type: string }
-        size_ha: { type: [string, 'null'], description: decimal string }
+        size_ha: { type: [string, 'null'], description: 'decimal string' }
         timezone: { type: string }
         currency: { type: string }
         approved_at: { type: [string, 'null'], format: date-time }
@@ -2782,7 +3533,7 @@ components:
         description: { type: [string, 'null'] }
         is_system: { type: boolean }
         is_locked: { type: boolean }
-        member_count: { type: integer, description: Only on the list endpoint }
+        member_count: { type: integer, description: 'Only on the list endpoint' }
         grants:
           type: object
           additionalProperties: { $ref: '#/components/schemas/Scope' }
@@ -2881,8 +3632,8 @@ components:
         key: { type: string }
         type: { type: string, enum: [action_list, checklist, chart, map, timeline] }
         inline: { type: boolean }
-        data: { type: object, additionalProperties: true, description: Present when inline }
-        href: { type: string, description: Present when not inline }
+        data: { type: object, additionalProperties: true, description: 'Present when inline' }
+        href: { type: string, description: 'Present when not inline' }
 
     ChartWidget:
       type: object
@@ -2918,7 +3669,7 @@ components:
     Quantity:
       type: object
       properties:
-        value: { type: string, description: decimal string }
+        value: { type: string, description: 'decimal string' }
         unit: { type: [string, 'null'] }
 
     Location:
@@ -2961,7 +3712,7 @@ components:
         event_type: { type: string }
         occurred_at: { type: string, format: date-time }
         recorded_at: { type: string, format: date-time }
-        recorded_late: { type: boolean, description: occurred_at and recorded_at differ by over an hour }
+        recorded_late: { type: boolean, description: 'occurred_at and recorded_at differ by over an hour' }
         actor_user_id: { type: [string, 'null'] }
         worker_id: { type: [string, 'null'] }
         plot_id: { type: [string, 'null'] }
@@ -3020,7 +3771,7 @@ components:
     Money:
       type: object
       properties:
-        amount: { type: string, description: decimal string }
+        amount: { type: string, description: 'decimal string' }
         currency: { type: string }
 
     AdminFarm:
@@ -3123,14 +3874,14 @@ components:
     PlanInput:
       type: object
       properties:
-        code: { type: string, pattern: '^[a-z0-9_]+$', description: Create only }
+        code: { type: string, pattern: '^[a-z0-9_]+$', description: 'Create only' }
         name: { type: string }
         description: { type: [string, 'null'] }
         price: { type: number, minimum: 0 }
         currency: { type: string }
         billing_period: { type: string, enum: [monthly, yearly] }
         trial_days: { type: [integer, 'null'] }
-        max_farms: { type: [integer, 'null'], description: null = unlimited }
+        max_farms: { type: [integer, 'null'], description: 'null = unlimited' }
         max_users: { type: [integer, 'null'] }
         max_storage_mb: { type: [integer, 'null'] }
         features: { type: array, items: { type: string } }
@@ -3231,7 +3982,7 @@ components:
 
     CatalogEntry:
       type: object
-      description: Common fields plus catalogue-specific ones (scientific_name, category, crop_id, maturity_days, species_id, purpose, dimension, to_base, kind, module)
+      description: 'Common fields plus catalogue-specific ones (scientific_name, category, crop_id, maturity_days, species_id, purpose, dimension, to_base, kind, module)'
       additionalProperties: true
       properties:
         id: { type: string, format: uuid }
@@ -3345,7 +4096,7 @@ components:
         description: { type: [string, 'null'] }
         type: { type: string, const: farm_block }
         boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
-        area_ha: { type: [number, 'null'], description: Computed from the boundary }
+        area_ha: { type: [number, 'null'], description: 'Computed from the boundary' }
         declared_area_ha: { type: [number, 'null'] }
         effective_area_ha: { type: [number, 'null'], description: 'area_ha when mapped, else declared_area_ha' }
         centroid:
@@ -3369,7 +4120,7 @@ components:
         type: { type: string, const: farm_section }
         block_id: { type: string, format: uuid }
         boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
-        area_ha: { type: [number, 'null'], description: Computed from the boundary }
+        area_ha: { type: [number, 'null'], description: 'Computed from the boundary' }
         declared_area_ha: { type: [number, 'null'] }
         effective_area_ha: { type: [number, 'null'], description: 'area_ha when mapped, else declared_area_ha' }
         centroid:
@@ -3397,7 +4148,7 @@ components:
         soil_profile: { oneOf: [{ $ref: '#/components/schemas/SoilProfile' }, { type: 'null' }] }
         soil_updated_at: { type: [string, 'null'], format: date-time }
         boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
-        area_ha: { type: [number, 'null'], description: Computed from the boundary }
+        area_ha: { type: [number, 'null'], description: 'Computed from the boundary' }
         declared_area_ha: { type: [number, 'null'] }
         effective_area_ha: { type: [number, 'null'], description: 'area_ha when mapped, else declared_area_ha' }
         centroid:
@@ -3424,7 +4175,7 @@ components:
         latitude: { type: [number, 'null'] }
         longitude: { type: [number, 'null'] }
         boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
-        area_ha: { type: [number, 'null'], description: Computed from the boundary }
+        area_ha: { type: [number, 'null'], description: 'Computed from the boundary' }
         declared_area_ha: { type: [number, 'null'] }
         effective_area_ha: { type: [number, 'null'], description: 'area_ha when mapped, else declared_area_ha' }
         centroid:
@@ -3442,7 +4193,7 @@ components:
       type: object
       properties:
         name: { type: string, maxLength: 120 }
-        code: { type: [string, 'null'], maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$', description: Generated when omitted; stored upper-case; never reused in the farm }
+        code: { type: [string, 'null'], maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$', description: 'Generated when omitted; stored upper-case; never reused in the farm' }
         description: { type: [string, 'null'], maxLength: 2000 }
         declared_area_ha: { type: [number, 'null'], minimum: 0 }
         boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
@@ -3451,7 +4202,7 @@ components:
       type: object
       properties:
         name: { type: string, maxLength: 120 }
-        code: { type: [string, 'null'], maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$', description: Generated when omitted; stored upper-case; never reused in the farm }
+        code: { type: [string, 'null'], maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$', description: 'Generated when omitted; stored upper-case; never reused in the farm' }
         description: { type: [string, 'null'], maxLength: 2000 }
         declared_area_ha: { type: [number, 'null'], minimum: 0 }
         boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
@@ -3461,7 +4212,7 @@ components:
       type: object
       properties:
         name: { type: string, maxLength: 120 }
-        code: { type: [string, 'null'], maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$', description: Generated when omitted; stored upper-case; never reused in the farm }
+        code: { type: [string, 'null'], maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$', description: 'Generated when omitted; stored upper-case; never reused in the farm' }
         description: { type: [string, 'null'], maxLength: 2000 }
         declared_area_ha: { type: [number, 'null'], minimum: 0 }
         boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
@@ -3473,7 +4224,7 @@ components:
       type: object
       properties:
         name: { type: string, maxLength: 120 }
-        code: { type: [string, 'null'], maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$', description: Generated when omitted; stored upper-case; never reused in the farm }
+        code: { type: [string, 'null'], maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$', description: 'Generated when omitted; stored upper-case; never reused in the farm' }
         description: { type: [string, 'null'], maxLength: 2000 }
         declared_area_ha: { type: [number, 'null'], minimum: 0 }
         boundary: { oneOf: [{ $ref: '#/components/schemas/GeoJsonPolygon' }, { type: 'null' }] }
@@ -3534,10 +4285,11 @@ components:
         approval_thresholds:
           type: object
           properties:
-            expense: { type: [number, 'null'], description: Farm currency }
+            expense: { type: [number, 'null'], description: 'Farm currency' }
             purchase_order: { type: [number, 'null'] }
             stock_adjustment_pct: { type: [number, 'null'] }
         allow_negative_stock: { type: boolean }
+        allow_intercropping: { type: boolean, description: 'More than one open crop cycle per plot' }
         units: { type: string, enum: [metric, imperial] }
 
     FarmSettingsInput:
@@ -3552,6 +4304,7 @@ components:
             purchase_order: { type: [number, 'null'], minimum: 0 }
             stock_adjustment_pct: { type: [number, 'null'], minimum: 0, maximum: 100 }
         allow_negative_stock: { type: boolean }
+        allow_intercropping: { type: boolean, description: 'More than one open crop cycle per plot' }
         units: { type: string, enum: [metric, imperial] }
 
     FarmOverview:
@@ -3630,3 +4383,308 @@ components:
         farm_id: { type: string, format: uuid }
         membership_id: { type: string, format: uuid }
         account_created: { type: boolean }
+
+    CropPlanStatus:
+      type: string
+      enum: [draft, approved, active, closed]
+    CropCycleStage:
+      type: string
+      enum: [nursery, planted, growing, harvesting, closed]
+    CropOperationType:
+      type: string
+      enum: [land_preparation, planting, weeding, fertilizing, spraying, irrigation, scouting, pruning, thinning, other]
+    CropObservationKind:
+      type: string
+      enum: [pest, disease, weed, nutrient, water, growth, weather, other]
+    Severity:
+      type: string
+      enum: [low, medium, high, critical]
+    Ref:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+    BatchRef:
+      oneOf:
+        - type: 'null'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            batch_code: { type: string }
+            status: { type: string }
+
+    FarmCrop:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: crop }
+        name: { type: string }
+        variety: { type: [string, 'null'] }
+        label: { type: string }
+        global_crop_id: { type: [string, 'null'], format: uuid }
+        global_variety_id: { type: [string, 'null'], format: uuid }
+        maturity_days: { type: [integer, 'null'] }
+        yield_unit: { type: string }
+        is_active: { type: boolean }
+    FarmCropInput:
+      type: object
+      properties:
+        global_crop_id: { type: [string, 'null'], format: uuid }
+        global_variety_id: { type: [string, 'null'], format: uuid }
+        name: { type: [string, 'null'], maxLength: 120 }
+        variety: { type: [string, 'null'], maxLength: 120 }
+        maturity_days: { type: [integer, 'null'], minimum: 1 }
+        yield_unit: { type: string, description: 'A unit code from the units catalogue' }
+        is_active: { type: boolean, description: 'Edit only' }
+
+    Season:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: crop_season }
+        name: { type: string }
+        starts_on: { type: string, format: date }
+        ends_on: { type: string, format: date }
+        notes: { type: [string, 'null'] }
+    SeasonInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 80 }
+        starts_on: { type: string, format: date }
+        ends_on: { type: string, format: date }
+        notes: { type: [string, 'null'] }
+
+    CropPlan:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: crop_plan }
+        code: { type: string }
+        name: { type: string }
+        status: { $ref: '#/components/schemas/CropPlanStatus' }
+        season: { $ref: '#/components/schemas/Ref' }
+        crop:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            label: { type: string }
+        planned_area_ha: { type: number }
+        expected_yield: { type: [number, 'null'] }
+        yield_unit: { type: string }
+        budget_amount: { type: [number, 'null'], description: 'Only with finance.values.view; farm currency' }
+        notes: { type: [string, 'null'] }
+        cycles_count: { type: integer }
+        planted_area_ha: { type: number }
+        created_by: { type: [string, 'null'], format: uuid }
+        approved_at: { type: [string, 'null'], format: date-time }
+        closed_at: { type: [string, 'null'], format: date-time }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+    CropPlanInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 120 }
+        season_id: { type: string, format: uuid }
+        crop_id: { type: string, format: uuid }
+        planned_area_ha: { type: number, exclusiveMinimum: 0 }
+        expected_yield: { type: [number, 'null'], minimum: 0 }
+        yield_unit: { type: string }
+        budget_amount: { type: [number, 'null'], minimum: 0 }
+        notes: { type: [string, 'null'] }
+        version: { type: integer, description: 'Edit only' }
+
+    CropCycle:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: crop_cycle }
+        code: { type: string }
+        stage: { $ref: '#/components/schemas/CropCycleStage' }
+        planting_method: { type: string, enum: [direct, transplant] }
+        plot: { $ref: '#/components/schemas/Ref' }
+        crop:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            label: { type: string }
+        plan: { oneOf: [{ $ref: '#/components/schemas/Ref' }, { type: 'null' }] }
+        season:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                id: { type: string, format: uuid }
+                name: { type: string }
+        area_ha: { type: number }
+        sown_on: { type: [string, 'null'], format: date }
+        planted_on: { type: [string, 'null'], format: date }
+        expected_harvest_on: { type: [string, 'null'], format: date }
+        safe_harvest_on: { type: [string, 'null'], format: date, description: 'End of the latest withholding period' }
+        expected_yield: { type: [number, 'null'] }
+        actual_yield: { type: number, description: 'Harvested so far, in yield_unit' }
+        yield_unit: { type: string }
+        nursery:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                seeds_sown: { type: [integer, 'null'] }
+                seedlings_germinated: { type: [integer, 'null'] }
+                seedlings_transplanted: { type: [integer, 'null'] }
+        seed_batch: { $ref: '#/components/schemas/BatchRef' }
+        nursery_batch: { $ref: '#/components/schemas/BatchRef' }
+        crop_lot: { $ref: '#/components/schemas/BatchRef' }
+        open_observations: { type: integer }
+        operations_count: { type: integer }
+        closed_on: { type: [string, 'null'], format: date }
+        close_reason: { type: [string, 'null'], enum: [harvested, failed, abandoned, other, null] }
+        notes: { type: [string, 'null'] }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+    CropCycleInput:
+      type: object
+      required: [plot_id, crop_id]
+      properties:
+        plot_id: { type: string, format: uuid }
+        crop_id: { type: string, format: uuid }
+        plan_id: { type: [string, 'null'], format: uuid }
+        season_id: { type: [string, 'null'], format: uuid }
+        planting_method: { type: string, enum: [direct, transplant] }
+        area_ha: { type: [number, 'null'], description: 'Defaults to the plot''s area' }
+        planted_on: { type: [string, 'null'], format: date }
+        sown_on: { type: [string, 'null'], format: date, description: 'Transplanted crops' }
+        expected_harvest_on: { type: [string, 'null'], format: date, description: 'Defaults from the crop''s maturity days' }
+        expected_yield: { type: [number, 'null'] }
+        yield_unit: { type: string }
+        seeds_sown: { type: [integer, 'null'] }
+        seed_batch_id: { type: [string, 'null'], format: uuid, description: 'A seed lot trace batch' }
+        notes: { type: [string, 'null'] }
+
+    CropOperationInputLine:
+      type: object
+      required: [product_name, quantity, unit]
+      properties:
+        product_name: { type: string, maxLength: 150 }
+        quantity: { type: number, exclusiveMinimum: 0 }
+        unit: { type: string }
+        withholding_days: { type: [integer, 'null'], minimum: 0, description: 'Pre-harvest interval' }
+        input_batch_id: { type: [string, 'null'], format: uuid, description: 'An input or seed lot trace batch' }
+    CropOperation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: crop_operation }
+        cycle_id: { type: string, format: uuid }
+        cycle: { $ref: '#/components/schemas/Ref' }
+        observation_id: { type: [string, 'null'], format: uuid }
+        operation: { $ref: '#/components/schemas/CropOperationType' }
+        status: { type: string, enum: [recorded, verified, rejected] }
+        occurred_at: { type: string, format: date-time }
+        notes: { type: [string, 'null'] }
+        labour_hours: { type: [number, 'null'] }
+        cost_amount: { type: [number, 'null'], description: 'Only with finance.values.view' }
+        latitude: { type: [number, 'null'] }
+        longitude: { type: [number, 'null'] }
+        inputs:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/CropOperationInputLine'
+              - type: object
+                properties:
+                  id: { type: string, format: uuid }
+        recorded_by: { oneOf: [{ $ref: '#/components/schemas/Ref' }, { type: 'null' }] }
+        verified_by: { oneOf: [{ $ref: '#/components/schemas/Ref' }, { type: 'null' }] }
+        verified_at: { type: [string, 'null'], format: date-time }
+        rejection_reason: { type: [string, 'null'] }
+        version: { type: integer }
+    CropOperationInput:
+      type: object
+      required: [cycle_id, type]
+      properties:
+        cycle_id: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/CropOperationType' }
+        occurred_at: { type: string, format: date-time }
+        observation_id: { type: [string, 'null'], format: uuid, description: 'The finding this work treats' }
+        notes: { type: [string, 'null'] }
+        labour_hours: { type: [number, 'null'] }
+        cost_amount: { type: [number, 'null'] }
+        latitude: { type: [number, 'null'] }
+        longitude: { type: [number, 'null'] }
+        inputs: { type: array, maxItems: 20, items: { $ref: '#/components/schemas/CropOperationInputLine' } }
+
+    CropObservation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: crop_observation }
+        cycle_id: { type: string, format: uuid }
+        cycle: { $ref: '#/components/schemas/Ref' }
+        kind: { $ref: '#/components/schemas/CropObservationKind' }
+        severity: { $ref: '#/components/schemas/Severity' }
+        title: { type: string }
+        description: { type: [string, 'null'] }
+        affected_pct: { type: [number, 'null'] }
+        observed_at: { type: string, format: date-time }
+        latitude: { type: [number, 'null'] }
+        longitude: { type: [number, 'null'] }
+        status: { type: string, enum: [open, monitoring, resolved] }
+        resolved_at: { type: [string, 'null'], format: date-time }
+        resolution_note: { type: [string, 'null'] }
+        treatments: { type: integer, description: 'Operations recorded against it' }
+        recorded_by: { oneOf: [{ $ref: '#/components/schemas/Ref' }, { type: 'null' }] }
+        version: { type: integer }
+    CropObservationInput:
+      type: object
+      required: [cycle_id, kind, severity, title]
+      properties:
+        cycle_id: { type: string, format: uuid }
+        kind: { $ref: '#/components/schemas/CropObservationKind' }
+        severity: { $ref: '#/components/schemas/Severity' }
+        title: { type: string, maxLength: 150 }
+        description: { type: [string, 'null'] }
+        affected_pct: { type: [number, 'null'], minimum: 0, maximum: 100 }
+        observed_at: { type: string, format: date-time }
+        latitude: { type: [number, 'null'] }
+        longitude: { type: [number, 'null'] }
+
+    CropHarvest:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: crop_harvest }
+        cycle_id: { type: string, format: uuid }
+        cycle:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+            crop: { type: [string, 'null'] }
+            plot: { type: [string, 'null'] }
+        harvested_on: { type: string, format: date }
+        quantity: { type: number }
+        unit: { type: string }
+        quality_grade: { type: [string, 'null'] }
+        moisture_pct: { type: [number, 'null'] }
+        notes: { type: [string, 'null'] }
+        batch:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            batch_code: { type: string }
+        withholding_override_reason: { type: [string, 'null'] }
+        recorded_by: { oneOf: [{ $ref: '#/components/schemas/Ref' }, { type: 'null' }] }
+        created_at: { type: string, format: date-time }
+    CropHarvestInput:
+      type: object
+      required: [cycle_id, harvested_on, quantity, unit]
+      properties:
+        cycle_id: { type: string, format: uuid }
+        harvested_on: { type: string, format: date }
+        quantity: { type: number, exclusiveMinimum: 0 }
+        unit: { type: string }
+        quality_grade: { type: [string, 'null'], maxLength: 20 }
+        moisture_pct: { type: [number, 'null'], minimum: 0, maximum: 100 }
+        notes: { type: [string, 'null'] }
+        withholding_override_reason: { type: [string, 'null'], maxLength: 500 }

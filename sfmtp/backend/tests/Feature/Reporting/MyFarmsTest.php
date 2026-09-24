@@ -35,7 +35,7 @@ class MyFarmsTest extends TestCase
         $owner = $this->ownerOf($farm);
 
         $summary = $this->asUser($owner)->getJson("/api/v1/farms/{$farm->id}/dashboards/owner")->assertOk()->json('data');
-        $this->assertContains('structure.plots', array_column($summary['kpis'], 'key'));
+        $this->assertContains('structure.mapped_area', array_column($summary['kpis'], 'key'));
         $this->assertContains('invite_member', array_column($summary['quick_actions'], 'key'));
 
         $checklist = collect($summary['widgets'])->firstWhere('key', 'setup_checklist')['data']['items'];

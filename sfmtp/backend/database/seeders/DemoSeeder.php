@@ -3,6 +3,14 @@
 namespace Database\Seeders;
 
 use App\Modules\Access\Domain\Models\FarmRole;
+use App\Modules\Crops\Application\CropCycles;
+use App\Modules\Crops\Application\CropHarvests;
+use App\Modules\Crops\Application\CropObservations;
+use App\Modules\Crops\Application\CropOperations;
+use App\Modules\Crops\Application\CropPlans;
+use App\Modules\Crops\Application\CropSetup;
+use App\Modules\Crops\Domain\Enums\CloseReason;
+use App\Modules\Crops\Domain\Enums\CycleStage;
 use App\Modules\FarmStructure\Application\StructureService;
 use App\Modules\Identity\Domain\Enums\UserType;
 use App\Modules\Identity\Domain\Models\User;
@@ -10,11 +18,13 @@ use App\Modules\Platform\Application\PlatformPermissions;
 use App\Modules\Tenancy\Application\FarmService;
 use App\Modules\Tenancy\Domain\Enums\FarmStatus;
 use App\Modules\Tenancy\Domain\Models\Farm;
+use App\Modules\Tenancy\Domain\Models\FarmUser;
 use App\Modules\Tenancy\TenantContext;
 use App\Modules\Traceability\Application\Recorder;
 use App\Modules\Traceability\Domain\Enums\BatchKind;
 use App\Modules\Traceability\Domain\Enums\LinkType;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -115,18 +125,100 @@ class DemoSeeder extends Seeder
             return $plots;
         });
 
-        // A small seed-to-package journey on the crop farm.
-        $context->run($crop, function () use ($recorder, $plots) {
-            $seed = $recorder->createBatch(BatchKind::SeedLot, ['name' => 'Maize seed Longe 5 (lot SC-2291)', 'quantity' => '50', 'unit' => 'kg'], ['occurred_at' => now()->subDays(120)]);
-            $lot = $recorder->createBatch(BatchKind::CropLot, ['name' => 'Maize — Block B / Plot B-3', 'origin_plot_id' => $plots['B-3']->id], ['occurred_at' => now()->subDays(110)]);
-            $recorder->link($seed, $lot, LinkType::Derived, '50', 'kg');
-            $recorder->record($lot, 'inspection', ['occurred_at' => now()->subDays(60), 'latitude' => 0.3736, 'longitude' => 32.7123, 'payload' => ['note' => 'Good stand, no fall armyworm seen']]);
-            $harvest = $recorder->createBatch(BatchKind::Harvest, ['name' => 'Maize harvest B-3', 'quantity' => '1020', 'unit' => 'kg'], ['occurred_at' => now()->subDays(20)]);
-            $recorder->link($lot, $harvest, LinkType::Derived, '1020', 'kg');
-            $dried = $recorder->createBatch(BatchKind::Processed, ['name' => 'Dried & graded maize', 'quantity' => '520', 'unit' => 'kg'], ['occurred_at' => now()->subDays(10)]);
-            $recorder->link($harvest, $dried, LinkType::Split, '520', 'kg');
-            $packs = $recorder->createBatch(BatchKind::Packaged, ['name' => 'Maize grain 50 kg bags ×10', 'quantity' => '500', 'unit' => 'kg'], ['occurred_at' => now()->subDays(5)]);
-            $recorder->link($dried, $packs, LinkType::Package, '500', 'kg');
+        // The agronomist and a field worker also work on the crop farm.
+        $context->run($crop, function () use ($crop, $farms, $user) {
+            foreach (['agronomist' => 'agronomist@aggfarms.test', 'field_worker' => 'worker@aggfarms.test'] as $roleKey => $email) {
+                $member = $farms->addMember($crop, $user($email, ''));
+                DB::table('farm_user_roles')->insert([
+                    'farm_id' => $crop->id, 'farm_user_id' => $member->id,
+                    'farm_role_id' => FarmRole::where('key', $roleKey)->value('id'), 'created_at' => now(),
+                ]);
+            }
         });
+
+        $this->seedCrops($crop, $plots, $context, $recorder);
+    }
+
+    /**
+     * Two seasons of crop work on the crop farm, recorded through the crop
+     * services so that the traceability history is the real one: a maize
+     * cycle from seed lot to packaged grain, and the current season's crops.
+     */
+    private function seedCrops(Farm $farm, array $plots, TenantContext $context, Recorder $recorder): void
+    {
+        $membership = fn (string $email) => FarmUser::where('farm_id', $farm->id)->whereHas('user', fn ($q) => $q->where('email', $email))->firstOrFail();
+        $agronomist = $membership('agronomist@aggfarms.test');
+        $owner = $membership('owner@aggfarms.test');
+        $as = function (FarmUser $who, callable $work) use ($context, $farm) {
+            Auth::setUser($who->user);
+
+            return $context->run($farm, $work, $who);
+        };
+        $day = fn (int $daysAgo) => now()->subDays($daysAgo);
+        $variety = fn (string $code) => DB::table('global_crop_varieties')->where('code', $code)->value('id');
+
+        [$maize, $beans, $cabbage, $seasonA, $seasonB, $planA, $planB, $seed, $beanSeed] = $as($agronomist, function () use ($day, $variety, $recorder) {
+            $setup = app(CropSetup::class);
+            $maize = $setup->addCrop(['global_variety_id' => $variety('longe_5')]);
+            $beans = $setup->addCrop(['global_variety_id' => $variety('nabe_15')]);
+            $cabbage = $setup->addCrop(['global_crop_id' => DB::table('global_crops')->where('code', 'cabbage')->value('id'), 'variety' => 'Gloria F1', 'maturity_days' => 90, 'yield_unit' => 'pcs']);
+            $year = now()->year;
+            $seasonA = $setup->addSeason(['name' => "{$year} Season A", 'starts_on' => $day(200)->toDateString(), 'ends_on' => $day(60)->toDateString()]);
+            $seasonB = $setup->addSeason(['name' => "{$year} Season B", 'starts_on' => $day(59)->toDateString(), 'ends_on' => now()->addDays(100)->toDateString()]);
+            $plans = app(CropPlans::class);
+            $planA = $plans->create(['name' => 'Maize, Block B', 'season_id' => $seasonA->id, 'crop_id' => $maize->id, 'planned_area_ha' => 6.6, 'expected_yield' => 3000]);
+            $planB = $plans->create(['name' => 'Maize, Block A', 'season_id' => $seasonB->id, 'crop_id' => $maize->id, 'planned_area_ha' => 13.2, 'expected_yield' => 6000]);
+            $seed = $recorder->createBatch(BatchKind::SeedLot, ['name' => 'Maize seed Longe 5 (lot SC-2291)', 'quantity' => '50', 'unit' => 'kg'], ['occurred_at' => $day(120)]);
+            $beanSeed = $recorder->createBatch(BatchKind::SeedLot, ['name' => 'Bean seed NABE 15 (lot NB-0716)', 'quantity' => '60', 'unit' => 'kg'], ['occurred_at' => $day(25)]);
+
+            return [$maize, $beans, $cabbage, $seasonA, $seasonB, $planA, $planB, $seed, $beanSeed];
+        });
+        $as($owner, function () use ($planA, $planB) {
+            app(CropPlans::class)->approve($planA);
+            app(CropPlans::class)->approve($planB);
+        });
+
+        $as($agronomist, function () use ($plots, $maize, $beans, $cabbage, $planA, $planB, $seed, $beanSeed, $day, $recorder) {
+            $cycles = app(CropCycles::class);
+            $ops = app(CropOperations::class);
+            $obs = app(CropObservations::class);
+            $harvests = app(CropHarvests::class);
+
+            // Season A: maize on B-3, sown to packed.
+            [$b3] = $cycles->start(['plot_id' => $plots['B-3']->id, 'crop_id' => $maize->id, 'plan_id' => $planA->id, 'seed_batch_id' => $seed->id, 'planted_on' => $day(110)->toDateString(), 'expected_yield' => 1000]);
+            $ops->record($b3, ['type' => 'fertilizing', 'occurred_at' => $day(110), 'notes' => 'Basal DAP at planting',
+                'inputs' => [['product_name' => 'DAP 18-46-0', 'quantity' => 125, 'unit' => 'kg']]]);
+            $ops->record($b3, ['type' => 'weeding', 'occurred_at' => $day(85), 'labour_hours' => 48]);
+            $armyworm = $obs->report($b3, ['kind' => 'pest', 'severity' => 'medium', 'title' => 'Fall armyworm', 'affected_pct' => 8, 'observed_at' => $day(56), 'latitude' => 0.3736, 'longitude' => 32.7123]);
+            $ops->record($b3, ['type' => 'spraying', 'occurred_at' => $day(55), 'observation_id' => $armyworm->id,
+                'inputs' => [['product_name' => 'Emamectin benzoate 5% SG', 'quantity' => 0.4, 'unit' => 'kg', 'withholding_days' => 14]]]);
+            $obs->update($armyworm, ['status' => 'resolved', 'resolution_note' => 'No live larvae a week after spraying']);
+            $ops->record($b3, ['type' => 'fertilizing', 'occurred_at' => $day(70), 'notes' => 'Top dressing', 'inputs' => [['product_name' => 'Urea 46% N', 'quantity' => 100, 'unit' => 'kg']]]);
+            $harvest = $harvests->record($b3->refresh(), ['harvested_on' => $day(20)->toDateString(), 'quantity' => 1020, 'unit' => 'kg', 'quality_grade' => 'A', 'moisture_pct' => 17.5]);
+            $cycles->close($b3->refresh(), CloseReason::Harvested, 'Stover left as mulch', $day(18)->toDateString());
+
+            $dried = $recorder->createBatch(BatchKind::Processed, ['name' => 'Dried & graded maize', 'quantity' => '520', 'unit' => 'kg'], ['occurred_at' => $day(10)]);
+            $recorder->link($harvest->batch, $dried, LinkType::Split, '520', 'kg');
+            $packs = $recorder->createBatch(BatchKind::Packaged, ['name' => 'Maize grain 50 kg bags ×10', 'quantity' => '500', 'unit' => 'kg'], ['occurred_at' => $day(5)]);
+            $recorder->link($dried, $packs, LinkType::Package, '500', 'kg');
+
+            // Season B, in progress.
+            [$a1] = $cycles->start(['plot_id' => $plots['A-1']->id, 'crop_id' => $maize->id, 'plan_id' => $planB->id, 'seed_batch_id' => $seed->id, 'planted_on' => $day(40)->toDateString(), 'expected_yield' => 3000]);
+            $cycles->advance($a1, CycleStage::Growing);
+            $ops->record($a1, ['type' => 'weeding', 'occurred_at' => $day(12), 'labour_hours' => 40]);
+            $obs->report($a1, ['kind' => 'pest', 'severity' => 'high', 'title' => 'Fall armyworm', 'description' => 'Window-pane damage on young leaves; larvae in the whorls.', 'affected_pct' => 20, 'observed_at' => $day(1)]);
+
+            [$b2] = $cycles->start(['plot_id' => $plots['B-2']->id, 'crop_id' => $maize->id, 'plan_id' => $planA->id, 'seed_batch_id' => $seed->id, 'planted_on' => $day(105)->toDateString(), 'expected_yield' => 950]);
+            $cycles->advance($b2, CycleStage::Growing);
+            $leafBlight = $obs->report($b2, ['kind' => 'disease', 'severity' => 'medium', 'title' => 'Northern leaf blight', 'affected_pct' => 10, 'observed_at' => $day(8)]);
+            $ops->record($b2, ['type' => 'spraying', 'occurred_at' => $day(6), 'observation_id' => $leafBlight->id,
+                'inputs' => [['product_name' => 'Mancozeb 80% WP', 'quantity' => 2.5, 'unit' => 'kg', 'withholding_days' => 21]]]);
+
+            $cycles->start(['plot_id' => $plots['A-2']->id, 'crop_id' => $beans->id, 'seed_batch_id' => $beanSeed->id, 'planted_on' => $day(20)->toDateString(), 'expected_yield' => 1200]);
+
+            $cycles->start(['plot_id' => $plots['B-1']->id, 'crop_id' => $cabbage->id, 'planting_method' => 'transplant', 'sown_on' => $day(21)->toDateString(), 'seeds_sown' => 30000, 'expected_yield' => 25000, 'area_ha' => 1.5]);
+        });
+
+        Auth::forgetGuards();
     }
 }

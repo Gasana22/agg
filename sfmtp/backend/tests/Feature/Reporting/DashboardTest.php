@@ -33,7 +33,7 @@ class DashboardTest extends TestCase
 
         $this->assertSame('owner', $data['dashboard']);
         $this->assertSame('7d', $data['period']['key']);
-        $this->assertSame(['farm.area', 'structure.mapped_area', 'structure.plots', 'farm.members', 'trace.open_batches', 'trace.events'], array_column($data['kpis'], 'key'));
+        $this->assertSame(['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'farm.members', 'trace.open_batches', 'trace.events'], array_column($data['kpis'], 'key'));
 
         $kpis = collect($data['kpis'])->keyBy('key');
         $this->assertSame(['value' => '120.0000', 'unit' => 'ha'], $kpis['farm.area']['value']);
@@ -68,8 +68,8 @@ class DashboardTest extends TestCase
     {
         $agronomist = $this->memberWithRole($this->farm, 'agronomist');
         $data = $this->dashboard('agronomist', $agronomist)->assertOk()->json('data');
-        $this->assertSame(['structure.plots', 'structure.mapped_area', 'trace.open_batches', 'trace.events'], array_column($data['kpis'], 'key'));
-        $this->assertSame(['view_map', 'new_batch'], array_column($data['quick_actions'], 'key'));
+        $this->assertSame(['crop.active_cycles', 'crop.planted_area', 'crop.near_harvest', 'crop.expected_yield', 'crop.actual_yield', 'crop.yield_per_ha', 'crop.incidents_open', 'crop.treatments_active'], array_column($data['kpis'], 'key'));
+        $this->assertSame(['start_cycle', 'record_operation', 'report_observation', 'record_harvest', 'new_crop_plan', 'view_map'], array_column($data['quick_actions'], 'key'));
 
         $worker = $this->memberWithRole($this->farm, 'field_worker');
         $this->dashboard('worker', $worker)->assertOk()->assertJsonPath('data.kpis', [])->assertJsonPath('data.widgets', []);

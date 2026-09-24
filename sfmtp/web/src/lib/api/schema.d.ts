@@ -763,6 +763,449 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/farms/{farm}/crops": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** The farm's crop list */
+        get: operations["listFarmCrops"];
+        put?: never;
+        /** Add a crop, usually from the catalogue (variety → crop, name and maturity filled in) */
+        post: operations["addFarmCrop"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/crops/{crop}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                crop: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit or deactivate a crop */
+        patch: operations["updateFarmCrop"];
+        trace?: never;
+    };
+    "/farms/{farm}/seasons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Seasons, newest first */
+        get: operations["listSeasons"];
+        put?: never;
+        /** Create a season */
+        post: operations["createSeason"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/seasons/{season}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                season: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit a season */
+        patch: operations["updateSeason"];
+        trace?: never;
+    };
+    "/farms/{farm}/crop-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Crop plans */
+        get: operations["listCropPlans"];
+        put?: never;
+        /**
+         * Draft a crop plan
+         * @description `budget_amount` needs finance.values.view (403 money_field_forbidden).
+         */
+        post: operations["createCropPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/crop-plans/{crop_plan}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                crop_plan: string;
+            };
+            cookie?: never;
+        };
+        /** Get a crop plan */
+        get: operations["getCropPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit a draft plan */
+        patch: operations["updateCropPlan"];
+        trace?: never;
+    };
+    "/farms/{farm}/crop-plans/{crop_plan}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                crop_plan: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a draft plan
+         * @description Four-eyes: the author cannot approve their own plan unless they are the owner.
+         */
+        post: operations["approveCropPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/crop-plans/{crop_plan}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                crop_plan: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close a plan whose cycles are all closed */
+        post: operations["closeCropPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/crop-cycles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Crop cycles */
+        get: operations["listCropCycles"];
+        put?: never;
+        /**
+         * Start a crop cycle on a plot
+         * @description Creates the crop lot (direct) or nursery batch (transplant), linked from the seed lot. 409 plot_occupied when the plot has an open cycle and intercropping is off; 422 plan_not_approved.
+         */
+        post: operations["startCropCycle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/crop-cycles/{cycle}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                cycle: string;
+            };
+            cookie?: never;
+        };
+        /** Get a crop cycle */
+        get: operations["getCropCycle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit expected dates, yield, area or notes */
+        patch: operations["updateCropCycle"];
+        trace?: never;
+    };
+    "/farms/{farm}/crop-cycles/{cycle}/transplant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                cycle: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Move seedlings from the nursery to the plot */
+        post: operations["transplantCropCycle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/crop-cycles/{cycle}/stage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                cycle: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Move a cycle to growing or harvesting */
+        post: operations["advanceCropCycle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/crop-cycles/{cycle}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                cycle: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close a cycle
+         * @description `harvested` needs at least one harvest (422 no_harvest). Closes the crop lot and nursery batches.
+         */
+        post: operations["closeCropCycle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/crop-operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Field operations (filtered by the member's scope) */
+        get: operations["listCropOperations"];
+        put?: never;
+        /**
+         * Record field work with the inputs used
+         * @description Verified at once when the recorder holds crops.operations.approve, otherwise waits for verification. Verified work writes `operation` and `input_applied` trace events and starts withholding periods. 403 not_assigned for members with an `assigned` scope (tasks arrive in Phase 6); 403 money_field_forbidden for `cost_amount` without finance.values.view.
+         */
+        post: operations["recordCropOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/crop-operations/{operation}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                operation: string;
+            };
+            cookie?: never;
+        };
+        /** Get an operation */
+        get: operations["getCropOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/crop-operations/{operation}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                operation: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify recorded work
+         * @description Four-eyes: not your own record unless you are the owner.
+         */
+        post: operations["verifyCropOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/crop-operations/{operation}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                operation: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject recorded work */
+        post: operations["rejectCropOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/crop-observations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Pest, disease and other scouting findings */
+        get: operations["listCropObservations"];
+        put?: never;
+        /** Report a finding on a cycle */
+        post: operations["reportCropObservation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/crop-observations/{observation}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                observation: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change severity or status (resolve) */
+        patch: operations["updateCropObservation"];
+        trace?: never;
+    };
+    "/farms/{farm}/harvests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Harvests */
+        get: operations["listHarvests"];
+        put?: never;
+        /**
+         * Record a harvest
+         * @description Creates a harvest batch derived from the crop lot. Inside a withholding period: 422 withholding_period unless `withholding_override_reason` is given by a member holding crops.operations.approve. Harvests are append-only.
+         */
+        post: operations["recordHarvest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/harvests/{harvest}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                harvest: string;
+            };
+            cookie?: never;
+        };
+        /** Get a harvest */
+        get: operations["getHarvest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/farms/{farm}/audit-logs": {
         parameters: {
             query?: never;
@@ -2518,6 +2961,8 @@ export interface components {
                 stock_adjustment_pct?: number | null;
             };
             allow_negative_stock?: boolean;
+            /** @description More than one open crop cycle per plot */
+            allow_intercropping?: boolean;
             /** @enum {string} */
             units?: "metric" | "imperial";
         };
@@ -2529,6 +2974,8 @@ export interface components {
                 stock_adjustment_pct?: number | null;
             };
             allow_negative_stock?: boolean;
+            /** @description More than one open crop cycle per plot */
+            allow_intercropping?: boolean;
             /** @enum {string} */
             units?: "metric" | "imperial";
         };
@@ -2611,6 +3058,359 @@ export interface components {
             /** Format: uuid */
             membership_id?: string;
             account_created?: boolean;
+        };
+        /** @enum {string} */
+        CropPlanStatus: "draft" | "approved" | "active" | "closed";
+        /** @enum {string} */
+        CropCycleStage: "nursery" | "planted" | "growing" | "harvesting" | "closed";
+        /** @enum {string} */
+        CropOperationType: "land_preparation" | "planting" | "weeding" | "fertilizing" | "spraying" | "irrigation" | "scouting" | "pruning" | "thinning" | "other";
+        /** @enum {string} */
+        CropObservationKind: "pest" | "disease" | "weed" | "nutrient" | "water" | "growth" | "weather" | "other";
+        /** @enum {string} */
+        Severity: "low" | "medium" | "high" | "critical";
+        Ref: {
+            /** Format: uuid */
+            id?: string;
+            code?: string;
+            name?: string;
+        };
+        BatchRef: null | {
+            /** Format: uuid */
+            id?: string;
+            batch_code?: string;
+            status?: string;
+        };
+        FarmCrop: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "crop";
+            name?: string;
+            variety?: string | null;
+            label?: string;
+            /** Format: uuid */
+            global_crop_id?: string | null;
+            /** Format: uuid */
+            global_variety_id?: string | null;
+            maturity_days?: number | null;
+            yield_unit?: string;
+            is_active?: boolean;
+        };
+        FarmCropInput: {
+            /** Format: uuid */
+            global_crop_id?: string | null;
+            /** Format: uuid */
+            global_variety_id?: string | null;
+            name?: string | null;
+            variety?: string | null;
+            maturity_days?: number | null;
+            /** @description A unit code from the units catalogue */
+            yield_unit?: string;
+            /** @description Edit only */
+            is_active?: boolean;
+        };
+        Season: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "crop_season";
+            name?: string;
+            /** Format: date */
+            starts_on?: string;
+            /** Format: date */
+            ends_on?: string;
+            notes?: string | null;
+        };
+        SeasonInput: {
+            name?: string;
+            /** Format: date */
+            starts_on?: string;
+            /** Format: date */
+            ends_on?: string;
+            notes?: string | null;
+        };
+        CropPlan: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "crop_plan";
+            code?: string;
+            name?: string;
+            status?: components["schemas"]["CropPlanStatus"];
+            season?: components["schemas"]["Ref"];
+            crop?: {
+                /** Format: uuid */
+                id?: string;
+                label?: string;
+            };
+            planned_area_ha?: number;
+            expected_yield?: number | null;
+            yield_unit?: string;
+            /** @description Only with finance.values.view; farm currency */
+            budget_amount?: number | null;
+            notes?: string | null;
+            cycles_count?: number;
+            planted_area_ha?: number;
+            /** Format: uuid */
+            created_by?: string | null;
+            /** Format: date-time */
+            approved_at?: string | null;
+            /** Format: date-time */
+            closed_at?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        CropPlanInput: {
+            name?: string;
+            /** Format: uuid */
+            season_id?: string;
+            /** Format: uuid */
+            crop_id?: string;
+            planned_area_ha?: number;
+            expected_yield?: number | null;
+            yield_unit?: string;
+            budget_amount?: number | null;
+            notes?: string | null;
+            /** @description Edit only */
+            version?: number;
+        };
+        CropCycle: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "crop_cycle";
+            code?: string;
+            stage?: components["schemas"]["CropCycleStage"];
+            /** @enum {string} */
+            planting_method?: "direct" | "transplant";
+            plot?: components["schemas"]["Ref"];
+            crop?: {
+                /** Format: uuid */
+                id?: string;
+                label?: string;
+            };
+            plan?: components["schemas"]["Ref"] | null;
+            season?: null | {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            area_ha?: number;
+            /** Format: date */
+            sown_on?: string | null;
+            /** Format: date */
+            planted_on?: string | null;
+            /** Format: date */
+            expected_harvest_on?: string | null;
+            /**
+             * Format: date
+             * @description End of the latest withholding period
+             */
+            safe_harvest_on?: string | null;
+            expected_yield?: number | null;
+            /** @description Harvested so far, in yield_unit */
+            actual_yield?: number;
+            yield_unit?: string;
+            nursery?: null | {
+                seeds_sown?: number | null;
+                seedlings_germinated?: number | null;
+                seedlings_transplanted?: number | null;
+            };
+            seed_batch?: components["schemas"]["BatchRef"];
+            nursery_batch?: components["schemas"]["BatchRef"];
+            crop_lot?: components["schemas"]["BatchRef"];
+            open_observations?: number;
+            operations_count?: number;
+            /** Format: date */
+            closed_on?: string | null;
+            /** @enum {string|null} */
+            close_reason?: "harvested" | "failed" | "abandoned" | "other" | null;
+            notes?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        CropCycleInput: {
+            /** Format: uuid */
+            plot_id: string;
+            /** Format: uuid */
+            crop_id: string;
+            /** Format: uuid */
+            plan_id?: string | null;
+            /** Format: uuid */
+            season_id?: string | null;
+            /** @enum {string} */
+            planting_method?: "direct" | "transplant";
+            /** @description Defaults to the plot's area */
+            area_ha?: number | null;
+            /** Format: date */
+            planted_on?: string | null;
+            /**
+             * Format: date
+             * @description Transplanted crops
+             */
+            sown_on?: string | null;
+            /**
+             * Format: date
+             * @description Defaults from the crop's maturity days
+             */
+            expected_harvest_on?: string | null;
+            expected_yield?: number | null;
+            yield_unit?: string;
+            seeds_sown?: number | null;
+            /**
+             * Format: uuid
+             * @description A seed lot trace batch
+             */
+            seed_batch_id?: string | null;
+            notes?: string | null;
+        };
+        CropOperationInputLine: {
+            product_name: string;
+            quantity: number;
+            unit: string;
+            /** @description Pre-harvest interval */
+            withholding_days?: number | null;
+            /**
+             * Format: uuid
+             * @description An input or seed lot trace batch
+             */
+            input_batch_id?: string | null;
+        };
+        CropOperation: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "crop_operation";
+            /** Format: uuid */
+            cycle_id?: string;
+            cycle?: components["schemas"]["Ref"];
+            /** Format: uuid */
+            observation_id?: string | null;
+            operation?: components["schemas"]["CropOperationType"];
+            /** @enum {string} */
+            status?: "recorded" | "verified" | "rejected";
+            /** Format: date-time */
+            occurred_at?: string;
+            notes?: string | null;
+            labour_hours?: number | null;
+            /** @description Only with finance.values.view */
+            cost_amount?: number | null;
+            latitude?: number | null;
+            longitude?: number | null;
+            inputs?: (components["schemas"]["CropOperationInputLine"] & {
+                /** Format: uuid */
+                id?: string;
+            })[];
+            recorded_by?: components["schemas"]["Ref"] | null;
+            verified_by?: components["schemas"]["Ref"] | null;
+            /** Format: date-time */
+            verified_at?: string | null;
+            rejection_reason?: string | null;
+            version?: number;
+        };
+        CropOperationInput: {
+            /** Format: uuid */
+            cycle_id: string;
+            type: components["schemas"]["CropOperationType"];
+            /** Format: date-time */
+            occurred_at?: string;
+            /**
+             * Format: uuid
+             * @description The finding this work treats
+             */
+            observation_id?: string | null;
+            notes?: string | null;
+            labour_hours?: number | null;
+            cost_amount?: number | null;
+            latitude?: number | null;
+            longitude?: number | null;
+            inputs?: components["schemas"]["CropOperationInputLine"][];
+        };
+        CropObservation: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "crop_observation";
+            /** Format: uuid */
+            cycle_id?: string;
+            cycle?: components["schemas"]["Ref"];
+            kind?: components["schemas"]["CropObservationKind"];
+            severity?: components["schemas"]["Severity"];
+            title?: string;
+            description?: string | null;
+            affected_pct?: number | null;
+            /** Format: date-time */
+            observed_at?: string;
+            latitude?: number | null;
+            longitude?: number | null;
+            /** @enum {string} */
+            status?: "open" | "monitoring" | "resolved";
+            /** Format: date-time */
+            resolved_at?: string | null;
+            resolution_note?: string | null;
+            /** @description Operations recorded against it */
+            treatments?: number;
+            recorded_by?: components["schemas"]["Ref"] | null;
+            version?: number;
+        };
+        CropObservationInput: {
+            /** Format: uuid */
+            cycle_id: string;
+            kind: components["schemas"]["CropObservationKind"];
+            severity: components["schemas"]["Severity"];
+            title: string;
+            description?: string | null;
+            affected_pct?: number | null;
+            /** Format: date-time */
+            observed_at?: string;
+            latitude?: number | null;
+            longitude?: number | null;
+        };
+        CropHarvest: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "crop_harvest";
+            /** Format: uuid */
+            cycle_id?: string;
+            cycle?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                crop?: string | null;
+                plot?: string | null;
+            };
+            /** Format: date */
+            harvested_on?: string;
+            quantity?: number;
+            unit?: string;
+            quality_grade?: string | null;
+            moisture_pct?: number | null;
+            notes?: string | null;
+            batch?: {
+                /** Format: uuid */
+                id?: string;
+                batch_code?: string;
+            };
+            withholding_override_reason?: string | null;
+            recorded_by?: components["schemas"]["Ref"] | null;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        CropHarvestInput: {
+            /** Format: uuid */
+            cycle_id: string;
+            /** Format: date */
+            harvested_on: string;
+            quantity: number;
+            unit: string;
+            quality_grade?: string | null;
+            moisture_pct?: number | null;
+            notes?: string | null;
+            withholding_override_reason?: string | null;
         };
     };
     responses: {
@@ -4365,6 +5165,922 @@ export interface operations {
                 };
             };
             422: components["responses"]["Problem"];
+        };
+    };
+    listFarmCrops: {
+        parameters: {
+            query?: {
+                include_inactive?: boolean;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["FarmCrop"][];
+                    };
+                };
+            };
+        };
+    };
+    addFarmCrop: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FarmCropInput"];
+            };
+        };
+        responses: {
+            /** @description Added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["FarmCrop"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    updateFarmCrop: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                crop: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FarmCropInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["FarmCrop"];
+                    };
+                };
+            };
+        };
+    };
+    listSeasons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Season"][];
+                    };
+                };
+            };
+        };
+    };
+    createSeason: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeasonInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Season"];
+                    };
+                };
+            };
+            422: components["responses"]["Problem"];
+        };
+    };
+    updateSeason: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                season: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeasonInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Season"];
+                    };
+                };
+            };
+            422: components["responses"]["Problem"];
+        };
+    };
+    listCropPlans: {
+        parameters: {
+            query?: {
+                "filter[status]"?: components["schemas"]["CropPlanStatus"];
+                "filter[season_id]"?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["CropPlan"][];
+                    };
+                };
+            };
+        };
+    };
+    createCropPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CropPlanInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropPlan"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getCropPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                crop_plan: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The plan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropPlan"];
+                    };
+                };
+            };
+        };
+    };
+    updateCropPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                crop_plan: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CropPlanInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropPlan"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    approveCropPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                crop_plan: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Approved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropPlan"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    closeCropPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                crop_plan: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Closed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropPlan"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    listCropCycles: {
+        parameters: {
+            query?: {
+                "filter[stage]"?: "open" | "nursery" | "planted" | "growing" | "harvesting" | "closed";
+                "filter[plot_id]"?: string;
+                "filter[crop_id]"?: string;
+                "filter[season_id]"?: string;
+                "filter[plan_id]"?: string;
+                q?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["CropCycle"][];
+                    };
+                };
+            };
+        };
+    };
+    startCropCycle: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CropCycleInput"];
+            };
+        };
+        responses: {
+            /** @description Started */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropCycle"];
+                        meta?: {
+                            warnings?: {
+                                code?: string;
+                                message?: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getCropCycle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                cycle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cycle */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropCycle"];
+                    };
+                };
+            };
+        };
+    };
+    updateCropCycle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                cycle: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    expected_harvest_on?: string | null;
+                    expected_yield?: number | null;
+                    yield_unit?: string;
+                    area_ha?: number;
+                    seedlings_germinated?: number | null;
+                    notes?: string | null;
+                    version?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropCycle"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    transplantCropCycle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                cycle: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    planted_on: string;
+                    seedlings_germinated?: number | null;
+                    seedlings_transplanted?: number | null;
+                    /** Format: date */
+                    expected_harvest_on?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Planted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropCycle"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    advanceCropCycle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                cycle: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    stage: "growing" | "harvesting";
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Moved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropCycle"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    closeCropCycle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                cycle: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    reason: "harvested" | "failed" | "abandoned" | "other";
+                    note?: string | null;
+                    /** Format: date */
+                    closed_on?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Closed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropCycle"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listCropOperations: {
+        parameters: {
+            query?: {
+                "filter[cycle_id]"?: string;
+                "filter[status]"?: "recorded" | "verified" | "rejected";
+                "filter[type]"?: components["schemas"]["CropOperationType"];
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["CropOperation"][];
+                    };
+                };
+            };
+        };
+    };
+    recordCropOperation: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CropOperationInput"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropOperation"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getCropOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                operation: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropOperation"];
+                    };
+                };
+            };
+        };
+    };
+    verifyCropOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                operation: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Verified */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropOperation"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    rejectCropOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                operation: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropOperation"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    listCropObservations: {
+        parameters: {
+            query?: {
+                "filter[cycle_id]"?: string;
+                "filter[status]"?: "open" | "monitoring" | "resolved" | "unresolved";
+                "filter[kind]"?: components["schemas"]["CropObservationKind"];
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["CropObservation"][];
+                    };
+                };
+            };
+        };
+    };
+    reportCropObservation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CropObservationInput"];
+            };
+        };
+        responses: {
+            /** @description Reported */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropObservation"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    updateCropObservation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                observation: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    severity?: components["schemas"]["Severity"];
+                    /** @enum {string} */
+                    status?: "open" | "monitoring" | "resolved";
+                    description?: string | null;
+                    affected_pct?: number | null;
+                    resolution_note?: string | null;
+                    version?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropObservation"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    listHarvests: {
+        parameters: {
+            query?: {
+                "filter[cycle_id]"?: string;
+                "filter[from]"?: string;
+                "filter[to]"?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["CropHarvest"][];
+                    };
+                };
+            };
+        };
+    };
+    recordHarvest: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CropHarvestInput"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropHarvest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getHarvest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                harvest: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The harvest */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CropHarvest"];
+                    };
+                };
+            };
         };
     };
     listAuditLogs: {

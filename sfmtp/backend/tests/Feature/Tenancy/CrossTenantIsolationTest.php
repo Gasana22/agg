@@ -4,6 +4,13 @@ namespace Tests\Feature\Tenancy;
 
 use App\Modules\Access\Domain\Models\FarmInvitation;
 use App\Modules\Access\Domain\Models\FarmRole;
+use App\Modules\Catalog\Database\seeders\CatalogSeeder;
+use App\Modules\Crops\Application\CropCycles;
+use App\Modules\Crops\Application\CropHarvests;
+use App\Modules\Crops\Application\CropObservations;
+use App\Modules\Crops\Application\CropOperations;
+use App\Modules\Crops\Application\CropPlans;
+use App\Modules\Crops\Application\CropSetup;
 use App\Modules\FarmStructure\Application\StructureService;
 use App\Modules\Tenancy\Domain\Models\Farm;
 use App\Modules\Tenancy\Domain\Models\FarmUser;
@@ -35,6 +42,7 @@ class CrossTenantIsolationTest extends TestCase
     {
         parent::setUp();
 
+        $this->seed(CatalogSeeder::class);
         $this->victim = $this->farm();
         $this->attackerFarm = $this->farm();
 
@@ -65,6 +73,34 @@ class CrossTenantIsolationTest extends TestCase
                 'widget' => 'trace_activity',
             ];
         });
+        $this->victimRecords += $this->victimCropRecords($this->victimRecords['plot']);
+    }
+
+    /** One of each crop record, created as the victim's owner. */
+    private function victimCropRecords(string $plotId): array
+    {
+        $owner = FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail();
+        $this->actingAs($owner->user, 'api');
+
+        return $this->app->make(TenantContext::class)->run($this->victim, function () use ($plotId) {
+            $crop = $this->app->make(CropSetup::class)->addCrop(['name' => 'Victim maize']);
+            $season = $this->app->make(CropSetup::class)->addSeason(['name' => 'Victim season', 'starts_on' => '2026-01-01', 'ends_on' => '2026-06-30']);
+            $plan = $this->app->make(CropPlans::class)->create(['name' => 'Victim plan', 'season_id' => $season->id, 'crop_id' => $crop->id, 'planned_area_ha' => 1]);
+            [$cycle] = $this->app->make(CropCycles::class)->start(['plot_id' => $plotId, 'crop_id' => $crop->id, 'area_ha' => 1]);
+            $operation = $this->app->make(CropOperations::class)->record($cycle, ['type' => 'weeding']);
+            $observation = $this->app->make(CropObservations::class)->report($cycle, ['kind' => 'pest', 'severity' => 'low', 'title' => 'Aphids']);
+            $harvest = $this->app->make(CropHarvests::class)->record($cycle, ['harvested_on' => now()->toDateString(), 'quantity' => 10, 'unit' => 'kg']);
+
+            return [
+                'crop' => $crop->id,
+                'season' => $season->id,
+                'crop_plan' => $plan->id,
+                'cycle' => $cycle->id,
+                'operation' => $operation->id,
+                'observation' => $observation->id,
+                'harvest' => $harvest->id,
+            ];
+        }, $owner);
     }
 
     /** @return array<int,Route> */
@@ -99,6 +135,9 @@ class CrossTenantIsolationTest extends TestCase
             'links' => DB::table('trace_batch_links')->count(),
             'farms' => DB::table('farms')->where('status', 'active')->count(),
             'grants' => DB::table('farm_role_permissions')->count(),
+            'crop_rows' => collect(['crops', 'crop_seasons', 'crop_plans', 'crop_cycles', 'crop_operations', 'crop_observations', 'crop_harvests'])
+                ->mapWithKeys(fn ($t) => [$t => DB::table($t)->count()])->all(),
+            'crop_versions' => DB::table('crop_cycles')->sum('version') + DB::table('crop_plans')->sum('version') + DB::table('crop_observations')->sum('version') + DB::table('crop_operations')->sum('version'),
             'structure' => DB::table('farm_blocks')->whereNull('deleted_at')->count() + DB::table('farm_sections')->whereNull('deleted_at')->count()
                 + DB::table('farm_plots')->whereNull('deleted_at')->count() + DB::table('farm_locations')->whereNull('deleted_at')->count(),
             'structure_versions' => DB::table('farm_plots')->sum('version'),

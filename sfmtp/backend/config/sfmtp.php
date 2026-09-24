@@ -26,6 +26,7 @@ return [
         'Platform',
         'Catalog',
         'FarmStructure',
+        'Crops',
         'Support',
         'Traceability',
         'Reporting',
