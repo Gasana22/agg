@@ -5177,6 +5177,8 @@ export interface components {
             status?: "assigned" | "in_progress" | "paused" | "submitted" | "verified" | "rejected" | "cancelled";
             /** Format: date */
             due_on?: string | null;
+            /** @description The signed-in member's own task (they can start, pause and submit it) */
+            is_mine?: boolean;
             overdue?: boolean;
             /** Format: date-time */
             started_at?: string | null;

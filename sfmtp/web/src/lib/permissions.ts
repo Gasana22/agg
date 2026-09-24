@@ -8,18 +8,23 @@ export type NavItem = {
   href: (farmId: string) => string;
   /** Permission required to see the item; the server still enforces it. */
   permission: string | null;
+  /** Only with this scope (e.g. `all`: supervisors, not the field worker who sees their own). */
+  scope?: string;
   icon: string;
 };
 
 /**
  * Farm navigation, filtered by the member's permissions (docs/01 §8).
- * Later phases add Crops, Livestock, Workers, Inventory … here.
+ * Later phases add Inventory, Finance … here.
  */
 export const FARM_NAV: NavItem[] = [
   { key: "dashboard", label: "Dashboard", href: (id) => `/farms/${id}`, permission: null, icon: "dashboard" },
+  { key: "my-day", label: "My day", href: (id) => `/farms/${id}/my-day`, permission: "tasks.execute", icon: "myday" },
+  { key: "tasks", label: "Tasks", href: (id) => `/farms/${id}/tasks`, permission: "tasks.view", scope: "all", icon: "tasks" },
   { key: "structure", label: "Farm map", href: (id) => `/farms/${id}/structure`, permission: "structure.view", icon: "map" },
   { key: "crops", label: "Crops", href: (id) => `/farms/${id}/crops`, permission: "crops.plans.view", icon: "crops" },
   { key: "livestock", label: "Livestock", href: (id) => `/farms/${id}/livestock`, permission: "livestock.animals.view", icon: "livestock" },
+  { key: "workers", label: "Workers", href: (id) => `/farms/${id}/workers`, permission: "workers.view", scope: "all", icon: "workers" },
   { key: "traceability", label: "Traceability", href: (id) => `/farms/${id}/traceability`, permission: "trace.batches.view", icon: "trace" },
   { key: "members", label: "Members", href: (id) => `/farms/${id}/members`, permission: "members.view", icon: "members" },
   { key: "roles", label: "Roles & permissions", href: (id) => `/farms/${id}/roles`, permission: "roles.view", icon: "roles" },
@@ -57,6 +62,7 @@ export function visibleNav(workspace: Pick<Workspace, "type" | "permissions" | "
   return FARM_NAV.filter((item) => {
     if (item.key === "dashboard") return (workspace.dashboards?.length ?? 0) > 0;
     if (item.key === "support" && readOnlySupport) return false;
+    if (item.scope && item.permission && workspace.permissions?.[item.permission] !== item.scope) return false;
     return can(workspace.permissions, item.permission);
   });
 }

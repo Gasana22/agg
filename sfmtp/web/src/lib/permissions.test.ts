@@ -23,8 +23,13 @@ describe("visibleNav", () => {
   });
 
   it("gives owners everything, including their subscription", () => {
-    const all = { "structure.view": "all", "crops.plans.view": "all", "livestock.animals.view": "all", "trace.batches.view": "all", "members.view": "all", "roles.view": "all", "audit.view": "all", "farm.profile.manage": "all", "billing.manage": "all" } as const;
-    expect(visibleNav(farm(all)).map((i) => i.key)).toEqual(["dashboard", "structure", "crops", "livestock", "traceability", "members", "roles", "audit", "settings", "billing", "support"]);
+    const all = { "structure.view": "all", "crops.plans.view": "all", "livestock.animals.view": "all", "tasks.execute": "assigned", "tasks.view": "all", "workers.view": "all", "trace.batches.view": "all", "members.view": "all", "roles.view": "all", "audit.view": "all", "farm.profile.manage": "all", "billing.manage": "all" } as const;
+    expect(visibleNav(farm(all)).map((i) => i.key)).toEqual(["dashboard", "my-day", "tasks", "structure", "crops", "livestock", "workers", "traceability", "members", "roles", "audit", "settings", "billing", "support"]);
+  });
+
+  it("gives field workers their day, not the supervisors' task and worker lists", () => {
+    const worker = { "tasks.execute": "assigned", "tasks.view": "assigned", "workers.view": "own", "structure.view": "assigned" } as const;
+    expect(visibleNav(farm(worker, ["worker"])).map((i) => i.key)).toEqual(["dashboard", "my-day", "structure", "support"]);
   });
 
   it("offers read-only support sessions no support tickets or billing", () => {

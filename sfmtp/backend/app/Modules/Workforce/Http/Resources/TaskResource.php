@@ -20,7 +20,8 @@ class TaskResource extends JsonResource
     public function toArray(Request $request): array
     {
         $access = app(WorkforceAccess::class);
-        $seesPlaces = $access->can('worker.gps.view') || $access->currentWorker()?->id === $this->worker_id;
+        $mine = $access->currentWorker()?->id === $this->worker_id;
+        $seesPlaces = $mine || $access->can('worker.gps.view');
         $a = $this->relationLoaded('activity') ? $this->activity : null;
 
         return [
@@ -28,6 +29,7 @@ class TaskResource extends JsonResource
             'type' => 'task',
             'code' => $this->code,
             'status' => $this->status->value,
+            'is_mine' => $mine,
             'due_on' => $this->due_on?->toDateString(),
             'overdue' => $this->due_on !== null && in_array($this->status->value, TaskStatus::OPEN, true) && $this->due_on->endOfDay()->isPast(),
             'started_at' => $this->started_at?->toIso8601ZuluString('millisecond'),

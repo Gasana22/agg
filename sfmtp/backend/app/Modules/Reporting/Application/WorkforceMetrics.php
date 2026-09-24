@@ -209,11 +209,12 @@ class WorkforceMetrics
     public function myWeek(): array
     {
         $me = $this->access->currentWorker();
-        $from = $this->today()->subDays(6);
+        $today = CarbonImmutable::parse($this->today());
+        $from = $today->subDays(6);
         $rows = $me ? Attendance::where('worker_id', $me->id)->whereDate('work_date', '>=', $from)->get()->keyBy(fn ($a) => $a->work_date->toDateString()) : collect();
         $labels = [];
         $hours = [];
-        for ($d = $from; $d->lessThanOrEqualTo($this->today()); $d = $d->addDay()) {
+        for ($d = $from; $d->lessThanOrEqualTo($today); $d = $d->addDay()) {
             $labels[] = $d->toDateString();
             $a = $rows->get($d->toDateString());
             $hours[] = $a && $a->minutes() !== null ? round($a->minutes() / 60, 1) : 0.0;

@@ -10,7 +10,7 @@ export type ActionListItem = {
   subtitle?: string;
   at?: string;
   href?: string | null;
-  badge?: { label: string; tone?: "primary" | "warning" | "danger" | "neutral" };
+  badge?: { label: string; tone?: "primary" | "warning" | "danger" | "neutral" | "success" | "info" };
 };
 
 export function ActionListWidget({ data }: { data: { items?: ActionListItem[]; total?: number } }) {

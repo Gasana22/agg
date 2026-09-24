@@ -313,6 +313,7 @@ class WorkforceTest extends TestCase
         $this->assertCount(1, $widgets['overdue_tasks']['data']['items']);
         $this->assertCount(1, $widgets['leave_requests']['data']['items']);
         $this->assertContains('new_task', array_column($data['quick_actions'], 'key'));
+        $this->as($this->manager)->getJson($this->url('/dashboards/manager/widgets/worker_activity'))->assertOk()->assertJsonPath('data.series.0.key', 'verified');
 
         // The livestock manager's queue has no crop work.
         $queue = collect($this->as($this->keeper)->getJson($this->url('/dashboards/livestock'))->json('data.widgets'))->firstWhere('key', 'verification_queue');
@@ -323,6 +324,8 @@ class WorkforceTest extends TestCase
         $this->assertSame(['tasks.today', 'tasks.done_today', 'attendance.status'], array_column($mine['kpis'], 'key'));
         $this->assertSame(1, $mine['kpis'][1]['value']);
         $this->assertStringStartsWith('Checked in at', $mine['kpis'][2]['value']);
+        $week = $this->as($this->fieldWorker)->getJson($this->url('/dashboards/worker/widgets/attendance_week'))->assertOk()->json('data');
+        $this->assertCount(7, $week['x']['values']);
         $theirs = $this->as($this->otherWorker)->getJson($this->url('/dashboards/worker'))->json('data');
         $this->assertSame('Not checked in', $theirs['kpis'][2]['value']);
         $this->assertSame('Fencing', collect($theirs['widgets'])->firstWhere('key', 'today_tasks')['data']['items'][0]['title']);

@@ -35,6 +35,13 @@ const TITLES: Record<string, string> = {
   weight_loss_alerts: "Weight loss",
   livestock_sale_requests: "Sale requests to decide",
   milk_production: "Milk kept per day (litres)",
+  verification_queue: "Work to verify",
+  schedule: "Today's schedule",
+  overdue_tasks: "Overdue tasks",
+  leave_requests: "Leave requests",
+  worker_activity: "Tasks verified per day",
+  today_tasks: "My tasks today",
+  attendance_week: "My hours this week",
 };
 
 /**

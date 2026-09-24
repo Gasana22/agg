@@ -13,7 +13,7 @@ export function useUnits() {
   });
 }
 
-export function useCatalog(catalog: "crops" | "crop-varieties" | "animal-species" | "animal-breeds", parentId?: string) {
+export function useCatalog(catalog: "crops" | "crop-varieties" | "animal-species" | "animal-breeds" | "activity-types", parentId?: string) {
   return useQuery({
     queryKey: ["catalog", catalog, parentId ?? null],
     queryFn: async () =>
@@ -22,6 +22,8 @@ export function useCatalog(catalog: "crops" | "crop-varieties" | "animal-species
         code?: string;
         name?: string;
         purpose?: string | null;
+        module?: string;
+        is_active?: boolean;
       }[],
     staleTime: 3_600_000,
     enabled: catalog !== "crop-varieties" && catalog !== "animal-breeds" ? true : Boolean(parentId),

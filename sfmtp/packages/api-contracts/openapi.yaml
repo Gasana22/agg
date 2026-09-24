@@ -8174,6 +8174,9 @@ components:
           - string
           - 'null'
           format: date
+        is_mine:
+          type: boolean
+          description: The signed-in member's own task (they can start, pause and submit it)
         overdue:
           type: boolean
         started_at:

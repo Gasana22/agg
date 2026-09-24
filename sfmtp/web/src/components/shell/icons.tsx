@@ -1,5 +1,8 @@
 import {
   Boxes,
+  CalendarCheck,
+  ClipboardList,
+  HardHat,
   CreditCard,
   Gauge,
   KeyRound,
@@ -24,6 +27,9 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   map: Map,
   crops: Sprout,
   livestock: PawPrint,
+  myday: CalendarCheck,
+  tasks: ClipboardList,
+  workers: HardHat,
   trace: Route,
   members: Users,
   roles: ShieldCheck,
