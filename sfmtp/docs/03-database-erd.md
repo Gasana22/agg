@@ -532,6 +532,32 @@ erDiagram
 - `animal_groups` (herds/flocks) and `animal_group_members` allow group
   feeding and group treatment for poultry and small stock.
 
+As built in Phase 5, the model differs from the diagram in these places:
+
+- **Vaccinations** are health records of kind `vaccination` (the kinds are
+  treatment, vaccination, deworming, check), so one table carries withdrawal
+  days and the next due date for all of them.
+- **Group records:** health, feeding and production rows name either an
+  animal or a group (a check constraint requires exactly one). A group
+  treatment writes a trace event on each member animal.
+- **Corrections:** health, feeding, weight, production and movement records
+  are append-only. A mistake is voided through `animal_record_voids`, which
+  keeps the original row and recomputes what depended on it (withdrawal
+  dates, last weight, the day's milk lot).
+- **Mortality and exits** are the animal's status (`dead`, `culled`,
+  `transferred`, `sold`) with `exited_on` and `exit_reason`, plus trace
+  events, instead of a separate `animal_mortalities` table.
+- **Sales** are `animal_sale_requests` (requested → approved or rejected →
+  completed). Completing one marks the animal sold.
+- **Production lots:** each day's milk or eggs form one trace batch
+  (`source_type = animal_production_day`), derived from the animals that gave
+  it. Milk inside a withdrawal window must be recorded as discarded and
+  stays out of the lot.
+- **Breeds** come from the global catalogue, with free-text `breed_note` for
+  crosses. There is no farm breed table yet.
+- **Groups** hold members through `animals.group_id` (one group per animal),
+  plus a `flock_size` for poultry that are not tagged individually.
+
 ## 6. Workers & activities
 
 ```mermaid

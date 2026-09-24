@@ -10,8 +10,8 @@ import { ApiError } from "@/lib/api/errors";
 import { CLOSE_REASONS, type CropCycle, type CropObservation, OBSERVATION_KINDS, OPERATION_TYPES, SEVERITIES } from "@/lib/crops";
 import { humanize } from "@/lib/format";
 
-import { FormDialog, num, text } from "./form-dialog";
-import { UnitSelect } from "./unit-select";
+import { FormDialog, num, text } from "@/components/forms/form-dialog";
+import { UnitSelect } from "@/components/forms/unit-select";
 
 type Base = { farmId: string; cycle: CropCycle; onClose: () => void; onDone: () => void };
 

@@ -2,7 +2,7 @@
 
 import { Select } from "@/components/ui/input";
 
-import { useUnits } from "./queries";
+import { useUnits } from "@/lib/api/catalog";
 
 /** Units from the global catalogue, optionally limited to some dimensions. */
 export function UnitSelect({ dimensions, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { dimensions?: string[] }) {

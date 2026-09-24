@@ -12,7 +12,7 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 
 import { useFarmCrops, useSeasons } from "./queries";
-import { UnitSelect } from "./unit-select";
+import { UnitSelect } from "@/components/forms/unit-select";
 
 /** The farm's crop list and seasons. */
 export function SetupPanel({ farmId, canManage }: { farmId: string; canManage: boolean }) {

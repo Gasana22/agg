@@ -14,6 +14,7 @@ own routes, migrations, domain, application services and HTTP layer
 | `Platform` | Platform roles and capabilities, farm administration, accounts and staff, settings, integrations, system pages |
 | `Catalog` | Global catalogues (crops, varieties, species, breeds, units, inventory categories, activity types) |
 | `Crops` | Farm crops, seasons, crop plans, cycles, field operations and inputs, observations, harvests; writes the crop trace history |
+| `Livestock` | Animals and groups, breeding and births, health and vaccinations with withdrawal periods, feeding, weights, milk and egg production, movements, exits and sale requests; writes the animal trace history |
 | `FarmStructure` | Blocks, sections, plots and locations with GeoJSON boundaries, soil profiles, geometry warnings (ADR-0009) |
 | `Support` | Tickets, internal notes, owner-granted read-only support access |
 | `Traceability` | Batch graph, hash-chained events, recorder, journeys, chain verification |
@@ -50,6 +51,12 @@ The crop farm also has a full maize season on B-3 (seed lot → crop lot →
 harvest → dried → packed, with a fall armyworm spray and its withholding
 period) and the current season's cycles on A-1, A-2, B-1 (nursery) and B-2.
 The agronomist and the field worker belong to both farms.
+
+The mixed farm keeps a herd, recorded by the livestock manager: a dairy
+herd with two weeks of milking, Ankole cattle, a goat flock with a death on
+record and a layer flock, with a calving (calf linked to its dam and sire),
+a mastitis treatment under milk withdrawal, a group vaccination and
+deworming, weights and a pending sale request.
 
 Both farms have a mapped layout: paddocks and livestock buildings on the mixed
 farm near Kakiri, and two blocks of three plots (with a soil test on B-3, the

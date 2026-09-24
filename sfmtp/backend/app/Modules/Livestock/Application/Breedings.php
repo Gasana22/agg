@@ -12,6 +12,7 @@ use App\Modules\Livestock\Domain\Models\Animal;
 use App\Modules\Livestock\Domain\Models\Breeding;
 use App\Modules\Traceability\Application\Recorder;
 use App\Support\Http\ApiException;
+use App\Support\Time\EventTime;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -61,7 +62,7 @@ class Breedings
                 'recorded_by' => Auth::id(),
             ]);
             $this->recorder->record($dam->batch, 'served', [
-                'occurred_at' => $served->setTime(10, 0),
+                'occurred_at' => EventTime::on($served, 10),
                 'subject_type' => 'animal_breeding',
                 'subject_id' => $breeding->id,
                 'payload' => array_filter([
@@ -95,7 +96,7 @@ class Breedings
                 default => 'aborted',
             };
             $this->recorder->record($breeding->dam->batch, $event, [
-                'occurred_at' => CarbonImmutable::parse($breeding->outcome_on)->setTime(10, 0),
+                'occurred_at' => EventTime::on($breeding->outcome_on, 10),
                 'subject_type' => 'animal_breeding',
                 'subject_id' => $breeding->id,
                 'payload' => array_filter(['note' => $note]),
@@ -135,12 +136,12 @@ class Breedings
                     'parentage_note' => $breeding->sire_id ? null : $breeding->sire_note,
                     'group_id' => $dam->group_id,
                     'location_id' => $dam->location_id,
-                ], CarbonImmutable::parse($bornOn)->setTime(6, 0)));
+                ], EventTime::on($bornOn, 6)));
             }
 
             $breeding->forceFill(['status' => BreedingStatus::Delivered, 'outcome_on' => $bornOn, 'offspring_count' => $born->count(), 'notes' => $note ?? $breeding->notes])->save();
             $this->recorder->record($dam->batch, 'gave_birth', [
-                'occurred_at' => CarbonImmutable::parse($bornOn)->setTime(6, 0),
+                'occurred_at' => EventTime::on($bornOn, 6),
                 'subject_type' => 'animal_breeding',
                 'subject_id' => $breeding->id,
                 'payload' => ['offspring' => $born->pluck('animal_code')->all()],

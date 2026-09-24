@@ -7,9 +7,9 @@ import { FieldError, Input, Label, Select, Textarea } from "@/components/ui/inpu
 import { api, idempotencyKey } from "@/lib/api/client";
 import type { CropCycle } from "@/lib/crops";
 
-import { FormDialog, num, text } from "./form-dialog";
+import { FormDialog, num, text } from "@/components/forms/form-dialog";
 import { useFarmCrops, usePlots } from "./queries";
-import { UnitSelect } from "./unit-select";
+import { UnitSelect } from "@/components/forms/unit-select";
 
 /** Start a crop cycle on a plot: direct sowing, or a nursery for transplanting. */
 export function StartCycleDialog({ farmId, onClose, onStarted }: { farmId: string; onClose: () => void; onStarted: (cycle: CropCycle, warnings: string[]) => void }) {

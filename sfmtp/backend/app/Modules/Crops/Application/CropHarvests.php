@@ -10,6 +10,7 @@ use App\Modules\Traceability\Application\Recorder;
 use App\Modules\Traceability\Domain\Enums\BatchKind;
 use App\Modules\Traceability\Domain\Enums\LinkType;
 use App\Support\Http\ApiException;
+use App\Support\Time\EventTime;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +57,7 @@ class CropHarvests
 
         return DB::transaction(function () use ($cycle, $data, $harvestedOn, $override) {
             $quantity = (string) $data['quantity'];
-            $event = ['occurred_at' => $harvestedOn->setTime(12, 0), 'plot_id' => $cycle->plot_id, 'subject_type' => 'crop_cycle', 'subject_id' => $cycle->id];
+            $event = ['occurred_at' => EventTime::on($harvestedOn, 12), 'plot_id' => $cycle->plot_id, 'subject_type' => 'crop_cycle', 'subject_id' => $cycle->id];
 
             $batch = $this->recorder->createBatch(BatchKind::Harvest, [
                 'name' => mb_substr("{$cycle->crop->label()} harvest · Plot {$cycle->plot->code} ({$cycle->code})", 0, 150),

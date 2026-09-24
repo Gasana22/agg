@@ -23,6 +23,7 @@ use App\Modules\Traceability\Domain\Enums\LinkType;
 use App\Modules\Traceability\Domain\Models\TraceBatch;
 use App\Modules\Traceability\Domain\Models\TraceBatchLink;
 use App\Support\Http\ApiException;
+use App\Support\Time\EventTime;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -75,7 +76,7 @@ class AnimalRecords
             };
             foreach ($this->animalsOf($animal, $group) as $a) {
                 $this->extendWithdrawal($a, $record);
-                $this->event($a, $event, $record, CarbonImmutable::parse($record->given_on)->setTime(9, 0), [
+                $this->event($a, $event, $record, EventTime::on($record->given_on, 9), [
                     'kind' => $record->kind->value,
                     'diagnosis' => $record->diagnosis,
                     'product' => $record->product_name,
@@ -106,7 +107,7 @@ class AnimalRecords
             if ($record->input_batch_id) {
                 $code = TraceBatch::whereKey($record->input_batch_id)->value('batch_code');
                 foreach ($this->animalsOf($animal, $group) as $a) {
-                    $this->event($a, 'fed', $record, CarbonImmutable::parse($record->fed_on)->setTime(7, 0), ['feed' => $record->feed_name, 'input_batch' => $code, 'group' => $group?->code]);
+                    $this->event($a, 'fed', $record, EventTime::on($record->fed_on, 7), ['feed' => $record->feed_name, 'input_batch' => $code, 'group' => $group?->code]);
                 }
             }
 
@@ -121,7 +122,7 @@ class AnimalRecords
         return DB::transaction(function () use ($data, $animal) {
             $record = Weight::create($this->base($data, $animal, null) + array_intersect_key($data, array_flip(['weighed_on', 'weight_kg'])) + ['method' => $data['method'] ?? 'scale']);
             $this->refreshLastWeight($animal);
-            $this->event($animal, 'weighed', $record, CarbonImmutable::parse($record->weighed_on)->setTime(8, 0), ['weight_kg' => $record->weight_kg, 'method' => $record->method->value]);
+            $this->event($animal, 'weighed', $record, EventTime::on($record->weighed_on, 8), ['weight_kg' => $record->weight_kg, 'method' => $record->method->value]);
 
             return $record;
         });
@@ -157,7 +158,7 @@ class AnimalRecords
                     }
                 }
                 $this->recorder->record($lot, 'produced', [
-                    'occurred_at' => $day->setTime(18, 0),
+                    'occurred_at' => EventTime::on($day, 18),
                     'subject_type' => 'animal_production',
                     'subject_id' => $record->id,
                     'payload' => array_filter([
@@ -397,7 +398,7 @@ class AnimalRecords
             'quantity' => '0',
             'unit' => $unit,
             'source_type' => 'animal_production_day',
-        ], ['occurred_at' => $day->setTime(6, 0), 'payload' => ['product' => $product, 'day' => $day->toDateString()]]);
+        ], ['occurred_at' => EventTime::on($day, 6), 'payload' => ['product' => $product, 'day' => $day->toDateString()]]);
     }
 
     private function assertInputBatch(?string $id, string $field): void

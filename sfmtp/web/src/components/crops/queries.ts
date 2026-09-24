@@ -19,14 +19,6 @@ export function useSeasons(farmId: string) {
   });
 }
 
-export function useUnits() {
-  return useQuery({
-    queryKey: ["catalog", "units"],
-    queryFn: async () => (await api.GET("/catalog/{catalog}", { params: { path: { catalog: "units" } } })).data!.data! as { code?: string; name?: string; dimension?: string }[],
-    staleTime: 3_600_000,
-  });
-}
-
 export function usePlots(farmId: string) {
   return useQuery({
     queryKey: ["structure", farmId],

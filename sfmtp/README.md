@@ -16,7 +16,8 @@ REST API.
 | 2 — Platform administration | ✅ Done: platform roles, farm approval/suspension, plans & subscriptions with limits and lifecycle, owner billing page, global catalogues, integrations, settings, system health, support tickets with owner-granted read-only access |
 | 3 — Farm management | ✅ Done: farm map with blocks / sections / plots / locations and soil tests, member invitations, member management, custom roles and the role editor, farm policies, "My farms" |
 | 4 — Crop management | ✅ Done: crop list and seasons, plans with approval, cycles from nursery to harvest, field work with inputs and withholding periods, pest and disease reports, harvests, all feeding traceability; agronomist dashboard |
-| 5 — Livestock | Next |
+| 5 — Livestock | ✅ Done: animals and groups with lineage, breeding and births, feeding, health and vaccinations with milk and meat withdrawal periods, weights, milk and egg records with daily lots, movements, deaths and culls, sale requests with approval, all feeding traceability; livestock dashboard |
+| 6 — Workers & activities | Next |
 
 ## Repository layout
 

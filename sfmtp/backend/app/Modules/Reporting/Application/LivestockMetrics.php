@@ -60,14 +60,14 @@ class LivestockMetrics
             ->count();
     }
 
-    /** Deaths in the period as a share of the herd at risk, in percent. */
+    /** Deaths in the period as a share of the herd at risk (a fraction; the dashboard formats it). */
     public function mortalityRate(Period $p): ?float
     {
         [$from, $to] = $this->days($p);
         $deaths = Animal::where('status', AnimalStatus::Dead->value)->whereBetween('exited_on', [$from, $to])->count();
         $atRisk = $this->headCount() + $deaths;
 
-        return $atRisk === 0 ? null : round($deaths / $atRisk * 100, 1);
+        return $atRisk === 0 ? null : round($deaths / $atRisk, 4);
     }
 
     public function sold(Period $p): int

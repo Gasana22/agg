@@ -119,6 +119,37 @@ Everything in the Phase 4 row below, with these notes:
   cross-tenant sweep over every crop route. The agronomist's journey was
   checked end to end in a browser.
 
+### Phase 5 — delivered
+
+Everything in the Phase 5 row below, with these notes:
+
+- **Every animal is a trace batch.** Registration creates it, births link
+  the calf from its dam and sire, and health, feeding, weighing, movement,
+  breeding, exit and sale events land on it in the same transaction as the
+  record. Each day's milk or eggs form a lot derived from the animals that
+  gave it.
+- **History is immutable.** Records are append-only at the database; a
+  mistake is voided with a reason, and the void is recorded too.
+- **Food safety:** treatments carry milk and meat withdrawal days. Milk
+  produced inside a milk withdrawal window must be recorded as discarded,
+  and a sale inside a meat withdrawal needs an override reason from someone
+  who may approve sales.
+- **Sales** are requested by the livestock manager or farm manager and
+  approved by the owner, or by a custom role granted
+  `livestock.sales.approve` (nobody approves their own request, except the
+  owner). Prices are visible only with `finance.values.view`; income
+  reaches the ledger in Phases 7–8.
+- **Boundaries:** the livestock manager sees livestock, the map and
+  traceability, and gets 403 on crops and money fields.
+- **Deferred:** feed drawn from inventory (Phase 7), vet visits as worker
+  tasks (Phase 6), and animal health score widgets (Phase 13).
+- **Test gate met:** 181 API tests on PostgreSQL (178 on MySQL, plus 3 that
+  need PostgreSQL features) and 39 web unit tests. They include lineage
+  from dam and sire to offspring, the milk and meat withdrawal rules, day lots, group records,
+  sale approval, append-only records and voids, the role boundaries, and
+  the cross-tenant sweep over every livestock route. The livestock
+  manager's journey was checked end to end in a browser.
+
 ## Phase plan
 
 | Phase | Scope | Key deliverables | Exit criteria (test gate) |

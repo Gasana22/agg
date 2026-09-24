@@ -19,6 +19,7 @@ use App\Modules\Traceability\Domain\Enums\BatchStatus;
 use App\Modules\Traceability\Domain\Enums\LinkType;
 use App\Modules\Traceability\Domain\Models\TraceBatch;
 use App\Support\Http\ApiException;
+use App\Support\Time\EventTime;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -106,7 +107,7 @@ class CropCycles
             $cycle->expected_harvest_on = $data['expected_harvest_on']
                 ?? ($crop->maturity_days ? $startDate->addDays($crop->maturity_days)->toDateString() : null);
 
-            $event = ['occurred_at' => $startDate->setTime(8, 0), 'plot_id' => $plot->id, 'subject_type' => 'crop_cycle'];
+            $event = ['occurred_at' => EventTime::on($startDate, 8), 'plot_id' => $plot->id, 'subject_type' => 'crop_cycle'];
 
             if ($method === PlantingMethod::Transplant) {
                 $cycle->stage = CycleStage::Nursery;
@@ -157,7 +158,7 @@ class CropCycles
             $cycle->save();
 
             $nursery = $cycle->nurseryBatch;
-            $event = ['occurred_at' => $plantedOn->setTime(8, 0), 'plot_id' => $cycle->plot_id, 'subject_type' => 'crop_cycle', 'subject_id' => $cycle->id];
+            $event = ['occurred_at' => EventTime::on($plantedOn, 8), 'plot_id' => $cycle->plot_id, 'subject_type' => 'crop_cycle', 'subject_id' => $cycle->id];
             $lot = $this->createCropLot($cycle, $cycle->crop, $cycle->plot, $nursery, $event, ['seedlings_transplanted' => $cycle->seedlings_transplanted]);
             if ($nursery && $nursery->status === BatchStatus::Open) {
                 $this->recorder->changeStatus($nursery, BatchStatus::Closed, 'Transplanted');

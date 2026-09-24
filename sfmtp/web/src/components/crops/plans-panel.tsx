@@ -12,7 +12,7 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { formatQuantity } from "@/lib/crops";
 
-import { FormDialog, num, text } from "./form-dialog";
+import { FormDialog, num, text } from "@/components/forms/form-dialog";
 import { useFarmCrops, useSeasons } from "./queries";
 
 const PLAN_TONE: Record<string, "neutral" | "primary" | "warning"> = { draft: "warning", approved: "primary", active: "primary", closed: "neutral" };

@@ -224,6 +224,11 @@ class LivestockTest extends TestCase
         $this->as($this->keeper)->postJson($this->url("/animals/{$goat['id']}/exit"), ['status' => 'sold', 'date' => now()->toDateString(), 'reason' => 'x'])->assertStatus(422);
         $this->as($this->keeper)->getJson($this->url('/animals'))->assertJsonCount(0, 'data');
         $this->as($this->keeper)->getJson($this->url('/animals?filter[status]=dead'))->assertJsonCount(1, 'data');
+
+        // Mortality is a fraction for the dashboard to format; today's events are never dated ahead of now.
+        $kpis = collect($this->as($this->keeper)->getJson($this->url('/dashboards/livestock?period=7d'))->json('data.kpis'))->keyBy('key');
+        $this->assertEquals(1.0, $kpis['livestock.mortality_rate']['value']);
+        $this->assertSame(0, DB::table('trace_events')->where('batch_id', $goat['batch']['id'])->where('occurred_at', '>', now()->addSecond())->count());
     }
 
     public function test_livestock_dashboard(): void

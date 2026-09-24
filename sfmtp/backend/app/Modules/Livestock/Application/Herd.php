@@ -14,6 +14,7 @@ use App\Modules\Traceability\Domain\Enums\BatchKind;
 use App\Modules\Traceability\Domain\Enums\BatchStatus;
 use App\Modules\Traceability\Domain\Enums\LinkType;
 use App\Support\Http\ApiException;
+use App\Support\Time\EventTime;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -186,7 +187,7 @@ class Herd
             return;
         }
         $this->recorder->record($batch, $event, [
-            'occurred_at' => CarbonImmutable::parse($date)->setTime(12, 0),
+            'occurred_at' => EventTime::on($date, 12),
             'subject_type' => 'animal',
             'subject_id' => $animal->id,
             'payload' => array_filter($payload),

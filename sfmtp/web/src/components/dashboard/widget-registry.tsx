@@ -29,6 +29,12 @@ const TITLES: Record<string, string> = {
   operations_to_verify: "Field work to verify",
   upcoming_harvests: "Upcoming harvests",
   expected_vs_actual_yield: "Expected vs harvested (kg)",
+  vaccinations_due: "Vaccinations & dewormings due",
+  withdrawal_alerts: "Withdrawal periods running",
+  expected_births: "Expected births",
+  weight_loss_alerts: "Weight loss",
+  livestock_sale_requests: "Sale requests to decide",
+  milk_production: "Milk kept per day (litres)",
 };
 
 /**
