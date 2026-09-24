@@ -18,7 +18,8 @@ REST API.
 | 4 — Crop management | ✅ Done: crop list and seasons, plans with approval, cycles from nursery to harvest, field work with inputs and withholding periods, pest and disease reports, harvests, all feeding traceability; agronomist dashboard |
 | 5 — Livestock | ✅ Done: animals and groups with lineage, breeding and births, feeding, health and vaccinations with milk and meat withdrawal periods, weights, milk and egg records with daily lots, movements, deaths and culls, sale requests with approval, all feeding traceability; livestock dashboard |
 | 6 — Workers & activities | ✅ Done: workers, activities and tasks with a state machine and verification, attendance with GPS and photos, leave, photo uploads, the offline sync API, manager and field-worker dashboards, and the Flutter field app v0 (offline outbox, push / pull) |
-| 7 — Procurement & inventory | Next |
+| 7 — Procurement & inventory | ✅ Done: items, lots as trace batches, the stock ledger with average cost, issues, transfers, counts with approval, stock requests, alerts; suppliers, purchase requests and orders with approval, deliveries and supplier invoices; the double-entry ledger core; Store Manager dashboard |
+| 8 — Finance | Next |
 
 ## Repository layout
 

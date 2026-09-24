@@ -119,6 +119,37 @@ Everything in the Phase 4 row below, with these notes:
   cross-tenant sweep over every crop route. The agronomist's journey was
   checked end to end in a browser.
 
+### Phase 5 — delivered
+
+Everything in the Phase 5 row below, with these notes:
+
+- **Every animal is a trace batch.** Registration creates it, births link
+  the calf from its dam and sire, and health, feeding, weighing, movement,
+  breeding, exit and sale events land on it in the same transaction as the
+  record. Each day's milk or eggs form a lot derived from the animals that
+  gave it.
+- **History is immutable.** Records are append-only at the database; a
+  mistake is voided with a reason, and the void is recorded too.
+- **Food safety:** treatments carry milk and meat withdrawal days. Milk
+  produced inside a milk withdrawal window must be recorded as discarded,
+  and a sale inside a meat withdrawal needs an override reason from someone
+  who may approve sales.
+- **Sales** are requested by the livestock manager or farm manager and
+  approved by the owner, or by a custom role granted
+  `livestock.sales.approve` (nobody approves their own request, except the
+  owner). Prices are visible only with `finance.values.view`; income
+  reaches the ledger in Phases 7–8.
+- **Boundaries:** the livestock manager sees livestock, the map and
+  traceability, and gets 403 on crops and money fields.
+- **Deferred:** feed drawn from inventory (Phase 7), vet visits as worker
+  tasks (Phase 6), and animal health score widgets (Phase 13).
+- **Test gate met:** 181 API tests on PostgreSQL (178 on MySQL, plus 3 that
+  need PostgreSQL features) and 39 web unit tests. They include lineage
+  from dam and sire to offspring, the milk and meat withdrawal rules, day lots, group records,
+  sale approval, append-only records and voids, the role boundaries, and
+  the cross-tenant sweep over every livestock route. The livestock
+  manager's journey was checked end to end in a browser.
+
 ### Phase 6 — delivered
 
 Everything in the Phase 6 row below, with these notes:
@@ -168,36 +199,65 @@ Everything in the Phase 6 row below, with these notes:
   against the real API in CI, and the manager's and field worker's web
   journeys were checked in a browser.
 
-### Phase 5 — delivered
+### Phase 7 — delivered
 
-Everything in the Phase 5 row below, with these notes:
+Everything in the Phase 7 row below, with these notes
+([ADR-0011](adr/0011-stock-valuation-and-ledger-core.md)):
 
-- **Every animal is a trace batch.** Registration creates it, births link
-  the calf from its dam and sire, and health, feeding, weighing, movement,
-  breeding, exit and sale events land on it in the same transaction as the
-  record. Each day's milk or eggs form a lot derived from the animals that
-  gave it.
-- **History is immutable.** Records are append-only at the database; a
-  mistake is voided with a reason, and the void is recorded too.
-- **Food safety:** treatments carry milk and meat withdrawal days. Milk
-  produced inside a milk withdrawal window must be recorded as discarded,
-  and a sale inside a meat withdrawal needs an override reason from someone
-  who may approve sales.
-- **Sales** are requested by the livestock manager or farm manager and
-  approved by the owner, or by a custom role granted
-  `livestock.sales.approve` (nobody approves their own request, except the
-  owner). Prices are visible only with `finance.values.view`; income
-  reaches the ledger in Phases 7–8.
-- **Boundaries:** the livestock manager sees livestock, the map and
-  traceability, and gets 403 on crops and money fields.
-- **Deferred:** feed drawn from inventory (Phase 7), vet visits as worker
-  tasks (Phase 6), and animal health score widgets (Phase 13).
-- **Test gate met:** 181 API tests on PostgreSQL (178 on MySQL, plus 3 that
-  need PostgreSQL features) and 39 web unit tests. They include lineage
-  from dam and sire to offspring, the milk and meat withdrawal rules, day lots, group records,
-  sale approval, append-only records and voids, the role boundaries, and
-  the cross-tenant sweep over every livestock route. The livestock
-  manager's journey was checked end to end in a browser.
+- **Stock.** Items (lot tracking on by default, expiry optional), any farm
+  location as a store, an append-only stock ledger with balances per item,
+  store and lot, weighted-average cost per balance row, first-expiry-first-out
+  issues to a crop cycle, plot, location, animal, group or general use,
+  transfers, low-stock and expiry alerts. Balance rows are locked before
+  every change: the concurrency test forks ten processes against one
+  balance on both engines.
+- **Counts** are entered against the shelf and change nothing until someone
+  else approves (the owner above the farm's `stock_adjustment_pct`). The
+  difference from the book at the time of the count is applied, so
+  movements in between are kept; a count that no longer fits must be
+  taken again.
+- **Stock requests** from crop, livestock and field staff (optionally from a
+  task, which gives the subject) are approved and then issued in full or in
+  part by the store.
+- **Purchasing.** Suppliers; purchase requests with approval; orders as
+  drafts that someone other than the buyer approves (only the owner above
+  `approval_thresholds.purchase_order`), sent, received in one or more
+  deliveries (each line a stock lot at the order price), and matched to the
+  supplier's invoice (no more than received; price differences to
+  variance). Orders close by themselves when received and invoiced.
+- **Traceability.** Every lot is an `input_lot` batch naming the supplier,
+  order and supplier lot number; every issue adds an `issued` event with
+  its subject. Prices never enter trace payloads.
+- **Ledger core.** A system chart of accounts, balanced append-only entries
+  (a PostgreSQL trigger also checks at commit), JE numbers per farm, and a
+  trial balance. Deliveries, invoices, issues, stock-in and counts post
+  automatically; the Inventory account equals the stock value. Only manual
+  entries can be reversed; documents are corrected through stock or
+  purchasing.
+- **Money visibility.** The store manager handles stock and deliveries
+  with stock values but without purchase prices; prices need
+  `procurement.orders.manage` or `finance.values.view`.
+- **Dashboards.** Store Manager dashboard (stock KPIs, requests, deliveries
+  to receive, expiring lots, low stock, recent movements, value by
+  category); stock and payables for the owner, manager and accountant.
+- **Web.** Inventory, Purchasing and Ledger pages, an item page with its
+  lots linked to their trace batches, and an order page from approval to
+  invoice.
+- **Deferred:** payments, customer invoices and the rest of finance
+  (Phase 8); returns to suppliers and supplier credit notes (Phase 8);
+  supplier self-service for orders and deliveries (Phase 12); mobile stock
+  flows (Phase 11); inventory reports and exports (Phase 13).
+- **Test gate met:** 204 API tests on PostgreSQL (200 on MySQL, plus 4 that
+  need PostgreSQL features) and 50 web unit tests. They include
+  the forked-process concurrency test (parallel issues never make stock
+  negative), request → order → approval → partial and full delivery →
+  stock lots → invoice with price variance, input lots as trace batches with
+  issue events, first-expiry issues, average cost and transfers, counts
+  with four-eyes, the owner threshold and stale counts, requests with
+  partial issue, the ledger balancing after every flow, append-only
+  entries, money visibility per role, and the cross-tenant sweep over
+  every new route and request body. The store manager's, manager's,
+  accountant's and owner's journeys were checked in a browser.
 
 ## Phase plan
 

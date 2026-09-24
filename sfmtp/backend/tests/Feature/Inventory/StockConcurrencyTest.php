@@ -45,7 +45,8 @@ class StockConcurrencyTest extends BaseTestCase
     public function test_parallel_issues_never_make_stock_negative(): void
     {
         if (! function_exists('pcntl_fork')) {
-            $this->markTestSkipped('Needs the pcntl extension.');
+            // The Phase 7 gate: never skipped silently in CI.
+            getenv('CI') ? $this->fail('The concurrency test needs the pcntl extension.') : $this->markTestSkipped('Needs the pcntl extension.');
         }
         $this->seed(CatalogSeeder::class);
         $owner = User::factory()->create(['mfa_enabled_at' => now()]);

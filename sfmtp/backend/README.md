@@ -14,6 +14,9 @@ own routes, migrations, domain, application services and HTTP layer
 | `Platform` | Platform roles and capabilities, farm administration, accounts and staff, settings, integrations, system pages |
 | `Catalog` | Global catalogues (crops, varieties, species, breeds, units, inventory categories, activity types) |
 | `Crops` | Farm crops, seasons, crop plans, cycles, field operations and inputs, observations, harvests; writes the crop trace history |
+| `Finance` | Double-entry ledger core: system chart of accounts, balanced append-only entries, manual reversals, trial balance (ADR-0011) |
+| `Inventory` | Items, lots (trace batches), the stock ledger and balances with average cost, issues, transfers, counts with approval, stock requests, alerts |
+| `Procurement` | Suppliers, purchase requests, purchase orders with approval, deliveries into stock lots, supplier invoices matched to receipts |
 | `Workforce` | Workers, activities and tasks (state machine, logs, verification), attendance, GPS points, task photos, leave; the `assigned` scope for crops and livestock |
 | `Media` | Photo and document uploads, stored once per farm by SHA-256 (local disk or S3 / MinIO) |
 | `Sync` | Offline push (ordered mutations through the normal services) and pull (snapshot or change feed) for the mobile app (ADR-0010) |
@@ -67,6 +70,14 @@ record and a layer flock, with a calving (calf linked to its dam and sire),
 a mastitis treatment under milk withdrawal, a group vaccination and
 deworming, weights and a pending sale request.
 
+The mixed farm's feed store and vet cabinet hold stock, run by the store
+manager: opening stock, a dewormer and feed purchase from request to
+invoice (with a price variance), an order on its way and one waiting for the
+owner's approval, a week of feed issued to the dairy herd, a dewormer
+request from the livestock manager, a purchase request and a diesel count
+waiting for the manager, a vaccine lot close to expiry, and mineral licks
+below their reorder level.
+
 Both farms have a mapped layout: paddocks and livestock buildings on the mixed
 farm near Kakiri, and two blocks of three plots (with a soil test on B-3, the
 origin of the demo maize batches) on the crop farm near Seeta. Invitation
@@ -81,7 +92,8 @@ vendor/bin/pint --test                             # code style
 ```
 
 Notable suites: `Tenancy/CrossTenantIsolationTest` (visits every farm route as
-another farm's owner), `Access/RoleBoundaryTest`, `Traceability/TraceabilityTest`
+another farm's owner), `Inventory/StockConcurrencyTest` (forked processes
+issue from one balance at once; needs the pcntl extension), `Access/RoleBoundaryTest`, `Traceability/TraceabilityTest`
 (including hash-chain tamper detection) and `Support/OpenApiCoverageTest`
 (routes ↔ `../packages/api-contracts/openapi.yaml`).
 

@@ -815,6 +815,34 @@ erDiagram
 - Valuation uses **weighted average cost** per item and location. FIFO by lot
   is optional, per farm.
 
+As built in Phase 7 (ADR-0011), the model differs from the diagram in these
+places:
+
+- **The stock ledger is `stock_movements`** (not `stock_transactions`):
+  append-only, with a signed quantity and value, `balance_after`, the source
+  document (`source_type` / `source_id`), the subject of an issue
+  (`subject_type` / `subject_id`) and the `ledger_entry_id` it posted.
+  Types: receipt, opening, issue, return, transfer_out, transfer_in,
+  adjustment.
+- **`stock_balances`** has one row per item, store and lot; untracked items
+  use `lot_key = ''`, so the unique key works on both engines. The check is
+  `quantity >= 0 OR allow_negative`; the flag is set on the row from the
+  farm setting, for untracked items only.
+- **Valuation** is the weighted average per balance row, so a lot keeps its
+  own price; there is no FIFO option.
+- **Stores are any `farm_locations` row.** There is no separate stores table.
+- **Lots** (`stock_lots`, LOT-0001 …) carry the supplier's lot number,
+  expiry, unit cost, supplier and a `trace_batch_id` (an `input_lot` batch).
+- **Documents:** `stock_transfers` (append-only), `stock_adjustments` and
+  lines (with the expected quantity at the time of the count),
+  `inventory_requests` and lines (with `issued_quantity`); `suppliers`
+  (`party_id` is reserved for Phase 12), `purchase_requests` and lines,
+  `purchase_orders` and lines (with received and invoiced quantities),
+  `deliveries` and lines (append-only, each line with its lot and movement),
+  `supplier_invoices` and lines (append-only).
+- **Codes** come from `farm_sequences` (farm, name, last value), locked per
+  row: ITM, LOT, TRF, ADJ, REQ, SUP, PR, PO, GRN, SINV.
+
 ## 8. Finance & sales
 
 ```mermaid
@@ -957,6 +985,15 @@ erDiagram
   journal entries for day-to-day work.
 - Posted transactions are immutable. Corrections are made with reversing
   entries.
+
+As built in Phase 7 (ADR-0011), the ledger core is `ledger_accounts` (the
+system chart, created on first use), `ledger_entries` (JE-00001 …, source
+document, memo, `reverses_entry_id` unique, `posted_by`) and `ledger_lines`
+(debit or credit, never both, with an optional cost centre). Entries and
+lines are append-only; on PostgreSQL a deferred constraint trigger refuses
+an unbalanced entry at commit. `ledger_sequences` numbers entries per farm.
+Only manual entries can be reversed; entries posted by stock or purchasing
+documents are corrected through those documents.
 
 ## 9. Assets, media, notifications
 
