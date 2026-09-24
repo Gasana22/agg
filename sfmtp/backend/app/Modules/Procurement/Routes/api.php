@@ -1,5 +1,7 @@
 <?php
 
+use App\Modules\Procurement\Http\Controllers\InvoiceSubmissionController;
+use App\Modules\Procurement\Http\Controllers\Portal\SupplierPortalController;
 use App\Modules\Procurement\Http\Controllers\PurchaseOrderController;
 use App\Modules\Procurement\Http\Controllers\PurchaseRequestController;
 use App\Modules\Procurement\Http\Controllers\SupplierController;
@@ -43,5 +45,28 @@ Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api', 'farm'])
         Route::post('purchase-orders/{order}/approve', [PurchaseOrderController::class, 'approve'])->middleware('farm.can:procurement.orders.approve')->name('orders.approve');
         Route::post('purchase-orders/{order}/deliveries', [PurchaseOrderController::class, 'receive'])->middleware('farm.can:procurement.deliveries.receive')->name('orders.receive');
         Route::get('supplier-invoices', [PurchaseOrderController::class, 'invoices'])->middleware('farm.can:procurement.orders.manage|finance.view')->name('invoices.index');
+        Route::get('supplier-invoice-submissions', [InvoiceSubmissionController::class, 'index'])->middleware('farm.can:procurement.orders.manage|finance.view')->name('submissions.index');
+        Route::middleware('farm.can:procurement.orders.manage|finance.manage')->whereUuid('submission')->group(function () {
+            Route::post('supplier-invoice-submissions/{submission}/record', [InvoiceSubmissionController::class, 'record'])->name('submissions.record');
+            Route::post('supplier-invoice-submissions/{submission}/reject', [InvoiceSubmissionController::class, 'reject'])->name('submissions.reject');
+        });
         Route::post('supplier-invoices/{supplierInvoice}/cancel', [PurchaseOrderController::class, 'cancelInvoice'])->middleware('farm.can:procurement.orders.manage|finance.manage')->whereUuid('supplierInvoice')->name('invoices.cancel');
+    });
+
+// The supplier portal: a party's orders from every farm it supplies (ADR-0016).
+Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api', 'party:supplier'])
+    ->prefix('supplier/{party}')
+    ->name('supplier.')
+    ->whereUuid(['party', 'farm', 'po'])
+    ->group(function () {
+        Route::get('dashboard', [SupplierPortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('orders', [SupplierPortalController::class, 'orders'])->name('orders.index');
+        Route::get('invoices', [SupplierPortalController::class, 'invoices'])->name('invoices.index');
+        Route::prefix('farms/{farm}')->name('farms.')->group(function () {
+            Route::get('orders/{po}', [SupplierPortalController::class, 'show'])->name('orders.show');
+            Route::post('orders/{po}/respond', [SupplierPortalController::class, 'respond'])->name('orders.respond');
+            Route::post('orders/{po}/dispatches', [SupplierPortalController::class, 'dispatch'])->name('orders.dispatch');
+            Route::post('orders/{po}/invoices', [SupplierPortalController::class, 'submitInvoice'])->name('orders.invoice');
+            Route::post('media', [SupplierPortalController::class, 'upload'])->name('media.upload');
+        });
     });

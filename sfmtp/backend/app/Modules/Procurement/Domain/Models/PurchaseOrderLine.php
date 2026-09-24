@@ -21,7 +21,7 @@ class PurchaseOrderLine extends Model
 
     protected function casts(): array
     {
-        return ['quantity' => 'decimal:3', 'unit_price' => 'decimal:4', 'received_quantity' => 'decimal:3', 'invoiced_quantity' => 'decimal:3'];
+        return ['quantity' => 'decimal:3', 'unit_price' => 'decimal:4', 'received_quantity' => 'decimal:3', 'invoiced_quantity' => 'decimal:3', 'confirmed_quantity' => 'decimal:3'];
     }
 
     public function item(): BelongsTo

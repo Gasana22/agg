@@ -29,10 +29,15 @@ use App\Modules\Livestock\Application\Herd;
 use App\Modules\Media\Domain\Models\Media;
 use App\Modules\Notifications\Application\Inbox;
 use App\Modules\Notifications\Domain\Models\MemberNotification;
+use App\Modules\Parties\Application\PortalAccess;
+use App\Modules\Parties\Domain\Models\Party;
+use App\Modules\Parties\Domain\Models\PartyLink;
 use App\Modules\Procurement\Application\Purchasing;
 use App\Modules\Procurement\Application\Receiving;
 use App\Modules\Procurement\Domain\Models\PurchaseOrder;
+use App\Modules\Procurement\Domain\Models\SupplierInvoiceSubmission;
 use App\Modules\Sales\Application\Invoicing;
+use App\Modules\Sales\Application\SalesOrders;
 use App\Modules\Sales\Application\Shipments;
 use App\Modules\Sync\Domain\Models\SyncConflict;
 use App\Modules\Tenancy\Domain\Models\Farm;
@@ -146,6 +151,14 @@ class CrossTenantIsolationTest extends TestCase
             $qr = $this->app->make(Publishing::class)->issue($goods);
             $this->app->make(Inbox::class)->notify([auth()->id()], 'test', 'Victim notice');
             $notification = MemberNotification::query()->value('id');
+            [$portalInvitation] = $this->app->make(PortalAccess::class)->invite('customer', $customer->id, 'buyer@victim.test');
+            $party = Party::create(['name' => 'Victim supplier party']);
+            $partyLink = PartyLink::create(['party_id' => $party->id, 'farm_id' => $this->victim->id, 'kind' => 'supplier', 'record_id' => $order->supplier_id, 'linked_at' => now()]);
+            $submission = SupplierInvoiceSubmission::create(['code' => 'SUB-001', 'order_id' => $order->id, 'supplier_id' => $order->supplier_id, 'invoice_number' => 'V-2',
+                'invoice_date' => now()->toDateString(), 'amount' => 1, 'lines' => []]);
+            $orders = $this->app->make(SalesOrders::class);
+            $product = $orders->createProduct(['name' => 'Victim eggs', 'unit' => 'pcs', 'list_price' => 500, 'is_published' => true]);
+            $salesOrder = $orders->place($customer->id, ['lines' => [['product_id' => $product->id, 'quantity' => 2]]], 'internal');
             $conflict = SyncConflict::create(['user_id' => auth()->id(), 'mutation_id' => (string) Str::uuid7(), 'entity' => 'animals', 'record_id' => (string) Str::uuid7(),
                 'server_version' => 1, 'fields' => [['field' => 'notes', 'base' => null, 'mine' => 'a', 'server' => 'b']], 'status' => 'open']);
 
@@ -154,6 +167,8 @@ class CrossTenantIsolationTest extends TestCase
                 'payrollRun' => $run->id, 'payrollLine' => $run->lines()->value('id'), 'budget' => $budget->id,
                 'customer' => $customer->id, 'customerInvoice' => $invoice->id, 'supplierInvoice' => $supplierInvoice->id,
                 'shipment' => $shipment->id, 'qrCode' => $qr->id, 'notification' => $notification, 'syncConflict' => $conflict->id,
+                'portalInvitation' => $portalInvitation->id, 'partyLink' => $partyLink->id, 'submission' => $submission->id,
+                'product' => $product->id, 'salesOrder' => $salesOrder->id,
             ];
         }, $owner);
     }
@@ -317,6 +332,11 @@ class CrossTenantIsolationTest extends TestCase
             'stock_versions' => DB::table('inventory_items')->sum('version') + DB::table('stock_adjustments')->sum('version') + DB::table('inventory_requests')->sum('version')
                 + DB::table('suppliers')->sum('version') + DB::table('purchase_requests')->sum('version') + DB::table('purchase_orders')->sum('version'),
             'stock_quantity' => (string) DB::table('stock_balances')->sum('quantity'),
+            'portal_rows' => collect(['party_links', 'portal_invitations', 'supplier_invoice_submissions', 'supplier_dispatches', 'products', 'sales_orders', 'sales_order_lines'])
+                ->mapWithKeys(fn ($t) => [$t => DB::table($t)->count()])->all(),
+            'portal_state' => DB::table('party_links')->orderBy('id')->pluck('status')->merge(DB::table('portal_invitations')->orderBy('id')->pluck('revoked_at'))
+                ->merge(DB::table('supplier_invoice_submissions')->orderBy('id')->pluck('status'))->merge(DB::table('sales_orders')->orderBy('id')->pluck('status'))->all(),
+            'portal_versions' => DB::table('products')->sum('version') + DB::table('sales_orders')->sum('version'),
             'members' => DB::table('farm_users')->where('status', 'active')->count(),
             'member_roles' => DB::table('farm_user_roles')->count(),
             'invitations' => DB::table('farm_invitations')->whereNull('revoked_at')->count(),

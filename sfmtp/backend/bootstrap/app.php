@@ -2,6 +2,7 @@
 
 use App\Modules\Access\Http\Middleware\RequireFarmPermission;
 use App\Modules\Identity\Http\Middleware\EnsureMfaCompliant;
+use App\Modules\Parties\Http\Middleware\ResolvePartyContext;
 use App\Modules\Platform\Http\Middleware\RequirePlatformAdmin;
 use App\Modules\Platform\Http\Middleware\RequirePlatformCapability;
 use App\Modules\Tenancy\Http\Middleware\ResolveFarmContext;
@@ -28,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'mfa.compliant' => EnsureMfaCompliant::class,
             'farm' => ResolveFarmContext::class,
             'farm.can' => RequireFarmPermission::class,
+            'party' => ResolvePartyContext::class,
             'platform.admin' => RequirePlatformAdmin::class,
             'platform.can' => RequirePlatformCapability::class,
         ]);
@@ -35,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Tenant context must exist before route-model binding, so that bound
         // models are resolved through the farm scope (docs/02 §2 layer 4).
         $middleware->prependToPriorityList(SubstituteBindings::class, ResolveFarmContext::class);
+        $middleware->prependToPriorityList(SubstituteBindings::class, ResolvePartyContext::class);
 
         // Idempotency runs after authentication (the key is per user).
         $middleware->appendToPriorityList(AuthenticatesRequests::class, EnforceIdempotency::class);

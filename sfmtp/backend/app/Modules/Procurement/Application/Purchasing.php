@@ -6,9 +6,11 @@ use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Finance\Application\Money;
 use App\Modules\Inventory\Application\Qty;
 use App\Modules\Inventory\Domain\Models\InventoryItem;
+use App\Modules\Parties\Domain\Models\Party;
 use App\Modules\Procurement\Domain\Models\PurchaseOrder;
 use App\Modules\Procurement\Domain\Models\PurchaseRequest;
 use App\Modules\Procurement\Domain\Models\Supplier;
+use App\Modules\Procurement\Notifications\PurchaseOrderSent;
 use App\Modules\Tenancy\Application\FarmSettings;
 use App\Modules\Tenancy\TenantContext;
 use App\Support\Database\Codes;
@@ -16,6 +18,7 @@ use App\Support\Database\Sequence;
 use App\Support\Http\ApiException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * Suppliers, purchase requests and purchase orders.
@@ -180,7 +183,7 @@ class Purchasing
         return $order;
     }
 
-    /** Mark the order as sent to the supplier (by phone, email or the portal in Phase 12). */
+    /** Mark the order as sent to the supplier (by phone or email, or through the supplier portal). */
     public function sendOrder(PurchaseOrder $order): PurchaseOrder
     {
         if ($order->status !== 'approved') {
@@ -188,6 +191,13 @@ class Purchasing
         }
         $order->forceFill(['status' => 'sent', 'sent_at' => now()])->save();
         $this->audit->record('procurement.order.sent', $order, ['status' => 'approved'], ['status' => 'sent']);
+        // A supplier on the portal is told at once and answers there.
+        $order->loadMissing('supplier');
+        if ($order->supplier->party_id && ($party = Party::find($order->supplier->party_id))) {
+            $farm = $this->context->farm();
+            Notification::send($party->users()->get(), new PurchaseOrderSent($farm->name, $order->code, $party->id, $farm->id, $order->id,
+                $order->expected_on?->toFormattedDayDateString()));
+        }
 
         return $order;
     }

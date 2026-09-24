@@ -119,7 +119,7 @@ class FarmService
     {
         return [
             'require_mfa_for_all' => false,
-            'approval_thresholds' => ['expense' => null, 'purchase_order' => null, 'stock_adjustment_pct' => null],
+            'approval_thresholds' => ['expense' => null, 'purchase_order' => null, 'sales_order' => null, 'stock_adjustment_pct' => null],
             'allow_negative_stock' => false,
             'allow_intercropping' => false,
             'units' => 'metric',

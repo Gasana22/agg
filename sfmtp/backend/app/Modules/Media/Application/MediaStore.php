@@ -4,6 +4,7 @@ namespace App\Modules\Media\Application;
 
 use App\Modules\Access\Application\FarmPermissions;
 use App\Modules\Media\Domain\Models\Media;
+use App\Modules\Tenancy\Domain\Models\FarmUser;
 use App\Modules\Tenancy\TenantContext;
 use App\Support\Http\ApiException;
 use Illuminate\Http\UploadedFile;
@@ -53,13 +54,24 @@ class MediaStore
         return [$media, true];
     }
 
-    /** The uploader, and members who review workers' photos, may open a file. */
+    /**
+     * The uploader may open a file, and so may members who review workers'
+     * photos. A file that came through a portal (uploaded by someone who is
+     * not a member of this farm: a supplier's delivery note or invoice) may
+     * also be opened by those who receive, buy or pay for goods.
+     */
     public function assertCanView(Media $media): void
     {
         if ($media->uploaded_by === Auth::id()) {
             return;
         }
-        foreach (['worker.gps.view', 'tasks.verify', 'attendance.approve'] as $permission) {
+        $allowed = ['worker.gps.view', 'tasks.verify', 'attendance.approve'];
+        $fromPortal = $media->uploaded_by !== null
+            && ! FarmUser::where('farm_id', $this->context->farmId())->where('user_id', $media->uploaded_by)->exists();
+        if ($fromPortal) {
+            $allowed = [...$allowed, 'procurement.deliveries.receive', 'procurement.orders.manage', 'finance.view'];
+        }
+        foreach ($allowed as $permission) {
             if ($this->permissions->allows($permission)) {
                 return;
             }

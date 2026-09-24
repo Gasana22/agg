@@ -19,7 +19,7 @@ class Shipment extends Model
 {
     use BelongsToFarm, HasUuids, Versioned;
 
-    protected $fillable = ['farm_id', 'code', 'status', 'customer_id', 'customer_invoice_id', 'trace_batch_id', 'destination', 'vehicle', 'driver', 'notes',
+    protected $fillable = ['farm_id', 'code', 'status', 'customer_id', 'customer_invoice_id', 'sales_order_id', 'trace_batch_id', 'destination', 'vehicle', 'driver', 'notes',
         'dispatched_at', 'dispatched_by'];
 
     protected function casts(): array
@@ -40,6 +40,11 @@ class Shipment extends Model
     public function batch(): BelongsTo
     {
         return $this->belongsTo(TraceBatch::class, 'trace_batch_id');
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(SalesOrder::class, 'sales_order_id');
     }
 
     public function lines(): HasMany

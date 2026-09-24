@@ -39,7 +39,7 @@ class PurchaseOrderController
 
     public function show(string $farm, PurchaseOrder $order): PurchaseOrderResource
     {
-        return new PurchaseOrderResource($order->load([...self::WITH, 'deliveries.lines.lot', 'deliveries.location', 'deliveries.receiver', 'invoices']));
+        return new PurchaseOrderResource($order->load([...self::WITH, 'deliveries.lines.lot', 'deliveries.location', 'deliveries.receiver', 'invoices', 'dispatches.lines', 'submissions']));
     }
 
     public function store(Request $request): JsonResponse
@@ -82,6 +82,7 @@ class PurchaseOrderController
     {
         $data = $request->validate([
             'location_id' => ['required', 'uuid'],
+            'dispatch_id' => ['sometimes', 'nullable', 'uuid'],
             'received_on' => ['sometimes', 'date'],
             'supplier_reference' => ['sometimes', 'nullable', 'string', 'max:60'],
             'media_id' => ['sometimes', 'nullable', 'uuid'],
@@ -94,7 +95,7 @@ class PurchaseOrderController
         ]);
         $delivery = $this->receiving->receive($order, $data);
 
-        return (new PurchaseOrderResource($order->refresh()->load([...self::WITH, 'deliveries.lines.lot', 'deliveries.location', 'deliveries.receiver', 'invoices'])))
+        return (new PurchaseOrderResource($order->refresh()->load([...self::WITH, 'deliveries.lines.lot', 'deliveries.location', 'deliveries.receiver', 'invoices', 'dispatches.lines', 'submissions'])))
             ->additional(['meta' => ['delivery' => ['id' => $delivery->id, 'code' => $delivery->code]]])
             ->response()->setStatusCode(201);
     }

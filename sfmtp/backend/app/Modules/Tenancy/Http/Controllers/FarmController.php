@@ -66,9 +66,10 @@ class FarmController
     {
         $data = $request->validate([
             'require_mfa_for_all' => ['sometimes', 'boolean'],
-            'approval_thresholds' => ['sometimes', 'array:expense,purchase_order,stock_adjustment_pct'],
+            'approval_thresholds' => ['sometimes', 'array:expense,purchase_order,sales_order,stock_adjustment_pct'],
             'approval_thresholds.expense' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
             'approval_thresholds.purchase_order' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
+            'approval_thresholds.sales_order' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
             'approval_thresholds.stock_adjustment_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'allow_negative_stock' => ['sometimes', 'boolean'],
             'allow_intercropping' => ['sometimes', 'boolean'],

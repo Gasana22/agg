@@ -18,6 +18,7 @@ class ShipmentResource extends JsonResource
             'code' => $this->code,
             'status' => $this->status,
             'customer' => $this->whenLoaded('customer', fn () => ['id' => $this->customer->id, 'code' => $this->customer->code, 'name' => $this->customer->name]),
+            'sales_order' => $this->sales_order_id ? ['id' => $this->sales_order_id, 'code' => $this->relationLoaded('order') ? $this->order?->code : null] : null,
             'invoice' => $this->customer_invoice_id ? ['id' => $this->customer_invoice_id, 'code' => $this->invoice?->code] : null,
             'trace_batch' => $this->whenLoaded('batch', fn () => ['id' => $this->batch->id, 'batch_code' => $this->batch->batch_code, 'status' => $this->batch->status->value]),
             'destination' => $this->destination,

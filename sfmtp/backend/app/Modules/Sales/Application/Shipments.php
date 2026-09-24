@@ -3,8 +3,10 @@
 namespace App\Modules\Sales\Application;
 
 use App\Modules\Audit\Application\AuditLogger;
+use App\Modules\Inventory\Application\Qty;
 use App\Modules\Sales\Domain\Models\Customer;
 use App\Modules\Sales\Domain\Models\CustomerInvoice;
+use App\Modules\Sales\Domain\Models\SalesOrder;
 use App\Modules\Sales\Domain\Models\Shipment;
 use App\Modules\Sales\Domain\Models\ShipmentLine;
 use App\Modules\Traceability\Application\BatchOperations;
@@ -58,7 +60,8 @@ class Shipments
         $lines = [];
         foreach (array_values($data['lines']) as $i => $line) {
             $batch = TraceBatch::find($line['batch_id']) ?? throw $this->invalid("lines.{$i}.batch_id", 'The selected batch does not exist in this farm.');
-            $lines[] = ['batch' => $batch, 'quantity' => isset($line['quantity']) ? (string) $line['quantity'] : $this->operations->available($batch), 'description' => $line['description'] ?? null];
+            $lines[] = ['batch' => $batch, 'quantity' => isset($line['quantity']) ? (string) $line['quantity'] : $this->operations->available($batch), 'description' => $line['description'] ?? null,
+                'sales_order_line_id' => $line['sales_order_line_id'] ?? null];
         }
 
         return DB::transaction(function () use ($data, $customer, $invoice, $at, $lines) {
@@ -83,6 +86,7 @@ class Shipments
                 'status' => 'dispatched',
                 'customer_id' => $customer->id,
                 'customer_invoice_id' => $invoice?->id,
+                'sales_order_id' => $data['sales_order_id'] ?? null,
                 'trace_batch_id' => $batch->id,
                 'destination' => $data['destination'] ?? $customer->address,
                 'vehicle' => $data['vehicle'] ?? null,
@@ -101,6 +105,7 @@ class Shipments
                     'quantity' => $line['quantity'],
                     'unit' => $line['quantity'] === null ? null : $line['batch']->unit,
                     'description' => $line['description'] ?? $line['batch']->name,
+                    'sales_order_line_id' => $line['sales_order_line_id'],
                 ]);
             }
 
@@ -140,6 +145,7 @@ class Shipments
                 $this->recorder->changeStatus($batch, BatchStatus::Closed, 'Delivered', ['occurred_at' => $at]);
             }
             $this->audit->record('sales.shipment.delivered', $shipment, ['status' => 'dispatched'], ['status' => 'delivered', 'received_by' => $shipment->received_by]);
+            $this->settleOrder($shipment, $at);
 
             return $shipment->load('lines.batch', 'customer', 'invoice', 'batch');
         });
@@ -154,9 +160,47 @@ class Shipments
             $this->recorder->record($shipment->batch, 'delivery_failed', ['subject_type' => 'shipment', 'subject_id' => $shipment->id,
                 'payload' => ['shipment' => $shipment->code, 'customer' => $shipment->customer->name, 'reason' => $reason]]);
             $this->audit->record('sales.shipment.failed', $shipment, ['status' => 'dispatched'], ['status' => 'failed', 'reason' => $reason]);
+            $this->returnToOrder($shipment);
 
             return $shipment->load('lines.batch', 'customer', 'invoice', 'batch');
         });
+    }
+
+    /** An order is delivered once all of it has left and every shipment that went has arrived. */
+    private function settleOrder(Shipment $shipment, CarbonImmutable $at): void
+    {
+        if (! $shipment->sales_order_id) {
+            return;
+        }
+        $order = SalesOrder::with('lines')->lockForUpdate()->find($shipment->sales_order_id);
+        $allSent = $order && $order->lines->every(fn ($l) => Qty::milli($l->dispatched_quantity) >= Qty::milli($l->quantity));
+        $open = $order ? Shipment::where('sales_order_id', $order->id)->where('status', 'dispatched')->exists() : true;
+        if ($allSent && ! $open && $order->status === 'dispatched') {
+            $order->forceFill(['status' => 'delivered', 'delivered_at' => $at])->save();
+            $this->audit->record('sales.order.delivered', $order, ['status' => 'dispatched'], ['status' => 'delivered']);
+        }
+    }
+
+    /** Goods that did not arrive are still owed: their quantity can be sent again. */
+    private function returnToOrder(Shipment $shipment): void
+    {
+        if (! $shipment->sales_order_id) {
+            return;
+        }
+        $order = SalesOrder::with(['lines', 'invoice'])->lockForUpdate()->find($shipment->sales_order_id);
+        if (! $order) {
+            return;
+        }
+        foreach ($shipment->lines()->whereNotNull('sales_order_line_id')->get() as $sl) {
+            $line = $order->lines->firstWhere('id', $sl->sales_order_line_id);
+            $line?->forceFill(['dispatched_quantity' => Qty::of(max(0, Qty::milli($line->dispatched_quantity) - Qty::milli($sl->quantity)))])->save();
+        }
+        $sent = $order->lines->contains(fn ($l) => Qty::milli($l->dispatched_quantity) > 0);
+        if (! $sent && $order->status === 'dispatched') {
+            $back = $order->invoice && $order->invoice->status !== 'void' ? 'invoiced' : 'approved';
+            $order->forceFill(['status' => $back])->save();
+            $this->audit->record('sales.order.returned', $order, ['status' => 'dispatched'], ['status' => $back, 'shipment' => $shipment->code]);
+        }
     }
 
     private function assertDispatched(Shipment $shipment): void

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A purchase order: draft → approved → sent → partially received / received → closed, or cancelled.
+ * A supplier with portal access answers a sent order (accepted / rejected).
  */
 class PurchaseOrder extends Model
 {
@@ -22,7 +23,7 @@ class PurchaseOrder extends Model
 
     protected function casts(): array
     {
-        return ['expected_on' => 'date', 'total_amount' => 'decimal:2', 'approved_at' => 'datetime', 'sent_at' => 'datetime', 'version' => 'integer'];
+        return ['expected_on' => 'date', 'total_amount' => 'decimal:2', 'approved_at' => 'datetime', 'sent_at' => 'datetime', 'supplier_responded_at' => 'datetime', 'supplier_promised_on' => 'date', 'version' => 'integer'];
     }
 
     public function lines(): HasMany
@@ -63,5 +64,15 @@ class PurchaseOrder extends Model
     public function invoices(): HasMany
     {
         return $this->hasMany(SupplierInvoice::class, 'order_id');
+    }
+
+    public function dispatches(): HasMany
+    {
+        return $this->hasMany(SupplierDispatch::class, 'order_id');
+    }
+
+    public function submissions(): HasMany
+    {
+        return $this->hasMany(SupplierInvoiceSubmission::class, 'order_id');
     }
 }

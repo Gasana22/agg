@@ -51,6 +51,7 @@ return [
         'Crops',
         'Livestock',
         'Sales',
+        'Parties',
         'Sync',
         'Support',
         'Traceability',

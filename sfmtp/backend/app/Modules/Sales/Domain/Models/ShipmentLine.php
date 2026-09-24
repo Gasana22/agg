@@ -15,7 +15,7 @@ class ShipmentLine extends Model
 
     public const UPDATED_AT = null;
 
-    protected $fillable = ['farm_id', 'shipment_id', 'position', 'trace_batch_id', 'quantity', 'unit', 'description'];
+    protected $fillable = ['farm_id', 'shipment_id', 'position', 'trace_batch_id', 'quantity', 'unit', 'description', 'sales_order_line_id'];
 
     protected function casts(): array
     {

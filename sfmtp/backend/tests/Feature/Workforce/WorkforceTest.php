@@ -33,6 +33,9 @@ class WorkforceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Midday on the farm: "today" and "hours ago" land on the same farm day
+        // whatever the hour the suite runs (farms default to Africa/Kampala).
+        $this->travelTo(now('Africa/Kampala')->setTime(12, 0)->utc());
         $this->seed(CatalogSeeder::class);
         $this->farm = $this->farm();
         $this->owner = $this->ownerOf($this->farm);

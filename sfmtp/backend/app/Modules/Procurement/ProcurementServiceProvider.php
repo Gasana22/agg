@@ -8,6 +8,7 @@ use App\Modules\Procurement\Domain\Models\PurchaseOrder;
 use App\Modules\Procurement\Domain\Models\PurchaseRequest;
 use App\Modules\Procurement\Domain\Models\Supplier;
 use App\Modules\Procurement\Domain\Models\SupplierInvoice;
+use App\Modules\Procurement\Portal\SupplierPortalSubject;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -15,6 +16,7 @@ class ProcurementServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->tag([SupplierPortalSubject::class], 'sfmtp.portal-subjects');
         $this->app->resolving(Payables::class, fn (Payables $payables, $app) => $payables->register('supplier_invoice', $app->make(SupplierInvoices::class)));
     }
 

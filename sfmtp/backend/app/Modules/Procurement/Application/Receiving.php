@@ -13,6 +13,7 @@ use App\Modules\Inventory\Application\StockService;
 use App\Modules\Media\Domain\Models\Media;
 use App\Modules\Procurement\Domain\Models\Delivery;
 use App\Modules\Procurement\Domain\Models\PurchaseOrder;
+use App\Modules\Procurement\Domain\Models\SupplierDispatch;
 use App\Modules\Procurement\Domain\Models\SupplierInvoice;
 use App\Support\Database\Sequence;
 use App\Support\Http\ApiException;
@@ -39,7 +40,12 @@ class Receiving
         private readonly AuditLogger $audit,
     ) {}
 
-    /** @param  array{location_id:string, received_on?:string, supplier_reference?:?string, media_id?:?string, note?:?string, lines:array<int,array{order_line_id:string, quantity:string|float, lot_number?:?string, expires_on?:?string}>}  $data */
+    /**
+     * Receiving against a supplier's dispatch notice (`dispatch_id`) marks it
+     * received and takes its delivery note unless another is given.
+     *
+     * @param  array{location_id:string, dispatch_id?:?string, received_on?:string, supplier_reference?:?string, media_id?:?string, note?:?string, lines:array<int,array{order_line_id:string, quantity:string|float, lot_number?:?string, expires_on?:?string}>}  $data
+     */
     public function receive(PurchaseOrder $order, array $data): Delivery
     {
         if (! in_array($order->status, ['approved', 'sent', 'partially_received'], true)) {
@@ -49,12 +55,19 @@ class Receiving
         if (! empty($data['media_id']) && ! Media::whereKey($data['media_id'])->exists()) {
             throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', ['media_id' => ['Upload the delivery note photo first.']]);
         }
+        $dispatch = null;
+        if (! empty($data['dispatch_id'])) {
+            $dispatch = SupplierDispatch::where('order_id', $order->id)->where('status', 'dispatched')->find($data['dispatch_id'])
+                ?? throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', ['dispatch_id' => ['Choose a dispatch of this order that has not been received.']]);
+            $data['supplier_reference'] ??= $dispatch->reference;
+            $data['media_id'] ??= $dispatch->media_id;
+        }
         $receivedOn = CarbonImmutable::parse($data['received_on'] ?? now()->toDateString());
         if ($receivedOn->isFuture()) {
             throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', ['received_on' => ['The date cannot be in the future.']]);
         }
 
-        return DB::transaction(function () use ($order, $data, $receivedOn) {
+        return DB::transaction(function () use ($order, $data, $receivedOn, $dispatch) {
             $order = PurchaseOrder::with(['supplier'])->lockForUpdate()->findOrFail($order->id);
             $lines = $order->lines()->with('item')->lockForUpdate()->get()->keyBy('id');
             $delivery = Delivery::create([
@@ -87,6 +100,7 @@ class Receiving
             }
             $complete = $order->lines()->get()->every(fn ($line) => Qty::milli($line->received_quantity) >= Qty::milli($line->quantity));
             $order->forceFill(['status' => $complete ? 'received' : 'partially_received'])->save();
+            $dispatch?->forceFill(['status' => 'received', 'delivery_id' => $delivery->id, 'received_at' => now()])->save();
             $this->audit->record('procurement.delivery.received', $delivery, null, ['code' => $delivery->code, 'order' => $order->code, 'order_status' => $order->status]);
 
             return $delivery;
