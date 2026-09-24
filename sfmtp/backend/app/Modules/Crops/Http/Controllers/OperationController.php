@@ -53,7 +53,21 @@ class OperationController
 
     public function store(Request $request): JsonResponse
     {
-        $data = $request->validate([
+        $data = $request->validate(self::storeRules());
+
+        $cycle = CropCycle::find($data['cycle_id']) ?? throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', [
+            'cycle_id' => ['The selected crop cycle does not exist in this farm.'],
+        ]);
+
+        $operation = $this->operations->record($cycle, $data);
+
+        return (new OperationResource($operation->load(self::WITH)))->response()->setStatusCode(201);
+    }
+
+    /** Also used by offline sync (docs/08). */
+    public static function storeRules(): array
+    {
+        return [
             'cycle_id' => ['required', 'uuid'],
             'type' => ['required', Rule::in(OperationType::values())],
             'occurred_at' => ['sometimes', 'date', 'before_or_equal:'.now()->addMinutes(5)->toIso8601String()],
@@ -69,15 +83,7 @@ class OperationController
             'inputs.*.unit' => ['required', 'string', 'exists:units,code'],
             'inputs.*.withholding_days' => ['nullable', 'integer', 'min:0', 'max:3650'],
             'inputs.*.input_batch_id' => ['nullable', 'uuid'],
-        ]);
-
-        $cycle = CropCycle::find($data['cycle_id']) ?? throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', [
-            'cycle_id' => ['The selected crop cycle does not exist in this farm.'],
-        ]);
-
-        $operation = $this->operations->record($cycle, $data);
-
-        return (new OperationResource($operation->load(self::WITH)))->response()->setStatusCode(201);
+        ];
     }
 
     public function verify(string $farm, CropOperation $operation): OperationResource

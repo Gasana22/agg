@@ -3,6 +3,15 @@
 namespace App\Modules\Sync\Application;
 
 use App\Modules\Access\Application\FarmPermissions;
+use App\Modules\Crops\Application\CropObservations;
+use App\Modules\Crops\Application\CropOperations;
+use App\Modules\Crops\Domain\Models\CropCycle;
+use App\Modules\Crops\Http\Controllers\ObservationController;
+use App\Modules\Crops\Http\Controllers\OperationController;
+use App\Modules\Livestock\Application\AnimalRecords;
+use App\Modules\Livestock\Http\Controllers\RecordController;
+use App\Modules\Livestock\Http\Resources\AnimalResource;
+use App\Modules\Sync\Domain\Models\SyncConflict;
 use App\Modules\Tenancy\TenantContext;
 use App\Modules\Workforce\Application\AttendanceBook;
 use App\Modules\Workforce\Application\FieldEvidence;
@@ -56,6 +65,10 @@ class SyncPush
         private readonly AttendanceBook $attendance,
         private readonly LeaveDesk $leave,
         private readonly TenantContext $context,
+        private readonly CropObservations $observations,
+        private readonly CropOperations $operations,
+        private readonly AnimalRecords $records,
+        private readonly FieldMerge $merge,
     ) {
         $this->handlers = [
             'worker_task_logs' => ['insert' => ['tasks.execute', $this->taskStep(...)]],
@@ -66,6 +79,19 @@ class SyncPush
             ],
             'worker_gps_points' => ['insert' => ['attendance.record', $this->gps(...)]],
             'worker_leave' => ['insert' => ['leave.request', $this->leaveRequest(...)]],
+            // Phase 11: agronomist, livestock and manager work from the phone.
+            'crop_observations' => ['insert' => ['crops.operations.record', $this->observation(...)]],
+            'crop_operations' => ['insert' => ['crops.operations.record', $this->operation(...)]],
+            'animal_health' => ['insert' => ['livestock.records.record', fn (array $c, Request $r) => $this->animalRecord('health', $c)]],
+            'animal_weights' => ['insert' => ['livestock.records.record', fn (array $c, Request $r) => $this->animalRecord('weight', $c)]],
+            'animal_production' => ['insert' => ['livestock.records.record', fn (array $c, Request $r) => $this->animalRecord('production', $c)]],
+            'animals' => ['update' => ['livestock.animals.manage', $this->animalEdit(...)]],
+            'task_reviews' => [
+                'verify' => ['tasks.verify', fn (array $c, Request $r) => $this->review($c, $r, true)],
+                'reject' => ['tasks.verify', fn (array $c, Request $r) => $this->review($c, $r, false)],
+            ],
+            // Anyone may resolve their own conflicts.
+            'sync_conflicts' => ['resolve' => [null, $this->resolveConflict(...)]],
         ];
     }
 
@@ -100,11 +126,12 @@ class SyncPush
 
         try {
             return DB::transaction(function () use ($m, $deviceId, $base, $permission, $handler, $request) {
-                if (! $this->permissions->allows($permission)) {
+                if ($permission !== null && ! $this->permissions->allows($permission)) {
                     throw ApiException::forbidden('forbidden', 'You do not have permission to do this in this farm.');
                 }
                 $data = (array) ($m['data'] ?? []);
-                $ctx = array_merge($data, array_filter(['id' => $m['id'] ?? null, 'occurred_at' => $m['occurred_at'] ?? null, 'device_id' => $deviceId]));
+                $ctx = array_merge($data, array_filter(['id' => $m['id'] ?? null, 'occurred_at' => $m['occurred_at'] ?? null, 'device_id' => $deviceId,
+                    'base_version' => $m['base_version'] ?? null, 'mutation_id' => $m['mutation_id']], fn ($v) => $v !== null));
 
                 return $this->store($m, $deviceId, $base + $handler($ctx, $request));
             });
@@ -138,6 +165,12 @@ class SyncPush
                 return ['status' => 'conflict', 'error' => $error, 'server' => ['entity' => 'tasks', 'id' => $task->id, 'version' => $task->version, 'data' => (new TaskResource($task))->resolve($request)]];
             });
         }
+        if ($m['entity'] === 'task_reviews' && $e->errorCode === 'invalid_state_transition') {
+            $task = Task::with(TaskController::WITH)->find($m['data']['task_id'] ?? null);
+
+            return ['status' => 'conflict', 'error' => $error, 'server' => $task
+                ? ['entity' => 'team_tasks', 'id' => $task->id, 'version' => $task->version, 'data' => (new TaskResource($task))->resolve($request)] : null];
+        }
         if ($m['entity'] === 'worker_attendance' && in_array($e->errorCode, ['already_checked_in', 'not_checked_in'], true)) {
             $record = isset($e->extra['attendance_id']) ? Attendance::find($e->extra['attendance_id']) : null;
 
@@ -161,7 +194,7 @@ class SyncPush
                 'op' => $m['op'],
                 'record_id' => $result['id'] ?? null,
                 'status' => $result['status'],
-                'result' => json_encode(array_intersect_key($result, array_flip(['status', 'version', 'error', 'server']))),
+                'result' => json_encode(array_intersect_key($result, array_flip(['status', 'version', 'error', 'server', 'merged', 'conflict_id']))),
                 'occurred_at' => isset($m['occurred_at']) ? CarbonImmutable::parse($m['occurred_at'])->utc()->format('Y-m-d H:i:s.u') : null,
                 'created_at' => now()->format('Y-m-d H:i:s.u'),
             ]);
@@ -253,6 +286,72 @@ class SyncPush
         $leave = $this->leave->request($ctx);
 
         return $this->applied($leave->id, $leave->version);
+    }
+
+    private function observation(array $ctx, Request $request): array
+    {
+        $data = $this->validated($ctx + ['observed_at' => $ctx['occurred_at'] ?? null], ObservationController::storeRules());
+        $cycle = $this->cycle($data['cycle_id']);
+        unset($data['cycle_id']);
+        $observation = $this->observations->report($cycle, $data);
+
+        return $this->applied($observation->id, $observation->version ?? null);
+    }
+
+    private function operation(array $ctx, Request $request): array
+    {
+        $data = $this->validated($ctx, OperationController::storeRules());
+        $operation = $this->operations->record($this->cycle($data['cycle_id']), $data);
+
+        return $this->applied($operation->id, $operation->version ?? null, ['status_after' => $operation->status->value]);
+    }
+
+    private function animalRecord(string $type, array $ctx): array
+    {
+        $record = $this->records->{$type}($this->validated($ctx, RecordController::rulesFor($type)));
+
+        return $this->applied($record->id, null);
+    }
+
+    private function animalEdit(array $ctx, Request $request): array
+    {
+        $this->validate($ctx, ['id' => ['required', 'uuid'], 'changes' => ['required', 'array'], 'base' => ['sometimes', 'array']]);
+        $r = $this->merge->animal($ctx, isset($ctx['base_version']) ? (int) $ctx['base_version'] : null, $ctx['mutation_id']);
+        $server = ['entity' => 'animals', 'id' => $r['animal']->id, 'version' => (int) $r['animal']->version, 'data' => (new AnimalResource($r['animal']))->resolve($request)];
+
+        return $r['status'] === 'applied'
+            ? ['status' => 'applied', 'id' => $r['animal']->id, 'version' => (int) $r['animal']->version, 'merged' => $r['merged'], 'server' => $server]
+            : ['status' => 'conflict', 'id' => $r['animal']->id, 'version' => (int) $r['animal']->version, 'merged' => $r['merged'], 'conflict_id' => $r['conflict']->id, 'server' => $server,
+                'error' => ['code' => 'field_conflict', 'message' => 'Someone else changed the same details. Choose which to keep.']];
+    }
+
+    private function review(array $ctx, Request $request, bool $verify): array
+    {
+        $this->validate($ctx, ['task_id' => ['required', 'uuid'], 'note' => [$verify ? 'nullable' : 'required', 'string', 'max:500']]);
+        $task = Task::find($ctx['task_id']) ?? throw ApiException::notFound();
+        $task = ($verify ? $this->flow->verify($task, $ctx['note'] ?? null) : $this->flow->reject($task, $ctx['note']))->load(TaskController::WITH);
+
+        return $this->applied($task->id, $task->version, ['entity' => 'team_tasks', 'data' => (new TaskResource($task))->resolve($request)]);
+    }
+
+    private function resolveConflict(array $ctx, Request $request): array
+    {
+        $this->validate($ctx, ['conflict_id' => ['required', 'uuid'], 'choices' => ['required', 'array']]);
+        $conflict = SyncConflict::find($ctx['conflict_id']) ?? throw ApiException::notFound();
+        $conflict = $this->merge->resolve($conflict, $ctx['choices']);
+
+        return $this->applied($conflict->id, $conflict->version, ['entity' => 'conflicts', 'data' => $conflict->toArrayForMember()]);
+    }
+
+    private function cycle(string $id): CropCycle
+    {
+        return CropCycle::find($id) ?? throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', ['cycle_id' => ['The selected crop cycle does not exist in this farm.']]);
+    }
+
+    /** Validate like the matching endpoint and keep only the validated fields. */
+    private function validated(array $data, array $rules): array
+    {
+        return Validator::make($data, $rules)->validate();
     }
 
     private function applied(?string $id, ?int $version, array $extra = []): array

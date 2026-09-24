@@ -3283,7 +3283,7 @@ export interface paths {
         put?: never;
         /**
          * Push offline changes
-         * @description Mutations are applied in order, each with the permission of the matching endpoint. Supported: worker_task_logs.insert (task steps), worker_task_photos.insert, worker_attendance.check_in / check_out, worker_gps_points.insert, worker_leave.insert. 30 pushes per minute per device.
+         * @description Mutations are applied in order, each with the permission of the matching endpoint. Supported: worker_task_logs.insert (task steps), worker_task_photos.insert, worker_attendance.check_in / check_out, worker_gps_points.insert, worker_leave.insert, crop_observations.insert, crop_operations.insert, animal_health.insert, animal_weights.insert, animal_production.insert, animals.update (field-level merge: `data.changes`, `data.base` and `base_version`; fields changed on both sides become a conflict), task_reviews.verify / reject, sync_conflicts.resolve. 30 pushes per minute per device.
          */
         post: operations["syncPush"];
         delete?: never;
@@ -3303,7 +3303,7 @@ export interface paths {
         };
         /**
          * Pull changes
-         * @description The phone's mirror: your own tasks for the coming 14 days and recent ones, your recent attendance and leave, your worker profile. `remove` means the record left your mirror.
+         * @description The phone's mirror, by what you may see: your own tasks for the coming 14 days and recent ones, attendance, leave and worker profile (workers); plots and open crop cycles (crop staff); active groups and animals (livestock staff); tasks waiting for verification as `team_tasks` (supervisors); your notifications and open conflicts (everyone). `remove` means the record left your mirror.
          */
         get: operations["syncPull"];
         put?: never;
@@ -5464,6 +5464,129 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/farms/{farm}/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Your notifications, newest first
+         * @description Every member has an inbox. The phone also receives it through sync pull (`notifications`).
+         */
+        get: operations["listNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark all as read */
+        post: operations["readAllNotifications"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/notifications/{notification}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                notification: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark one as read */
+        post: operations["readNotification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/devices/current/push-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Register this phone for push notifications
+         * @description The device comes from the access token (mobile sign-in). Pushes are sent through Firebase Cloud Messaging when the server has a service account (SFMTP_FCM_CREDENTIALS); tokens that FCM no longer knows are forgotten.
+         */
+        put: operations["registerPushToken"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/sync/conflicts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Your open sync conflicts */
+        get: operations["listSyncConflicts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/sync/conflicts/{syncConflict}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                syncConflict: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Choose, per field, your value or the server's
+         * @description Keeping `mine` writes your value now. Only the member whose change it was may resolve (403); once (409). Phones resolve offline with the `sync_conflicts.resolve` mutation.
+         */
+        post: operations["resolveSyncConflict"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7526,9 +7649,9 @@ export interface components {
              */
             mutation_id: string;
             /** @enum {string} */
-            entity: "worker_task_logs" | "worker_task_photos" | "worker_attendance" | "worker_gps_points" | "worker_leave";
+            entity: "worker_task_logs" | "worker_task_photos" | "worker_attendance" | "worker_gps_points" | "worker_leave" | "crop_observations" | "crop_operations" | "animal_health" | "animal_weights" | "animal_production" | "animals" | "task_reviews" | "sync_conflicts";
             /** @enum {string} */
-            op: "insert" | "check_in" | "check_out";
+            op: "insert" | "check_in" | "check_out" | "update" | "verify" | "reject" | "resolve";
             /**
              * Format: uuid
              * @description Client-generated id of the new record
@@ -7577,6 +7700,13 @@ export interface components {
             } | null;
             /** @description The server's record after applying, or on conflict */
             server?: components["schemas"]["SyncRecord"] | null;
+            /** @description animals.update: the fields applied */
+            merged?: string[];
+            /**
+             * Format: uuid
+             * @description animals.update: the conflict to resolve for fields changed on both sides
+             */
+            conflict_id?: string;
         };
         SyncPull: {
             changes?: (components["schemas"]["SyncRecord"] & {
@@ -9239,6 +9369,52 @@ export interface components {
             key_id?: string;
             /** @description base64 signature of the canonical JSON of `data` */
             value?: string;
+        };
+        MemberNotification: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "notification";
+            /** @description task_assigned, task_verified, task_rejected, task_step_refused, sync_conflict … */
+            kind?: string;
+            title?: string;
+            body?: string | null;
+            link?: string | null;
+            /** @description Ids the app opens, e.g. task_id, conflict_id */
+            data?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            read_at?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        SyncConflict: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "sync_conflict";
+            /** @enum {string} */
+            entity?: "animals";
+            /** Format: uuid */
+            record_id?: string;
+            label?: string | null;
+            fields?: {
+                field?: string;
+                base?: unknown;
+                mine?: unknown;
+                server?: unknown;
+            }[];
+            /** @enum {string} */
+            status?: "open" | "resolved";
+            resolution?: {
+                [key: string]: "mine" | "server";
+            } | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            resolved_at?: string | null;
+            version?: number;
         };
     };
     responses: {
@@ -19888,6 +20064,187 @@ export interface operations {
                 };
             };
             429: components["responses"]["Problem"];
+        };
+    };
+    listNotifications: {
+        parameters: {
+            query?: {
+                unread?: boolean;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["MemberNotification"][];
+                        meta?: {
+                            next_cursor?: string | null;
+                            unread?: number;
+                        };
+                    };
+                };
+            };
+            422: components["responses"]["Problem"];
+        };
+    };
+    readAllNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            marked?: number;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    readNotification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                notification: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["MemberNotification"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    registerPushToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description The FCM or APNs token; null stops pushes to this device */
+                    token: string | null;
+                    /** @enum {string|null} */
+                    platform?: "fcm" | "apns" | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            registered?: boolean;
+                        };
+                    };
+                };
+            };
+            422: components["responses"]["Problem"];
+        };
+    };
+    listSyncConflicts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SyncConflict"][];
+                    };
+                };
+            };
+        };
+    };
+    resolveSyncConflict: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                syncConflict: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Every conflicting field */
+                    choices: {
+                        [key: string]: "mine" | "server";
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SyncConflict"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
 }

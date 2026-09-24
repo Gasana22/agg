@@ -64,12 +64,36 @@ class RecordController
     public function store(Request $request): JsonResponse
     {
         $type = $this->type($request);
+        $data = $request->validate(self::rulesFor($type));
+
+        $record = $this->records->{$type}($data);
+
+        return (new RecordResource($record->load(['animal', 'group', 'recorder', 'void'])))->response()->setStatusCode(201);
+    }
+
+    public function void(Request $request): RecordResource
+    {
+        $type = $this->type($request);
+        $record = $request->route($request->route()->defaults['param']);
+        if (! $record instanceof AnimalRecord) {
+            throw ApiException::notFound();
+        }
+        $data = $request->validate(['reason' => ['required', 'string', 'max:500']]);
+        $this->records->void($record, $data['reason']);
+
+        return new RecordResource($record->fresh()->load(['animal', 'group', 'recorder', 'void']));
+    }
+
+    /** Rules for a record type (health, feeding, weight, production); also used by offline sync. */
+    public static function rulesFor(string $type): array
+    {
         $subject = [
             'animal_id' => ['nullable', 'uuid', $type === 'weight' ? 'required' : 'required_without:group_id'],
             'group_id' => $type === 'weight' ? ['prohibited'] : ['nullable', 'uuid'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
-        $rules = $subject + match ($type) {
+
+        return $subject + match ($type) {
             'health' => [
                 'kind' => ['required', Rule::in(HealthKind::values())],
                 'given_on' => ['required', 'date', 'before_or_equal:+1 day'],
@@ -104,24 +128,6 @@ class RecordController
                 'discarded' => ['sometimes', 'boolean'],
             ],
         };
-        $data = $request->validate($rules);
-
-        $record = $this->records->{$type}($data);
-
-        return (new RecordResource($record->load(['animal', 'group', 'recorder', 'void'])))->response()->setStatusCode(201);
-    }
-
-    public function void(Request $request): RecordResource
-    {
-        $type = $this->type($request);
-        $record = $request->route($request->route()->defaults['param']);
-        if (! $record instanceof AnimalRecord) {
-            throw ApiException::notFound();
-        }
-        $data = $request->validate(['reason' => ['required', 'string', 'max:500']]);
-        $this->records->void($record, $data['reason']);
-
-        return new RecordResource($record->fresh()->load(['animal', 'group', 'recorder', 'void']));
     }
 
     private function type(Request $request): string

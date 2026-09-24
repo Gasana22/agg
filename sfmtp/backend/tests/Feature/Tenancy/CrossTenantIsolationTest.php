@@ -27,11 +27,14 @@ use App\Modules\Livestock\Application\AnimalSales;
 use App\Modules\Livestock\Application\Breedings;
 use App\Modules\Livestock\Application\Herd;
 use App\Modules\Media\Domain\Models\Media;
+use App\Modules\Notifications\Application\Inbox;
+use App\Modules\Notifications\Domain\Models\MemberNotification;
 use App\Modules\Procurement\Application\Purchasing;
 use App\Modules\Procurement\Application\Receiving;
 use App\Modules\Procurement\Domain\Models\PurchaseOrder;
 use App\Modules\Sales\Application\Invoicing;
 use App\Modules\Sales\Application\Shipments;
+use App\Modules\Sync\Domain\Models\SyncConflict;
 use App\Modules\Tenancy\Domain\Models\Farm;
 use App\Modules\Tenancy\Domain\Models\FarmUser;
 use App\Modules\Tenancy\TenantContext;
@@ -141,12 +144,16 @@ class CrossTenantIsolationTest extends TestCase
             $shipment = $this->app->make(Shipments::class)->dispatch(['customer_id' => $customer->id, 'lines' => [['batch_id' => $goods->id, 'quantity' => 10]]]);
             $this->app->make(Publishing::class)->approve($goods, ['product', 'farm']);
             $qr = $this->app->make(Publishing::class)->issue($goods);
+            $this->app->make(Inbox::class)->notify([auth()->id()], 'test', 'Victim notice');
+            $notification = MemberNotification::query()->value('id');
+            $conflict = SyncConflict::create(['user_id' => auth()->id(), 'mutation_id' => (string) Str::uuid7(), 'entity' => 'animals', 'record_id' => (string) Str::uuid7(),
+                'server_version' => 1, 'fields' => [['field' => 'notes', 'base' => null, 'mine' => 'a', 'server' => 'b']], 'status' => 'open']);
 
             return [
                 'ledgerAccount' => $account->id, 'expense' => $expense->id, 'income' => $income->id, 'payment' => $payment->id,
                 'payrollRun' => $run->id, 'payrollLine' => $run->lines()->value('id'), 'budget' => $budget->id,
                 'customer' => $customer->id, 'customerInvoice' => $invoice->id, 'supplierInvoice' => $supplierInvoice->id,
-                'shipment' => $shipment->id, 'qrCode' => $qr->id,
+                'shipment' => $shipment->id, 'qrCode' => $qr->id, 'notification' => $notification, 'syncConflict' => $conflict->id,
             ];
         }, $owner);
     }

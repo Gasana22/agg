@@ -31,6 +31,7 @@ class SyncPull
     public function pull(?int $cursor, array $entities, int $limit, Request $request): array
     {
         $farmId = $this->context->farmId();
+        $entities = $this->entities->allowed($entities);
 
         if (! $cursor) {
             $head = $this->feed->head($farmId);

@@ -48,7 +48,20 @@ class ObservationController
 
     public function store(Request $request): JsonResponse
     {
-        $data = $request->validate([
+        $data = $request->validate(self::storeRules());
+
+        $cycle = CropCycle::find($data['cycle_id']) ?? throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', [
+            'cycle_id' => ['The selected crop cycle does not exist in this farm.'],
+        ]);
+        unset($data['cycle_id']);
+
+        return (new ObservationResource($this->observations->report($cycle, $data)->load(self::WITH)->loadCount('treatments')))->response()->setStatusCode(201);
+    }
+
+    /** Also used by offline sync (docs/08). */
+    public static function storeRules(): array
+    {
+        return [
             'cycle_id' => ['required', 'uuid'],
             'kind' => ['required', Rule::in(ObservationKind::values())],
             'severity' => ['required', Rule::in(Severity::values())],
@@ -58,14 +71,7 @@ class ObservationController
             'observed_at' => ['sometimes', 'date', 'before_or_equal:'.now()->addMinutes(5)->toIso8601String()],
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
-        ]);
-
-        $cycle = CropCycle::find($data['cycle_id']) ?? throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', [
-            'cycle_id' => ['The selected crop cycle does not exist in this farm.'],
-        ]);
-        unset($data['cycle_id']);
-
-        return (new ObservationResource($this->observations->report($cycle, $data)->load(self::WITH)->loadCount('treatments')))->response()->setStatusCode(201);
+        ];
     }
 
     public function update(Request $request, string $farm, CropObservation $observation): ObservationResource

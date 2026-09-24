@@ -4,6 +4,7 @@ namespace App\Modules\Workforce\Application;
 
 use App\Modules\Audit\Application\AuditLogger;
 use App\Modules\Catalog\Domain\Models\ActivityType;
+use App\Modules\Notifications\Application\Inbox;
 use App\Modules\Workforce\Domain\Enums\ActivityStatus;
 use App\Modules\Workforce\Domain\Enums\LeaveStatus;
 use App\Modules\Workforce\Domain\Enums\SubjectType;
@@ -210,6 +211,10 @@ class Activities
                 'due_on' => ($activity->due_on ?? $activity->planned_on)->toDateString(),
             ]);
             $codes[] = $task->code;
+            if ($userId = $worker->loadMissing('membership')->membership?->user_id) {
+                app(Inbox::class)->notify([$userId], 'task_assigned', "New task: {$activity->title}",
+                    $task->due_on ? 'Due '.$task->due_on->toFormattedDateString() : null, "/farms/{$activity->farm_id}/my-day", ['task_id' => $task->id]);
+            }
         }
         if ($activity->status !== ActivityStatus::Open) {
             $activity->forceFill(['status' => ActivityStatus::Open, 'completed_at' => null])->save();

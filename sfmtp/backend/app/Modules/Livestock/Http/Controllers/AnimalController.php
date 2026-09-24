@@ -67,7 +67,7 @@ class AnimalController
 
     public function store(Request $request): JsonResponse
     {
-        $data = $request->validate($this->rules(true));
+        $data = $request->validate(self::rules(true));
         $animal = $this->herd->register($data);
 
         return (new AnimalResource($this->visible($animal->id)))->response()->setStatusCode(201)
@@ -77,7 +77,7 @@ class AnimalController
     public function update(Request $request, string $farm, Animal $animal): AnimalResource
     {
         OptimisticLock::check($request, $animal);
-        $data = $request->validate($this->rules(false));
+        $data = $request->validate(self::rules(false));
 
         return new AnimalResource($this->visible($this->herd->update($animal, $data)->id));
     }
@@ -112,7 +112,8 @@ class AnimalController
         return $this->query()->whereKey($id)->first() ?? throw ApiException::notFound();
     }
 
-    private function rules(bool $creating): array
+    /** Also used by offline sync for edits. */
+    public static function rules(bool $creating): array
     {
         $required = $creating ? 'required' : 'sometimes';
 

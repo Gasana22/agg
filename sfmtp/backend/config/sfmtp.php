@@ -16,6 +16,14 @@ return [
     'trace_signing_seed' => env('SFMTP_TRACE_SIGNING_SEED'),
 
     /*
+    | Push notifications (Phase 11): path to a Firebase service-account JSON.
+    | Without it, notifications stay in the in-app inbox and are logged.
+    */
+    'push' => [
+        'fcm_credentials' => env('SFMTP_FCM_CREDENTIALS'),
+    ],
+
+    /*
     | Proxies (web BFF, load balancer) whose X-Forwarded-* headers are trusted:
     | comma-separated IPs/CIDRs, or "*". Empty = trust none.
     */
@@ -30,6 +38,7 @@ return [
         'Tenancy',
         'Access',
         'Audit',
+        'Notifications',
         'Billing',
         'Platform',
         'Catalog',

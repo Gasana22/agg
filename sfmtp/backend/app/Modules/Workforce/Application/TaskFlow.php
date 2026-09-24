@@ -3,6 +3,7 @@
 namespace App\Modules\Workforce\Application;
 
 use App\Modules\Audit\Application\AuditLogger;
+use App\Modules\Notifications\Application\Inbox;
 use App\Modules\Traceability\Application\Recorder;
 use App\Modules\Traceability\Domain\Models\TraceBatch;
 use App\Modules\Workforce\Domain\Enums\SubjectType;
@@ -83,7 +84,12 @@ class TaskFlow
     {
         $this->assertOwnTask($task);
 
-        return $this->log($task, $event, $task->status, $this->occurredAt($ctx['occurred_at'] ?? null, strict: false), $ctx, applied: false);
+        $log = $this->log($task, $event, $task->status, $this->occurredAt($ctx['occurred_at'] ?? null, strict: false), $ctx, applied: false);
+        // docs/08 §4: the step is kept as evidence and the supervisors are told.
+        app(Inbox::class)->notifyHolders('tasks.verify', 'task_step_refused', "{$task->worker->full_name}: {$event->value} on {$task->code} could not be applied",
+            "Recorded offline while the task was {$task->status->value}. The step is kept in the task's history.", "/farms/{$task->farm_id}/tasks?task={$task->id}", ['task_id' => $task->id], except: Auth::id());
+
+        return $log;
     }
 
     public function verify(Task $task, ?string $note): Task
@@ -141,6 +147,10 @@ class TaskFlow
                 $this->traceWork($task);
             }
             $this->activities->rollup($task->activity);
+            if ($userId = $task->worker->loadMissing('membership')->membership?->user_id) {
+                app(Inbox::class)->notify([$userId], $verified ? 'task_verified' : 'task_rejected',
+                    ($verified ? 'Work approved: ' : 'Work sent back: ').$task->activity->title, $note, "/farms/{$task->farm_id}/my-day", ['task_id' => $task->id]);
+            }
 
             return $task;
         });

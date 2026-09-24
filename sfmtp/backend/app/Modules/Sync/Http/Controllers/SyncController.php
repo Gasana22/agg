@@ -2,11 +2,14 @@
 
 namespace App\Modules\Sync\Http\Controllers;
 
+use App\Modules\Sync\Application\FieldMerge;
 use App\Modules\Sync\Application\SyncEntities;
 use App\Modules\Sync\Application\SyncPull;
 use App\Modules\Sync\Application\SyncPush;
+use App\Modules\Sync\Domain\Models\SyncConflict;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class SyncController
@@ -48,5 +51,18 @@ class SyncController
             (int) ($data['limit'] ?? config('sfmtp.sync.pull_limit')),
             $request,
         )]);
+    }
+
+    /** The member's open conflicts (the phone also gets them through pull). */
+    public function conflicts(): JsonResponse
+    {
+        return response()->json(['data' => SyncConflict::where('user_id', Auth::id())->where('status', 'open')->orderByDesc('created_at')->get()->map->toArrayForMember()->all()]);
+    }
+
+    public function resolve(Request $request, string $farm, SyncConflict $syncConflict, FieldMerge $merge): JsonResponse
+    {
+        $data = $request->validate(['choices' => ['required', 'array']]);
+
+        return response()->json(['data' => $merge->resolve($syncConflict, $data['choices'])->toArrayForMember()]);
     }
 }

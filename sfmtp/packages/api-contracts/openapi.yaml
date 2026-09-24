@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SFMTP API
-  version: 1.9.0-phase10
+  version: 1.10.0-phase11
   description: |
     Smart Farm Management & Traceability Platform REST API.
 
@@ -30,6 +30,8 @@ tags:
     description: Workers, activities and tasks with their state machine, attendance with GPS and photos, leave, and the field worker's day.
   - name: Media
     description: Photo and document uploads, stored once per farm by SHA-256.
+  - name: Notifications
+    description: Each member's in-app inbox, also mirrored to phones and pushed through FCM when configured.
   - name: Sync
     description: Offline push and pull for the mobile app (docs/08).
   - name: Inventory
@@ -5856,7 +5858,7 @@ paths:
       - Sync
       operationId: syncPush
       summary: Push offline changes
-      description: 'Mutations are applied in order, each with the permission of the matching endpoint. Supported: worker_task_logs.insert (task steps), worker_task_photos.insert, worker_attendance.check_in / check_out, worker_gps_points.insert, worker_leave.insert. 30 pushes per minute per device.'
+      description: 'Mutations are applied in order, each with the permission of the matching endpoint. Supported: worker_task_logs.insert (task steps), worker_task_photos.insert, worker_attendance.check_in / check_out, worker_gps_points.insert, worker_leave.insert, crop_observations.insert, crop_operations.insert, animal_health.insert, animal_weights.insert, animal_production.insert, animals.update (field-level merge: `data.changes`, `data.base` and `base_version`; fields changed on both sides become a conflict), task_reviews.verify / reject, sync_conflicts.resolve. 30 pushes per minute per device.'
       parameters:
       - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -5892,7 +5894,7 @@ paths:
       - Sync
       operationId: syncPull
       summary: Pull changes
-      description: 'The phone''s mirror: your own tasks for the coming 14 days and recent ones, your recent attendance and leave, your worker profile. `remove` means the record left your mirror.'
+      description: 'The phone''s mirror, by what you may see: your own tasks for the coming 14 days and recent ones, attendance, leave and worker profile (workers); plots and open crop cycles (crop staff); active groups and animals (livestock staff); tasks waiting for verification as `team_tasks` (supervisors); your notifications and open conflicts (everyone). `remove` means the record left your mirror.'
       parameters:
       - name: cursor
         in: query
@@ -5906,7 +5908,7 @@ paths:
         in: query
         schema:
           type: string
-          description: 'Comma-separated: tasks, attendance, leave, workers'
+          description: 'Comma-separated: tasks, attendance, leave, workers, plots, crop_cycles, animal_groups, animals, team_tasks, notifications, conflicts'
       - name: limit
         in: query
         schema:
@@ -11378,6 +11380,213 @@ paths:
           $ref: '#/components/responses/Problem'
       security: []
 
+  /farms/{farm}/notifications:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Notifications
+      operationId: listNotifications
+      summary: Your notifications, newest first
+      description: Every member has an inbox. The phone also receives it through sync pull (`notifications`).
+      x-permission: member
+      parameters:
+      - name: unread
+        in: query
+        schema:
+          type: boolean
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MemberNotification'
+                  meta:
+                    type: object
+                    properties:
+                      next_cursor:
+                        type:
+                        - string
+                        - 'null'
+                      unread:
+                        type: integer
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/notifications/read-all:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    post:
+      tags:
+      - Notifications
+      operationId: readAllNotifications
+      summary: Mark all as read
+      x-permission: member
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      marked:
+                        type: integer
+  /farms/{farm}/notifications/{notification}/read:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: notification
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Notifications
+      operationId: readNotification
+      summary: Mark one as read
+      x-permission: member
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MemberNotification'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /me/devices/current/push-token:
+    put:
+      tags:
+      - Notifications
+      operationId: registerPushToken
+      summary: Register this phone for push notifications
+      description: The device comes from the access token (mobile sign-in). Pushes are sent through Firebase Cloud Messaging when the server has a service account (SFMTP_FCM_CREDENTIALS); tokens that FCM no longer knows are forgotten.
+      x-permission: signed in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - token
+              properties:
+                token:
+                  type:
+                  - string
+                  - 'null'
+                  description: The FCM or APNs token; null stops pushes to this device
+                platform:
+                  type:
+                  - string
+                  - 'null'
+                  enum:
+                  - fcm
+                  - apns
+                  - null
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      registered:
+                        type: boolean
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/sync/conflicts:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Sync
+      operationId: listSyncConflicts
+      summary: Your open sync conflicts
+      x-permission: member
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SyncConflict'
+  /farms/{farm}/sync/conflicts/{syncConflict}/resolve:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: syncConflict
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Sync
+      operationId: resolveSyncConflict
+      summary: Choose, per field, your value or the server's
+      description: Keeping `mine` writes your value now. Only the member whose change it was may resolve (403); once (409). Phones resolve offline with the `sync_conflicts.resolve` mutation.
+      x-permission: member (the conflict's own)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - choices
+              properties:
+                choices:
+                  type: object
+                  additionalProperties:
+                    type: string
+                    enum:
+                    - mine
+                    - server
+                  description: Every conflicting field
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SyncConflict'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+
 components:
   securitySchemes:
     bearer:
@@ -14080,12 +14289,24 @@ components:
           - worker_attendance
           - worker_gps_points
           - worker_leave
+          - crop_observations
+          - crop_operations
+          - animal_health
+          - animal_weights
+          - animal_production
+          - animals
+          - task_reviews
+          - sync_conflicts
         op:
           type: string
           enum:
           - insert
           - check_in
           - check_out
+          - update
+          - verify
+          - reject
+          - resolve
         id:
           type:
           - string
@@ -14191,6 +14412,15 @@ components:
           - $ref: '#/components/schemas/SyncRecord'
           - type: 'null'
           description: The server's record after applying, or on conflict
+        merged:
+          type: array
+          items:
+            type: string
+          description: 'animals.update: the fields applied'
+        conflict_id:
+          type: string
+          format: uuid
+          description: 'animals.update: the conflict to resolve for fields changed on both sides'
     SyncPull:
       type: object
       properties:
@@ -17776,3 +18006,91 @@ components:
         value:
           type: string
           description: base64 signature of the canonical JSON of `data`
+    MemberNotification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: notification
+        kind:
+          type: string
+          description: task_assigned, task_verified, task_rejected, task_step_refused, sync_conflict …
+        title:
+          type: string
+        body:
+          type:
+          - string
+          - 'null'
+        link:
+          type:
+          - string
+          - 'null'
+        data:
+          type: object
+          additionalProperties: true
+          description: Ids the app opens, e.g. task_id, conflict_id
+        read_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    SyncConflict:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: sync_conflict
+        entity:
+          type: string
+          enum:
+          - animals
+        record_id:
+          type: string
+          format: uuid
+        label:
+          type:
+          - string
+          - 'null'
+        fields:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              base: {}
+              mine: {}
+              server: {}
+        status:
+          type: string
+          enum:
+          - open
+          - resolved
+        resolution:
+          type:
+          - object
+          - 'null'
+          additionalProperties:
+            type: string
+            enum:
+            - mine
+            - server
+        created_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        version:
+          type: integer
