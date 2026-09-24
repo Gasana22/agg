@@ -315,8 +315,9 @@ class DashboardRegistry
                         'chart' => 'bar',
                         'x' => ['type' => 'category', 'values' => $d['labels']],
                         'series' => [
-                            ['key' => 'income', 'label' => 'Income', 'unit' => $farm->currency, 'values' => $d['income']],
+                            // Expenses first: the first series is drawn muted, income in the brand colour.
                             ['key' => 'expenses', 'label' => 'Expenses', 'unit' => $farm->currency, 'values' => $d['expenses']],
+                            ['key' => 'income', 'label' => 'Income', 'unit' => $farm->currency, 'values' => $d['income']],
                         ],
                     ];
                 }],

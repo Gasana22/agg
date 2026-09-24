@@ -19,7 +19,7 @@ export function EmptyState({ title, children }: { title: string; children?: Reac
 export function ErrorNotice({ error }: { error: unknown }) {
   const message =
     error instanceof ApiError
-      ? error.status === 403
+      ? error.status === 403 && error.code === "forbidden"
         ? "You don't have access to this."
         : error.problem.title
       : "Something went wrong. Please try again.";

@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   Boxes,
   BookOpenText,
   CalendarCheck,
@@ -23,6 +24,7 @@ import {
   ShieldCheck,
   Tractor,
   Users,
+  Wallet,
 } from "lucide-react";
 
 export const NAV_ICONS: Record<string, LucideIcon> = {
@@ -36,6 +38,8 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   inventory: Package,
   procurement: ShoppingCart,
   ledger: BookOpenText,
+  finance: Wallet,
+  reports: BarChart3,
   trace: Route,
   members: Users,
   roles: ShieldCheck,

@@ -51,6 +51,13 @@ const TITLES: Record<string, string> = {
   orders_to_approve: "Purchase orders to approve",
   invoices_due: "Supplier invoices due",
   inventory_value: "Stock value by category",
+  expenses_to_approve: "Expenses to approve",
+  customer_invoices_overdue: "Customer invoices due",
+  payroll_pending: "Payroll to approve or pay",
+  recent_transactions: "Recent transactions",
+  income_vs_expenses: "Income and expenses by month",
+  budget_vs_actual: "Budgets: planned and spent",
+  cash_flow_forecast: "Cash expected, next 13 weeks",
 };
 
 /**

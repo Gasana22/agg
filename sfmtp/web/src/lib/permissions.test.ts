@@ -24,13 +24,18 @@ describe("visibleNav", () => {
 
   it("gives owners everything, including their subscription", () => {
     const all = { "structure.view": "all", "crops.plans.view": "all", "livestock.animals.view": "all", "tasks.execute": "assigned", "tasks.view": "all", "workers.view": "all", "inventory.view": "all", "procurement.orders.approve": "all", "finance.view": "all", "trace.batches.view": "all", "members.view": "all", "roles.view": "all", "audit.view": "all", "farm.profile.manage": "all", "billing.manage": "all" } as const;
-    expect(visibleNav(farm(all)).map((i) => i.key)).toEqual(["dashboard", "my-day", "tasks", "structure", "crops", "livestock", "inventory", "procurement", "workers", "ledger", "traceability", "members", "roles", "audit", "settings", "billing", "support"]);
+    expect(visibleNav(farm(all)).map((i) => i.key)).toEqual(["dashboard", "my-day", "tasks", "structure", "crops", "livestock", "inventory", "procurement", "workers", "finance", "reports", "ledger", "traceability", "members", "roles", "audit", "settings", "billing", "support"]);
   });
 
   it("shows purchasing to anyone with one of its permissions", () => {
     expect(visibleNav(farm({ "procurement.deliveries.receive": "all" }, ["store"])).map((i) => i.key)).toEqual(["dashboard", "procurement", "support"]);
     expect(can({ "finance.view": "all" }, "procurement.orders.manage|finance.view")).toBe(true);
     expect(can({ "finance.view": "all" }, "procurement.orders.manage")).toBe(false);
+  });
+
+  it("gives the manager expense requests but not the books", () => {
+    const manager = { "finance.expenses.request": "all", "finance.payroll.view_hours": "all", "tasks.view": "all" } as const;
+    expect(visibleNav(farm(manager, ["manager"])).map((i) => i.key)).toEqual(["dashboard", "tasks", "finance", "support"]);
   });
 
   it("gives field workers their day, not the supervisors' task and worker lists", () => {

@@ -1,10 +1,13 @@
 "use client";
 
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
-import { TabBar } from "@/components/inventory/common";
+import { AccountDialog, JournalDialog } from "@/components/finance/dialogs";
+import { useAccounts } from "@/components/finance/queries";
+import { TabBar, useActions } from "@/components/inventory/common";
 import { ReasonDialog } from "@/components/inventory/dialogs";
 import { useFarmCurrency } from "@/components/inventory/queries";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +23,7 @@ import { can } from "@/lib/permissions";
 const TABS = [
   { key: "balances", label: "Trial balance" },
   { key: "journal", label: "Journal" },
+  { key: "accounts", label: "Accounts" },
 ] as const;
 
 const TYPE_ORDER = ["asset", "liability", "equity", "income", "expense"];
@@ -39,12 +43,99 @@ function Ledger() {
   const canManage = workspace?.type === "farm" && can(workspace?.permissions, "finance.manage");
   const currency = useFarmCurrency(farmId);
   const tab = TABS.find((t) => t.key === search.get("tab"))?.key ?? "balances";
+  const queryClient = useQueryClient();
+  const [journal, setJournal] = useState(false);
 
   return (
     <>
-      <PageHeader title="Ledger" description="Double-entry books. Stock, deliveries and supplier invoices post here. Entries are never edited: stock is corrected by a count, manual entries by a reversal." />
+      <PageHeader
+        title="Ledger"
+        description="Double-entry books: every document posts here. Entries are never edited: a document is voided, stock is counted, a manual entry is reversed."
+        actions={
+          canManage ? (
+            <Button variant="secondary" onClick={() => setJournal(true)}>
+              <Plus /> Journal entry
+            </Button>
+          ) : null
+        }
+      />
       <TabBar base={`/farms/${farmId}/ledger`} tabs={TABS} active={tab} label="Ledger sections" />
-      {tab === "balances" ? <TrialBalance farmId={farmId} currency={currency} /> : <Journal farmId={farmId} currency={currency} canManage={canManage} initialAccount={search.get("account") ?? ""} />}
+      {tab === "balances" ? <TrialBalance farmId={farmId} currency={currency} /> : null}
+      {tab === "journal" ? <Journal farmId={farmId} currency={currency} canManage={canManage} initialAccount={search.get("account") ?? ""} /> : null}
+      {tab === "accounts" ? <Accounts farmId={farmId} canManage={canManage} /> : null}
+      {journal ? (
+        <JournalDialog
+          farmId={farmId}
+          currency={currency}
+          onClose={() => setJournal(false)}
+          onDone={async () => {
+            setJournal(false);
+            await Promise.all(["ledger-entries", "ledger-accounts"].map((k) => queryClient.invalidateQueries({ queryKey: [k, farmId] })));
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function Accounts({ farmId, canManage }: { farmId: string; canManage: boolean }) {
+  const queryClient = useQueryClient();
+  const [adding, setAdding] = useState(false);
+  const accounts = useAccounts(farmId);
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["ledger-accounts", farmId] });
+  const { error, busy, run } = useActions(refresh);
+  const rows = [...(accounts.data ?? [])].sort((a, b) => (a.code ?? "").localeCompare(b.code ?? ""));
+  return (
+    <>
+      {canManage ? (
+        <div className="mb-3 flex justify-end">
+          <Button size="sm" onClick={() => setAdding(true)}>
+            <Plus /> Account
+          </Button>
+        </div>
+      ) : null}
+      {error ? <div className="mb-3"><ErrorNotice error={error} /></div> : null}
+      {accounts.isLoading ? (
+        <Skeleton className="h-64 w-full" />
+      ) : (
+        <Table>
+          <thead>
+            <tr>
+              <Th>Account</Th>
+              <Th>Type</Th>
+              <Th />
+              <Th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((a) => (
+              <tr key={a.id} className={a.is_active === false ? "text-muted" : ""}>
+                <Td>
+                  <span className="tabular-nums text-muted">{a.code}</span> {a.name}
+                  {a.description ? <span className="block text-xs text-muted">{a.description}</span> : null}
+                </Td>
+                <Td className="text-muted">{humanize(a.type ?? "")}</Td>
+                <Td>
+                  <div className="flex flex-wrap gap-1">
+                    {a.is_cash ? <Badge tone="primary">money</Badge> : null}
+                    {a.is_control ? <Badge>kept by documents</Badge> : null}
+                    {a.is_system && !a.is_control ? <Badge>system</Badge> : null}
+                    {a.is_active === false ? <Badge tone="warning">inactive</Badge> : null}
+                  </div>
+                </Td>
+                <Td className="text-right">
+                  {canManage && !a.is_system ? (
+                    <Button size="sm" variant="ghost" disabled={busy === a.id} onClick={() => run(a.id!, () => api.PATCH("/farms/{farm}/ledger/accounts/{ledgerAccount}", { params: { path: { farm: farmId, ledgerAccount: a.id! } }, body: { is_active: a.is_active === false } }))}>
+                      {a.is_active === false ? "Activate" : "Deactivate"}
+                    </Button>
+                  ) : null}
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
+      {adding ? <AccountDialog farmId={farmId} onClose={() => setAdding(false)} onDone={async () => { setAdding(false); await refresh(); }} /> : null}
     </>
   );
 }
