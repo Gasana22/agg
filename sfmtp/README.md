@@ -21,7 +21,8 @@ REST API.
 | 7 — Procurement & inventory | ✅ Done: items, lots as trace batches, the stock ledger with average cost, issues, transfers, counts with approval, stock requests, alerts; suppliers, purchase requests and orders with approval, deliveries and supplier invoices; the double-entry ledger core; Store Manager dashboard |
 | 8 — Finance | ✅ Done: accounts and manual entries, expenses with approval thresholds, income, customer invoices (with livestock sales), payments against any document, payroll from attendance charged to the work done, budgets, profit and loss, cash flow with a forecast, cost per crop and per acre; accountant dashboard and the owner's financial KPIs |
 | 9 — Traceability (full) | ✅ Done: split / merge / process / package with quantity checks, recall to the customer, shipments, journey views (timeline, workers, inputs, customers, map), the journey projection, integrity checks and alerts; the traceability explorer |
-| 10 — QR system | Next |
+| 10 — QR system | ✅ Done: approved public fields with preview, random QR codes with revoke and recall notices, the public scan page, signed payloads, rate limits, anonymous scan statistics, printable PDF labels |
+| 11 — Mobile app (complete) | Next |
 
 ## Repository layout
 

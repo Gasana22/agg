@@ -18,6 +18,7 @@ consequences.
 | [0011](0011-stock-valuation-and-ledger-core.md) | Stock valuation and the ledger core: average cost per lot, row locks, entries corrected through their documents | Accepted |
 | [0012](0012-finance-documents-and-payables.md) | Finance as documents: approval by threshold, voids by reversal, one payable registry, control accounts, payroll by task time | Accepted |
 | [0013](0013-batch-operations-journeys-and-shipments.md) | Batch operations with quantity accounting, downstream recall, journey views and projection, alerts, shipments in Sales | Accepted |
+| [0014](0014-public-traceability-and-qr-codes.md) | Public traceability: allow-listed fields, approved snapshots, random codes, revocation and recall notices, signed payloads, anonymous scan counts, PDF labels | Accepted |
 
 ## Product-owner decisions (2026-09-23)
 

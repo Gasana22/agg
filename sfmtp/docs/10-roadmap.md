@@ -312,6 +312,52 @@ Everything in the Phase 8 row below, with these notes
   new route and request body. The accountant's, manager's and owner's
   journeys were checked in a browser.
 
+### Phase 10 — delivered
+
+Everything in the Phase 10 row below, with these notes
+([ADR-0014](adr/0014-public-traceability-and-qr-codes.md)):
+
+- **Approvals.**
+  - Choose from twelve allow-listed public fields and preview the result.
+  - The approval stores the exact payload; a new approval replaces it for
+    every code of the batch.
+  - Prices, costs, people, quantities and GPS cannot be published.
+- **QR codes.**
+  - Codes are random, unique across farms, and forgiving to type.
+  - They can be issued, revoked with a reason, and are revoked
+    automatically by a recall.
+  - SVG previews and A4 label sheets (3 × 8) as PDF.
+- **Public page.**
+  - `/q/{code}` needs no sign-in and works at phone width.
+  - It shows only the approved fields; a withdrawn code or recalled batch
+    shows a notice.
+  - The API behind it is limited to 60 requests a minute per IP and signs
+    its payload with Ed25519 (public key published).
+- **Scan statistics**: counts per day and country with nothing about the
+  person, a QR scans KPI on the owner dashboard, and a QR codes tab on
+  Traceability.
+- **Demo**: the B-3 maize bags are published with a code and two weeks of
+  scans.
+- **Deferred:**
+  - label templates for other stock and a bulk print run (Phase 13
+    exports);
+  - signing-key history for rotation;
+  - the customer portal view of bought batches (Phase 12).
+- **Test gate met:** 225 API tests on PostgreSQL (220 on MySQL, plus 5
+  that need PostgreSQL features) and 56 web unit tests. They include:
+  - the public payload holding only approved fields, with no secret
+    leaking even when every field is approved;
+  - signature verification, and a tampered payload failing it;
+  - withdrawn and recalled notices, and recall revoking codes;
+  - the 61st request in a minute refused while another IP is not;
+  - scans counted with only day and country;
+  - labels (PDF structure; every label decodes);
+  - publishing permissions;
+  - the cross-tenant sweep over the new routes.
+
+  Publishing, printing, scanning signed out, and revoking were checked in
+  a browser.
+
 ### Phase 9 — delivered
 
 Everything in the Phase 9 row below, with these notes

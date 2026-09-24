@@ -1235,6 +1235,16 @@ As built in Phase 9 (ADR-0013):
   not built yet: moves are events, places come from plots and GPS on
   events, and documents come with media links.
 
+As built in Phase 10 (ADR-0014):
+
+- **`trace_approvals`** also store the reviewed `payload` and a note, and
+  are append-only: a newer approval replaces the old one for the batch.
+- **`trace_qr_codes`** add a label, who issued and revoked the code and
+  when, the revoke reason, a running `scan_count`, `last_scanned_at` and a
+  version. `code` is globally unique.
+- **`trace_qr_scans`** (new): one row per code, day and country with a
+  count. No IP or device is kept.
+
 ## 11. Sync support tables
 
 | Table | Purpose |
