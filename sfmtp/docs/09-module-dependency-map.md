@@ -91,6 +91,8 @@ those arrows are drawn.
 | Finance | `Payables` registry and `Payable` contract: each module registers the documents payments can settle (ADR-0012) | Sales (customer invoices), Procurement (supplier invoices) |
 | Livestock | Completed `SaleRequest`s, billed on customer invoices | Sales |
 | Traceability | `Recorder::createBatch/link/record/correct` | Crops, Livestock, Inventory, Procurement, Sales |
+| Traceability | `BatchOperations::split/merge/process/package/ship/recall` (quantity-checked, row-locked; ADR-0013) | Sales (shipments) |
+| Traceability | `WorkerNames` contract for the journey's worker view | implemented by Workforce |
 | Media | `MediaService::attach`, signed URLs | All |
 | Notifications | `Notifier::send(Notification, recipients)` (queued, multi-channel) | All |
 

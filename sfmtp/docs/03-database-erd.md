@@ -1217,6 +1217,24 @@ erDiagram
 
 Design details: [07 — Traceability & Audit](07-traceability-and-audit.md).
 
+As built in Phase 9 (ADR-0013):
+
+- **`product_journey` is `product_journeys`**: batch, upstream and
+  downstream graphs, timeline and summary (JSON), the last event sequence
+  seen, and `refreshed_at`. It is refreshed by a queued job after each
+  write and rebuilt by `trace:refresh-journeys`.
+- **Batch availability is derived**, not stored: quantity minus the
+  consuming links (`split`, `merge`, `process`, `package`, `ship`).
+- **Shipments** are in the Sales module: `shipments` (code, status
+  dispatched, delivered or failed, customer, optional customer invoice,
+  the `shipment` trace batch, destination, vehicle, driver, times,
+  receiver) and append-only `shipment_lines` (the batch sent and its
+  quantity).
+- `trace_events` gain indexes on worker and event type for the journey
+  views. `trace_movements`, `trace_locations` and `trace_documents` are
+  not built yet: moves are events, places come from plots and GPS on
+  events, and documents come with media links.
+
 ## 11. Sync support tables
 
 | Table | Purpose |

@@ -312,6 +312,65 @@ Everything in the Phase 8 row below, with these notes
   new route and request body. The accountant's, manager's and owner's
   journeys were checked in a browser.
 
+### Phase 9 — delivered
+
+Everything in the Phase 9 row below, with these notes
+([ADR-0013](adr/0013-batch-operations-journeys-and-shipments.md)):
+
+- **Operations.** Split, merge, process and package, with quantities
+  checked under row locks. Each batch shows what is left, and a batch that
+  is used up closes itself. Manual links that take quantity follow the same
+  rule.
+- **Recall** follows the product downstream to every batch and shipment
+  made from it, and needs `trace.publish`.
+- **Shipments** (Sales): dispatch from any batches to a customer, with
+  delivery confirmed or failed. They end the forward journey. The store
+  dispatches without seeing prices.
+- **Journey views** over a batch's lineage:
+  - a timeline with corrections folded in;
+  - workers and recorders;
+  - seed and input lots with everything applied, including withholding
+    periods;
+  - customers reached;
+  - plots, GPS points and moves.
+- **The `product_journeys` projection**, refreshed by a queued job after
+  each change and rebuilt by `trace:refresh-journeys`.
+- **Integrity**: the nightly chain check now emails the owner on failure,
+  and the check can also be run on demand. **Alerts**: broken or unchecked
+  chain, recalled product at customers, undelivered shipments, products
+  without a source, crops without a seed source. They also appear on the
+  owner and manager dashboards.
+- **Web**: a traceability explorer with these parts:
+  - the journey graph;
+  - the timeline with correction history;
+  - seeds and inputs, workers, customers;
+  - a map of plots and GPS points;
+  - the operation, recall and correction dialogs;
+  - Alerts and Integrity tabs;
+  - a Shipments page.
+- **Demo**: the B-3 maize is split, dried, packed and shipped to two
+  customers (one delivery not yet confirmed). Its harvest moisture is
+  corrected.
+- **Deferred:**
+  - unit conversion and stock movement with trace operations (Phase 12,
+    with products and sales orders);
+  - QR and public pages (Phase 10);
+  - trace documents and certificates (with media links);
+  - a daily anchor digest.
+- **Test gate met:** 220 API tests on PostgreSQL (215 on MySQL, plus 5 that
+  need PostgreSQL features) and 56 web unit tests. They include:
+  - the seed → customer journey rebuilt from normal work through the API
+    (backward, forward, sales, inputs, places, workers, timeline);
+  - quantities that cannot be used twice;
+  - a recall that reaches the customer and raises the alert;
+  - corrections shown in the journey while the original row and the chain
+    stay intact;
+  - an altered event caught by the on-demand check and the nightly job,
+    with the owner emailed;
+  - the cross-tenant sweep over every new route.
+
+  The owner's and store manager's journeys were checked in a browser.
+
 ## Phase plan
 
 | Phase | Scope | Key deliverables | Exit criteria (test gate) |
