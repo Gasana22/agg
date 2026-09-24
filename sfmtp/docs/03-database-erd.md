@@ -395,9 +395,27 @@ erDiagram
     crop_harvests ||--o{ crop_batches : ""
 ```
 
-`crop_cycles.plot_id` references `farm_plots` through `(farm_id, plot_id)`.
-A partial unique index prevents two *active* cycles overlapping on the same
-plot, unless intercropping is enabled for the farm.
+`crop_cycles.plot_id` references `farm_plots` through `(farm_id, plot_id)`,
+and every other crop reference (plan, season, crop, seed / nursery / crop-lot
+batches, observation) is a composite `(farm_id, …)` key too.
+
+As built in Phase 4, the model differs from the diagram in three places:
+
+- **Nursery** counts (`seeds_sown`, `seedlings_germinated`,
+  `seedlings_transplanted`, `sown_on`) live on `crop_cycles`, with the nursery
+  trace batch in `nursery_batch_id`. A cycle has at most one nursery, so a
+  separate table added nothing.
+- **Treatments** are operations that name the observation they treat
+  (`crop_operations.observation_id`). The pre-harvest interval is per input
+  (`crop_operation_inputs.withholding_days`), and verified inputs set
+  `crop_cycles.safe_harvest_on`.
+- **Harvest batches:** each `crop_harvests` row carries its own
+  `trace_batch_id`, instead of a separate `crop_batches` table. Harvests are
+  append-only.
+
+One open cycle per plot is checked by the service under a row lock on the
+plot, because the rule depends on a farm setting (`allow_intercropping`)
+that a unique index cannot see.
 
 ## 5. Livestock
 

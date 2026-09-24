@@ -84,6 +84,41 @@ Everything in the Phase 3 row below, with these notes:
   every new route. The owner, manager and invitee journeys were checked end
   to end in a browser.
 
+### Phase 4 — delivered
+
+Everything in the Phase 4 row below, with these notes:
+
+- **Traceability is automatic.** Starting a cycle creates the crop lot (or a
+  nursery batch for transplanted crops), derived from the seed lot. Verified
+  field work adds `operation` and `input_applied` events, findings add
+  `observation` events, and each harvest creates a harvest batch derived
+  from the crop lot. All of it happens in the same transaction as the crop
+  record.
+- **Food safety:** inputs carry their withholding (pre-harvest) days. A
+  harvest before the safe date is refused unless someone allowed to verify
+  crop work gives an override reason, which stays on the harvest and in its
+  trace event.
+- **Verification:** work recorded by someone who may verify it
+  (`crops.operations.approve`) is verified at once; anyone else's waits for
+  verification, and nobody verifies their own. Plans follow the same
+  four-eyes rule, except for the owner.
+- **Field workers** hold `crops.operations.record` with scope `assigned`, so
+  they record crop work once tasks assign them to cycles (Phase 6).
+- **Money:** plan budgets and operation costs are stored now, visible only
+  with `finance.values.view`. Costs reach the ledger in Phases 7–8.
+- **Inputs** are named by hand, optionally with their input-lot batch.
+  Picking inventory items and deducting stock comes with inventory in
+  Phase 7.
+- **Deferred:** the crop health score KPI and the crop health map widget
+  (Phase 13), and the weather widget (Phase 14, weather provider).
+- **Test gate met:** 172 API tests on PostgreSQL (169 on MySQL, plus 3 that
+  need PostgreSQL features) and 36 web unit tests. They include the crop
+  lifecycle from plan to packed grain with a backward journey to the seed
+  lot, the withholding rule, verification and scopes, the agronomist,
+  accountant, livestock, store and field-worker boundaries, and the
+  cross-tenant sweep over every crop route. The agronomist's journey was
+  checked end to end in a browser.
+
 ## Phase plan
 
 | Phase | Scope | Key deliverables | Exit criteria (test gate) |
