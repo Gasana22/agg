@@ -12,11 +12,14 @@ use App\Modules\Crops\Application\CropOperations;
 use App\Modules\Crops\Application\CropPlans;
 use App\Modules\Crops\Application\CropSetup;
 use App\Modules\FarmStructure\Application\StructureService;
+use App\Modules\Inventory\Application\Items;
+use App\Modules\Inventory\Application\StockDesk;
 use App\Modules\Livestock\Application\AnimalRecords;
 use App\Modules\Livestock\Application\AnimalSales;
 use App\Modules\Livestock\Application\Breedings;
 use App\Modules\Livestock\Application\Herd;
 use App\Modules\Media\Domain\Models\Media;
+use App\Modules\Procurement\Application\Purchasing;
 use App\Modules\Tenancy\Domain\Models\Farm;
 use App\Modules\Tenancy\Domain\Models\FarmUser;
 use App\Modules\Tenancy\TenantContext;
@@ -91,6 +94,33 @@ class CrossTenantIsolationTest extends TestCase
         $this->victimRecords += $this->victimCropRecords($this->victimRecords['plot']);
         $this->victimRecords += $this->victimLivestockRecords();
         $this->victimRecords += $this->victimWorkforceRecords();
+        $this->victimRecords += $this->victimStockRecords($this->victimRecords['location']);
+    }
+
+    /** Stock, a count, a request, a supplier, a purchase request and order, and a ledger entry, as the victim's owner. */
+    private function victimStockRecords(string $storeId): array
+    {
+        $owner = FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail();
+        $this->actingAs($owner->user, 'api');
+
+        return $this->app->make(TenantContext::class)->run($this->victim, function () use ($storeId) {
+            $item = $this->app->make(Items::class)->create(['name' => 'Victim feed', 'unit' => 'kg', 'tracks_lots' => false,
+                'category_id' => DB::table('global_inventory_categories')->where('code', 'animal_feed')->value('id')]);
+            $desk = $this->app->make(StockDesk::class);
+            $movement = $desk->stockIn(['item_id' => $item->id, 'location_id' => $storeId, 'quantity' => 10, 'unit_cost' => 100]);
+            $buy = $this->app->make(Purchasing::class);
+            $supplier = $buy->createSupplier(['name' => 'Victim supplier']);
+
+            return [
+                'item' => $item->id,
+                'adjustment' => $desk->proposeAdjustment(['location_id' => $storeId, 'reason' => 'Count', 'lines' => [['item_id' => $item->id, 'counted_quantity' => 9]]])->id,
+                'inventoryRequest' => $desk->request(['lines' => [['item_id' => $item->id, 'quantity' => 1]]])->id,
+                'supplier' => $supplier->id,
+                'purchaseRequest' => $buy->request(['lines' => [['item_id' => $item->id, 'quantity' => 5]]])->id,
+                'order' => $buy->createOrder(['supplier_id' => $supplier->id, 'lines' => [['item_id' => $item->id, 'quantity' => 5, 'unit_price' => 100]]])->id,
+                'entry' => $movement->ledger_entry_id,
+            ];
+        }, $owner);
     }
 
     /** One of each livestock record, created as the victim's owner. */
@@ -215,6 +245,11 @@ class CrossTenantIsolationTest extends TestCase
             'structure' => DB::table('farm_blocks')->whereNull('deleted_at')->count() + DB::table('farm_sections')->whereNull('deleted_at')->count()
                 + DB::table('farm_plots')->whereNull('deleted_at')->count() + DB::table('farm_locations')->whereNull('deleted_at')->count(),
             'structure_versions' => DB::table('farm_plots')->sum('version'),
+            'stock_rows' => collect(['inventory_items', 'stock_lots', 'stock_balances', 'stock_movements', 'stock_transfers', 'stock_adjustments', 'inventory_requests', 'suppliers', 'purchase_requests', 'purchase_orders', 'purchase_order_lines', 'deliveries', 'supplier_invoices', 'ledger_entries', 'ledger_lines'])
+                ->mapWithKeys(fn ($t) => [$t => DB::table($t)->count()])->all(),
+            'stock_versions' => DB::table('inventory_items')->sum('version') + DB::table('stock_adjustments')->sum('version') + DB::table('inventory_requests')->sum('version')
+                + DB::table('suppliers')->sum('version') + DB::table('purchase_requests')->sum('version') + DB::table('purchase_orders')->sum('version'),
+            'stock_quantity' => (string) DB::table('stock_balances')->sum('quantity'),
             'members' => DB::table('farm_users')->where('status', 'active')->count(),
             'member_roles' => DB::table('farm_user_roles')->count(),
             'invitations' => DB::table('farm_invitations')->whereNull('revoked_at')->count(),
@@ -284,6 +319,17 @@ class CrossTenantIsolationTest extends TestCase
             'data' => ['task_id' => $this->victimRecords['task'], 'event' => 'start'],
         ]]])->assertOk()->json('data.results.0');
         $this->assertSame('rejected', $result['status']);
+
+        // Issuing, requesting or buying another farm's item; receiving into another farm's store; ordering from its supplier.
+        $store = $this->asUser($attacker)->postJson("{$farm}/structure/locations", ['name' => 'Attacker store', 'kind' => 'store'])->assertCreated()->json('data.id');
+        $this->asUser($attacker)->postJson("{$farm}/inventory/issues", ['item_id' => $this->victimRecords['item'], 'location_id' => $store, 'quantity' => 1])
+            ->assertStatus(422)->assertJsonValidationErrors('item_id');
+        $this->asUser($attacker)->postJson("{$farm}/inventory/stock-in", ['item_id' => $this->victimRecords['item'], 'location_id' => $this->victimRecords['location'], 'quantity' => 1])
+            ->assertStatus(422);
+        $this->asUser($attacker)->postJson("{$farm}/inventory/requests", ['lines' => [['item_id' => $this->victimRecords['item'], 'quantity' => 1]]])
+            ->assertStatus(422)->assertJsonValidationErrors('lines.0.item_id');
+        $this->asUser($attacker)->postJson("{$farm}/purchase-orders", ['supplier_id' => $this->victimRecords['supplier'], 'lines' => [['item_id' => $this->victimRecords['item'], 'quantity' => 1, 'unit_price' => 1]]])
+            ->assertStatus(422)->assertJsonValidationErrors('supplier_id');
     }
 
     public function test_random_farm_ids_are_indistinguishable_from_forbidden_ones(): void

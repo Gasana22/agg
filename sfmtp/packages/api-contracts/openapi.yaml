@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SFMTP API
-  version: 1.5.0-phase6
+  version: 1.6.0-phase7
   description: |
     Smart Farm Management & Traceability Platform REST API.
 
@@ -32,6 +32,12 @@ tags:
     description: Photo and document uploads, stored once per farm by SHA-256.
   - name: Sync
     description: Offline push and pull for the mobile app (docs/08).
+  - name: Inventory
+    description: Items, stores, lots, the stock ledger, issues, transfers, counts with approval, stock requests and alerts. Values need inventory.values.view.
+  - name: Procurement
+    description: Suppliers, purchase requests, purchase orders with approval, deliveries into stock lots, and supplier invoices matched to what was received.
+  - name: Finance
+    description: The double-entry ledger (ADR-0011) that stock and purchases post to.
   - name: Livestock
     description: Groups, animals, health and vaccination with withdrawal periods, feeding, weights, production into daily product lots, movements, breeding and sale requests. Records are append-only; mistakes are voided.
   - name: Crops
@@ -5899,6 +5905,2049 @@ paths:
         '422':
           $ref: '#/components/responses/Problem'
 
+  /farms/{farm}/inventory/items:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Inventory
+      operationId: listInventoryItems
+      summary: Stock items with on-hand totals
+      description: Requesters see the list to pick from. Values and costs need inventory.values.view.
+      x-permission: inventory.view | inventory.requests.create
+      parameters:
+      - name: filter[category_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[search]
+        in: query
+        schema:
+          type: string
+      - name: filter[low_stock]
+        in: query
+        schema:
+          type: boolean
+      - name: filter[active]
+        in: query
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InventoryItem'
+        '403':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Inventory
+      operationId: createInventoryItem
+      summary: Create a stock item
+      description: Items track lots by default, so every receipt becomes a trace batch.
+      x-permission: inventory.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryItemInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryItem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/items/{item}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: item
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Inventory
+      operationId: getInventoryItem
+      summary: An item with its balances and recent movements
+      x-permission: inventory.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    allOf:
+                    - $ref: '#/components/schemas/InventoryItem'
+                    - type: object
+                      properties:
+                        balances:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/StockBalance'
+                        recent_movements:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/StockMovement'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags:
+      - Inventory
+      operationId: updateInventoryItem
+      summary: Update a stock item
+      description: Send `version`. The unit and lot tracking cannot change once the item has stock movements.
+      x-permission: inventory.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryItemInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryItem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/stock:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Inventory
+      operationId: listStockBalances
+      summary: Stock on hand by item, store and lot
+      description: Values and costs need inventory.values.view.
+      x-permission: inventory.view
+      parameters:
+      - name: filter[location_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[item_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[include_empty]
+        in: query
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockBalance'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/movements:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Inventory
+      operationId: listStockMovements
+      summary: The stock ledger
+      description: Append-only; newest first. Values and costs need inventory.values.view.
+      x-permission: inventory.view
+      parameters:
+      - name: filter[item_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[location_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[type]
+        in: query
+        schema:
+          type: string
+          enum:
+          - receipt
+          - opening
+          - issue
+          - return
+          - transfer_out
+          - transfer_in
+          - adjustment
+      - name: filter[source_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[from]
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: filter[to]
+        in: query
+        schema:
+          type: string
+          format: date
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/CursorPage'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/StockMovement'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/stock-in:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    post:
+      tags:
+      - Inventory
+      operationId: stockIn
+      summary: Record opening or found stock
+      description: Credits Opening balances (3100) in the ledger. Purchases come in through purchase-order deliveries instead.
+      x-permission: inventory.stock.move
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - item_id
+              - location_id
+              - quantity
+              properties:
+                item_id:
+                  type: string
+                  format: uuid
+                location_id:
+                  type: string
+                  format: uuid
+                quantity:
+                  type: number
+                  exclusiveMinimum: 0
+                unit_cost:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: 0
+                  description: Needs inventory.values.view
+                lot_number:
+                  type:
+                  - string
+                  - 'null'
+                expires_on:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                  description: Required for items that track expiry
+                occurred_at:
+                  type: string
+                  format: date-time
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '201':
+          description: Received
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StockMovement'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/issues:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    post:
+      tags:
+      - Inventory
+      operationId: issueStock
+      summary: Issue stock to a crop cycle, animal, plot or general use
+      description: 'Row-locked: parallel issues never take stock below zero (422 insufficient_stock with `available`). Posts Dr Inputs used / Cr Inventory at average cost and adds an `issued` event to each lot''s trace batch.'
+      x-permission: inventory.stock.move
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - item_id
+              - location_id
+              - quantity
+              properties:
+                item_id:
+                  type: string
+                  format: uuid
+                location_id:
+                  type: string
+                  format: uuid
+                quantity:
+                  type: number
+                  exclusiveMinimum: 0
+                lot_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                  description: Omit for first-expiry-first-out
+                subject_type:
+                  type: string
+                  enum:
+                  - crop_cycle
+                  - plot
+                  - location
+                  - animal
+                  - animal_group
+                  - general
+                subject_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                occurred_at:
+                  type: string
+                  format: date-time
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '201':
+          description: One movement per lot used
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockMovement'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/transfers:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Inventory
+      operationId: listStockTransfers
+      summary: Recent transfers between stores
+      x-permission: inventory.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockTransfer'
+        '403':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Inventory
+      operationId: transferStock
+      summary: Move stock between stores
+      description: Value moves with the stock at average cost; lots keep their identity.
+      x-permission: inventory.stock.move
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - from_location_id
+              - to_location_id
+              - lines
+              properties:
+                from_location_id:
+                  type: string
+                  format: uuid
+                to_location_id:
+                  type: string
+                  format: uuid
+                occurred_at:
+                  type: string
+                  format: date-time
+                note:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    required:
+                    - item_id
+                    - quantity
+                    properties:
+                      item_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: number
+                        exclusiveMinimum: 0
+                      lot_id:
+                        type:
+                        - string
+                        - 'null'
+                        format: uuid
+      responses:
+        '201':
+          description: Transferred
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      code:
+                        type: string
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/alerts:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Inventory
+      operationId: getInventoryAlerts
+      summary: Low stock, out of stock, expiring and expired lots
+      description: Expiring means within the next 30 days.
+      x-permission: inventory.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryAlerts'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/adjustments:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Inventory
+      operationId: listStockAdjustments
+      summary: Stock counts and adjustments
+      x-permission: inventory.view
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          enum:
+          - proposed
+          - approved
+          - rejected
+          - cancelled
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockAdjustment'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Inventory
+      operationId: proposeStockAdjustment
+      summary: Propose a count
+      description: The books do not change until someone else approves.
+      x-permission: inventory.stock.adjust
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - location_id
+              - reason
+              - lines
+              properties:
+                location_id:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+                lines:
+                  type: array
+                  minItems: 1
+                  maxItems: 200
+                  items:
+                    type: object
+                    required:
+                    - item_id
+                    - counted_quantity
+                    properties:
+                      item_id:
+                        type: string
+                        format: uuid
+                      lot_id:
+                        type:
+                        - string
+                        - 'null'
+                        format: uuid
+                        description: Required for lot-tracked items
+                      counted_quantity:
+                        type: number
+                        minimum: 0
+      responses:
+        '201':
+          description: Proposed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StockAdjustment'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/adjustments/{adjustment}/approve:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: adjustment
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Inventory
+      operationId: approveStockAdjustment
+      summary: Approve a count
+      description: Not by the member who proposed it (unless the owner). A change above the farm's `stock_adjustment_pct` threshold needs the owner. Stock is set to the counted quantity; the difference posts to Stock adjustments (5100).
+      x-permission: inventory.stock.approve
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StockAdjustment'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/adjustments/{adjustment}/reject:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: adjustment
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Inventory
+      operationId: rejectStockAdjustment
+      summary: Reject a count
+      x-permission: inventory.stock.approve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - note
+              properties:
+                note:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StockAdjustment'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/requests:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Inventory
+      operationId: listInventoryRequests
+      summary: Stock requests
+      description: Requesters see their own; the store and approvers see all.
+      x-permission: inventory.requests.create | inventory.stock.move | inventory.stock.approve
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          description: 'Comma-separated: requested, approved, partially_issued, issued, rejected, cancelled'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InventoryRequest'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Inventory
+      operationId: createInventoryRequest
+      summary: Ask the store for stock
+      x-permission: inventory.requests.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - lines
+              properties:
+                task_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                  description: Takes the subject from the task's activity
+                subject_type:
+                  type: string
+                  enum:
+                  - crop_cycle
+                  - plot
+                  - location
+                  - animal
+                  - animal_group
+                  - general
+                subject_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                location_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                needed_on:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                note:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    required:
+                    - item_id
+                    - quantity
+                    properties:
+                      item_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: number
+                        exclusiveMinimum: 0
+      responses:
+        '201':
+          description: Requested
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryRequest'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/requests/{inventoryRequest}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: inventoryRequest
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Inventory
+      operationId: getInventoryRequest
+      summary: A stock request
+      x-permission: inventory.requests.create | inventory.stock.move | inventory.stock.approve
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryRequest'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/requests/{inventoryRequest}/approve:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: inventoryRequest
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Inventory
+      operationId: approveInventoryRequest
+      summary: Approve a stock request
+      description: Not your own request (unless the owner).
+      x-permission: inventory.stock.approve
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryRequest'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/requests/{inventoryRequest}/reject:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: inventoryRequest
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Inventory
+      operationId: rejectInventoryRequest
+      summary: Reject a stock request
+      x-permission: inventory.stock.approve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - note
+              properties:
+                note:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryRequest'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/requests/{inventoryRequest}/issue:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: inventoryRequest
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Inventory
+      operationId: issueInventoryRequest
+      summary: Issue an approved request, in full or in part
+      description: Issued to the request's subject; more than requested is 422.
+      x-permission: inventory.stock.move
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - location_id
+              - lines
+              properties:
+                location_id:
+                  type: string
+                  format: uuid
+                note:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                    - line_id
+                    - quantity
+                    properties:
+                      line_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: number
+                        exclusiveMinimum: 0
+                      lot_id:
+                        type:
+                        - string
+                        - 'null'
+                        format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryRequest'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/inventory/requests/{inventoryRequest}/cancel:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: inventoryRequest
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Inventory
+      operationId: cancelInventoryRequest
+      summary: Cancel a stock request
+      description: Your own, or any with inventory.stock.approve; not once stock was issued.
+      x-permission: inventory.requests.create | inventory.stock.move | inventory.stock.approve
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryRequest'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/suppliers:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Procurement
+      operationId: listSuppliers
+      summary: Suppliers
+      x-permission: suppliers.view
+      parameters:
+      - name: include_inactive
+        in: query
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Supplier'
+        '403':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Procurement
+      operationId: createSupplier
+      summary: Add a supplier
+      x-permission: suppliers.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Supplier'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/suppliers/{supplier}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: supplier
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    patch:
+      tags:
+      - Procurement
+      operationId: updateSupplier
+      summary: Update a supplier
+      description: Send `version`.
+      x-permission: suppliers.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Supplier'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/purchase-requests:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Procurement
+      operationId: listPurchaseRequests
+      summary: Purchase requests
+      x-permission: procurement.requests.create | procurement.requests.approve | procurement.orders.manage
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          description: 'Comma-separated: submitted, approved, rejected, ordered, cancelled'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PurchaseRequest'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Procurement
+      operationId: createPurchaseRequest
+      summary: Ask for a purchase
+      x-permission: procurement.requests.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - lines
+              properties:
+                needed_by:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                reason:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    required:
+                    - quantity
+                    properties:
+                      item_id:
+                        type:
+                        - string
+                        - 'null'
+                        format: uuid
+                      description:
+                        type:
+                        - string
+                        - 'null'
+                        description: Required without item_id
+                      quantity:
+                        type: number
+                        exclusiveMinimum: 0
+                      unit:
+                        type:
+                        - string
+                        - 'null'
+                      estimated_unit_price:
+                        type:
+                        - number
+                        - 'null'
+                        minimum: 0
+                        description: 403 money_field_forbidden without price access
+      responses:
+        '201':
+          description: Submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PurchaseRequest'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/purchase-requests/{purchaseRequest}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: purchaseRequest
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Procurement
+      operationId: getPurchaseRequest
+      summary: A purchase request
+      x-permission: procurement.requests.create | procurement.requests.approve | procurement.orders.manage
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PurchaseRequest'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/purchase-requests/{purchaseRequest}/approve:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: purchaseRequest
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Procurement
+      operationId: approvePurchaseRequest
+      summary: Approve a purchase request
+      description: Not your own (unless the owner).
+      x-permission: procurement.requests.approve
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PurchaseRequest'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/purchase-requests/{purchaseRequest}/reject:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: purchaseRequest
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Procurement
+      operationId: rejectPurchaseRequest
+      summary: Reject a purchase request
+      x-permission: procurement.requests.approve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - note
+              properties:
+                note:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PurchaseRequest'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/purchase-requests/{purchaseRequest}/cancel:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: purchaseRequest
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Procurement
+      operationId: cancelPurchaseRequest
+      summary: Cancel a purchase request
+      description: Before it is ordered.
+      x-permission: procurement.requests.create | procurement.requests.approve
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PurchaseRequest'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/purchase-orders:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Procurement
+      operationId: listPurchaseOrders
+      summary: Purchase orders
+      description: The store sees orders without prices. Prices need procurement.orders.manage or finance.values.view.
+      x-permission: procurement.orders.manage | procurement.orders.approve | procurement.deliveries.receive
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          description: Comma-separated statuses
+      - name: filter[supplier_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/CursorPage'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/PurchaseOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Procurement
+      operationId: createPurchaseOrder
+      summary: Raise a purchase order
+      description: From an approved purchase request (which becomes `ordered`) or directly. Starts as a draft.
+      x-permission: procurement.orders.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseOrderInput'
+      responses:
+        '201':
+          description: Draft created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PurchaseOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/purchase-orders/{order}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: order
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Procurement
+      operationId: getPurchaseOrder
+      summary: A purchase order with deliveries and invoices
+      description: Prices need procurement.orders.manage or finance.values.view. Invoices are listed only with price access.
+      x-permission: procurement.orders.manage | procurement.orders.approve | procurement.deliveries.receive
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PurchaseOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags:
+      - Procurement
+      operationId: updatePurchaseOrder
+      summary: Change a draft order
+      description: Drafts only; send `version`. Sending `lines` replaces them.
+      x-permission: procurement.orders.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseOrderInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PurchaseOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/purchase-orders/{order}/approve:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: order
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Procurement
+      operationId: approvePurchaseOrder
+      summary: Approve an order
+      description: Not by its author (unless the owner). Above the farm's `approval_thresholds.purchase_order`, only the owner.
+      x-permission: procurement.orders.approve
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PurchaseOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/purchase-orders/{order}/send:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: order
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Procurement
+      operationId: sendPurchaseOrder
+      summary: Mark as sent to the supplier
+      description: From approved.
+      x-permission: procurement.orders.manage
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PurchaseOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/purchase-orders/{order}/close:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: order
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Procurement
+      operationId: closePurchaseOrder
+      summary: Close an order
+      description: 'Short-close: nothing more will be received. Orders close by themselves when fully received and invoiced.'
+      x-permission: procurement.orders.manage
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PurchaseOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/purchase-orders/{order}/cancel:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: order
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Procurement
+      operationId: cancelPurchaseOrder
+      summary: Cancel an order
+      description: Only before anything was received.
+      x-permission: procurement.orders.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PurchaseOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/purchase-orders/{order}/deliveries:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: order
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Procurement
+      operationId: receiveDelivery
+      summary: Receive a delivery (goods received note)
+      description: 'From sent, approved or partially received orders; no more than is outstanding. Each line becomes a stock lot (an input_lot trace batch naming the supplier and order) valued at the order price: Dr Inventory / Cr Goods received not invoiced.'
+      x-permission: procurement.deliveries.receive
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - location_id
+              - lines
+              properties:
+                location_id:
+                  type: string
+                  format: uuid
+                received_on:
+                  type: string
+                  format: date
+                supplier_reference:
+                  type:
+                  - string
+                  - 'null'
+                media_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                  description: A photo of the delivery note
+                note:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                    - order_line_id
+                    - quantity
+                    properties:
+                      order_line_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: number
+                        exclusiveMinimum: 0
+                      lot_number:
+                        type:
+                        - string
+                        - 'null'
+                      expires_on:
+                        type:
+                        - string
+                        - 'null'
+                        format: date
+      responses:
+        '201':
+          description: Received; the updated order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PurchaseOrder'
+                  meta:
+                    type: object
+                    properties:
+                      delivery:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          code:
+                            type: string
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/purchase-orders/{order}/invoices:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: order
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Procurement
+      operationId: recordSupplierInvoice
+      summary: Record the supplier's invoice
+      description: 'Three-way match: no more than received and not yet invoiced. Dr Goods received not invoiced at the order price, the difference to Price variance (5200), Cr Accounts payable. The same invoice number from the same supplier is 409.'
+      x-permission: procurement.orders.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - invoice_number
+              - invoice_date
+              - lines
+              properties:
+                invoice_number:
+                  type: string
+                  maxLength: 60
+                invoice_date:
+                  type: string
+                  format: date
+                due_on:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                  description: Defaults to the supplier's payment terms
+                notes:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                    - order_line_id
+                    - quantity
+                    - unit_price
+                    properties:
+                      order_line_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: number
+                        exclusiveMinimum: 0
+                      unit_price:
+                        type: number
+                        minimum: 0
+      responses:
+        '201':
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SupplierInvoice'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/supplier-invoices:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Procurement
+      operationId: listSupplierInvoices
+      summary: Supplier invoices
+      x-permission: procurement.orders.manage | finance.view
+      parameters:
+      - name: filter[supplier_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[order_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SupplierInvoice'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/ledger/accounts:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Finance
+      operationId: listLedgerAccounts
+      summary: Chart of accounts with balances (trial balance)
+      x-permission: finance.view
+      parameters:
+      - name: as_of
+        in: query
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LedgerAccount'
+                  meta:
+                    type: object
+                    properties:
+                      total_debit:
+                        type: number
+                      total_credit:
+                        type: number
+                      as_of:
+                        type:
+                        - string
+                        - 'null'
+                        format: date
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/ledger/entries:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Finance
+      operationId: listLedgerEntries
+      summary: Journal entries
+      x-permission: finance.view
+      parameters:
+      - name: filter[source_type]
+        in: query
+        schema:
+          type: string
+      - name: filter[source_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[account_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[from]
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: filter[to]
+        in: query
+        schema:
+          type: string
+          format: date
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/CursorPage'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/LedgerEntry'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/ledger/entries/{entry}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: entry
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Finance
+      operationId: getLedgerEntry
+      summary: A journal entry
+      x-permission: finance.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LedgerEntry'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/ledger/entries/{entry}/reverse:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: entry
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Finance
+      operationId: reverseLedgerEntry
+      summary: Reverse an entry
+      description: Entries are never changed or deleted; a reversal posts the mirror image. An entry is reversed at most once (409).
+      x-permission: finance.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 200
+      responses:
+        '201':
+          description: The reversing entry
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LedgerEntry'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+
 components:
   securitySchemes:
     bearer:
@@ -8730,3 +10779,1441 @@ components:
           type: string
         has_more:
           type: boolean
+    InventoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: inventory_item
+        code:
+          type: string
+        name:
+          type: string
+        category:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
+              kind:
+                type: string
+          - type: 'null'
+        unit:
+          type: string
+        sku:
+          type:
+          - string
+          - 'null'
+        reorder_level:
+          type:
+          - number
+          - 'null'
+        tracks_lots:
+          type: boolean
+        tracks_expiry:
+          type: boolean
+        default_location:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
+          - type: 'null'
+        is_active:
+          type: boolean
+        on_hand:
+          type:
+          - number
+          - 'null'
+        low_stock:
+          type: boolean
+        stock_value:
+          type: number
+          description: Only with inventory.values.view
+        notes:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    InventoryItemInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 150
+        category_id:
+          type: string
+          format: uuid
+        unit:
+          type: string
+          description: A unit code
+        sku:
+          type:
+          - string
+          - 'null'
+        reorder_level:
+          type:
+          - number
+          - 'null'
+          minimum: 0
+        tracks_lots:
+          type: boolean
+          default: true
+        tracks_expiry:
+          type: boolean
+          default: false
+        default_location_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        is_active:
+          type: boolean
+        notes:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+    StockBalance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        item:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+            unit:
+              type: string
+        location:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        lot:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              lot_number:
+                type:
+                - string
+                - 'null'
+              expires_on:
+                type:
+                - string
+                - 'null'
+                format: date
+              trace_batch_id:
+                type:
+                - string
+                - 'null'
+                format: uuid
+          - type: 'null'
+        quantity:
+          type: number
+        value:
+          type: number
+          description: Only with inventory.values.view
+        updated_at:
+          type: string
+          format: date-time
+    StockMovement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+          - receipt
+          - opening
+          - issue
+          - return
+          - transfer_out
+          - transfer_in
+          - adjustment
+        item:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+            unit:
+              type: string
+        location:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        lot:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              lot_number:
+                type:
+                - string
+                - 'null'
+              expires_on:
+                type:
+                - string
+                - 'null'
+                format: date
+              trace_batch_id:
+                type:
+                - string
+                - 'null'
+                format: uuid
+          - type: 'null'
+        quantity:
+          type: number
+          description: 'Signed: negative out of the store'
+        balance_after:
+          type: number
+        unit_cost:
+          type:
+          - number
+          - 'null'
+          description: Only with inventory.values.view
+        value:
+          type: number
+          description: Signed; only with inventory.values.view
+        source:
+          type: object
+          properties:
+            type:
+              type: string
+            id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+        subject:
+          oneOf:
+          - type: object
+            properties:
+              type:
+                type: string
+              id:
+                type:
+                - string
+                - 'null'
+                format: uuid
+          - type: 'null'
+        ledger_entry_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Only with inventory.values.view
+        note:
+          type:
+          - string
+          - 'null'
+        occurred_at:
+          type: string
+          format: date-time
+        recorded_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+    StockTransfer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        from:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        to:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        note:
+          type:
+          - string
+          - 'null'
+        occurred_at:
+          type: string
+          format: date-time
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              item:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+                  unit:
+                    type: string
+              lot:
+                oneOf:
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    code:
+                      type: string
+                    lot_number:
+                      type:
+                      - string
+                      - 'null'
+                    expires_on:
+                      type:
+                      - string
+                      - 'null'
+                      format: date
+                    trace_batch_id:
+                      type:
+                      - string
+                      - 'null'
+                      format: uuid
+                - type: 'null'
+              quantity:
+                type: number
+    InventoryAlerts:
+      type: object
+      properties:
+        low_stock:
+          type: array
+          items:
+            type: object
+            properties:
+              item:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+                  unit:
+                    type: string
+              on_hand:
+                type: number
+              reorder_level:
+                type:
+                - number
+                - 'null'
+        out_of_stock:
+          type: array
+          items:
+            type: object
+            properties:
+              item:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+                  unit:
+                    type: string
+              on_hand:
+                type: number
+              reorder_level:
+                type:
+                - number
+                - 'null'
+        expiring:
+          type: array
+          items:
+            type: object
+            properties:
+              item:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+                  unit:
+                    type: string
+              lot:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  lot_number:
+                    type:
+                    - string
+                    - 'null'
+              location:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+              expires_on:
+                type: string
+                format: date
+              quantity:
+                type: number
+        expired:
+          type: array
+          items:
+            type: object
+            properties:
+              item:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+                  unit:
+                    type: string
+              lot:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  lot_number:
+                    type:
+                    - string
+                    - 'null'
+              location:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+              expires_on:
+                type: string
+                format: date
+              quantity:
+                type: number
+    StockAdjustment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: stock_adjustment
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - proposed
+          - approved
+          - rejected
+          - cancelled
+        location:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        reason:
+          type: string
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              item:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+                  unit:
+                    type: string
+              lot:
+                oneOf:
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    code:
+                      type: string
+                    lot_number:
+                      type:
+                      - string
+                      - 'null'
+                    expires_on:
+                      type:
+                      - string
+                      - 'null'
+                      format: date
+                    trace_batch_id:
+                      type:
+                      - string
+                      - 'null'
+                      format: uuid
+                - type: 'null'
+              expected_quantity:
+                type: number
+              counted_quantity:
+                type: number
+              difference:
+                type: number
+        value_change:
+          type:
+          - number
+          - 'null'
+          description: Only with inventory.values.view
+        proposed_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        decided_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        decided_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        decision_note:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    InventoryRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: inventory_request
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - requested
+          - approved
+          - partially_issued
+          - issued
+          - rejected
+          - cancelled
+        subject:
+          type: object
+          properties:
+            type:
+              type: string
+              enum:
+              - crop_cycle
+              - plot
+              - location
+              - animal
+              - animal_group
+              - general
+            id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+            label:
+              type:
+              - string
+              - 'null'
+        task_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        location:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
+          - type: 'null'
+        needed_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        note:
+          type:
+          - string
+          - 'null'
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              item:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+                  unit:
+                    type: string
+              quantity:
+                type: number
+              issued_quantity:
+                type: number
+        requested_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        decided_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        decided_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        decision_note:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    Supplier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: supplier
+        code:
+          type: string
+        name:
+          type: string
+        contact_person:
+          type:
+          - string
+          - 'null'
+        phone:
+          type:
+          - string
+          - 'null'
+        email:
+          type:
+          - string
+          - 'null'
+        address:
+          type:
+          - string
+          - 'null'
+        tax_id:
+          type:
+          - string
+          - 'null'
+        payment_terms_days:
+          type:
+          - integer
+          - 'null'
+        is_active:
+          type: boolean
+        notes:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+    SupplierInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 150
+        contact_person:
+          type:
+          - string
+          - 'null'
+        phone:
+          type:
+          - string
+          - 'null'
+        email:
+          type:
+          - string
+          - 'null'
+          format: email
+        address:
+          type:
+          - string
+          - 'null'
+        tax_id:
+          type:
+          - string
+          - 'null'
+        payment_terms_days:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 365
+        is_active:
+          type: boolean
+        notes:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+    PurchaseRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: purchase_request
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - submitted
+          - approved
+          - rejected
+          - ordered
+          - cancelled
+        needed_by:
+          type:
+          - string
+          - 'null'
+          format: date
+        reason:
+          type:
+          - string
+          - 'null'
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              item:
+                oneOf:
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    code:
+                      type: string
+                    name:
+                      type: string
+                    unit:
+                      type: string
+                - type: 'null'
+              description:
+                type:
+                - string
+                - 'null'
+              quantity:
+                type: number
+              unit:
+                type:
+                - string
+                - 'null'
+              estimated_unit_price:
+                type:
+                - number
+                - 'null'
+                description: Only with price access
+        requested_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        decided_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        decided_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        decision_note:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    PurchaseOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: purchase_order
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - draft
+          - approved
+          - sent
+          - partially_received
+          - received
+          - closed
+          - cancelled
+        supplier:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        purchase_request:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+          - type: 'null'
+        expected_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        delivery_location:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
+          - type: 'null'
+        currency:
+          type: string
+        total_amount:
+          type: number
+          description: Only with price access
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              item:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+                  unit:
+                    type: string
+              description:
+                type:
+                - string
+                - 'null'
+              quantity:
+                type: number
+              received_quantity:
+                type: number
+              invoiced_quantity:
+                type: number
+              unit_price:
+                type: number
+                description: Only with price access
+        deliveries:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              received_on:
+                type: string
+                format: date
+              supplier_reference:
+                type:
+                - string
+                - 'null'
+              location:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+              received_by:
+                oneOf:
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                - type: 'null'
+              lines:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    order_line_id:
+                      type: string
+                      format: uuid
+                    quantity:
+                      type: number
+                    lot:
+                      oneOf:
+                      - type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          code:
+                            type: string
+                          lot_number:
+                            type:
+                            - string
+                            - 'null'
+                          expires_on:
+                            type:
+                            - string
+                            - 'null'
+                            format: date
+                          trace_batch_id:
+                            type:
+                            - string
+                            - 'null'
+                            format: uuid
+                      - type: 'null'
+        invoices:
+          type: array
+          description: Only with price access
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              invoice_number:
+                type: string
+              invoice_date:
+                type: string
+                format: date
+              due_on:
+                type:
+                - string
+                - 'null'
+                format: date
+              amount:
+                type: number
+              status:
+                type: string
+        notes:
+          type:
+          - string
+          - 'null'
+        created_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        approved_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        approved_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        sent_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        cancel_reason:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    PurchaseOrderInput:
+      type: object
+      properties:
+        supplier_id:
+          type: string
+          format: uuid
+          description: Create only
+        purchase_request_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Create only; an approved request
+        expected_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        delivery_location_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        notes:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            required:
+            - item_id
+            - quantity
+            - unit_price
+            properties:
+              item_id:
+                type: string
+                format: uuid
+              description:
+                type:
+                - string
+                - 'null'
+              quantity:
+                type: number
+                exclusiveMinimum: 0
+              unit_price:
+                type: number
+                minimum: 0
+    SupplierInvoice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: supplier_invoice
+        code:
+          type: string
+        invoice_number:
+          type: string
+        supplier:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        order:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+        invoice_date:
+          type: string
+          format: date
+        due_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        amount:
+          type: number
+        status:
+          type: string
+          enum:
+          - recorded
+          - paid
+          - cancelled
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              order_line_id:
+                type: string
+                format: uuid
+              item:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+                  unit:
+                    type: string
+              quantity:
+                type: number
+              unit_price:
+                type: number
+              order_unit_price:
+                type: number
+        ledger_entry_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        notes:
+          type:
+          - string
+          - 'null'
+        recorded_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+    LedgerAccount:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+          - asset
+          - liability
+          - equity
+          - income
+          - expense
+        is_system:
+          type: boolean
+        debit:
+          type: number
+        credit:
+          type: number
+        balance:
+          type: number
+          description: Positive in the account's normal direction
+    LedgerEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: ledger_entry
+        number:
+          type: string
+        posted_on:
+          type: string
+          format: date
+        source:
+          type: object
+          properties:
+            type:
+              type: string
+            id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+        memo:
+          type:
+          - string
+          - 'null'
+        reverses_entry_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        reversed_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              number:
+                type: string
+          - type: 'null'
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              account:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: string
+              debit:
+                type: number
+              credit:
+                type: number
+              cost_center:
+                oneOf:
+                - type: object
+                  properties:
+                    type:
+                      type: string
+                    id:
+                      type: string
+                      format: uuid
+                - type: 'null'
+              memo:
+                type:
+                - string
+                - 'null'
+        posted_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time

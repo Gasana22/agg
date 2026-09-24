@@ -33,7 +33,7 @@ class DashboardTest extends TestCase
 
         $this->assertSame('owner', $data['dashboard']);
         $this->assertSame('7d', $data['period']['key']);
-        $this->assertSame(['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'farm.members', 'trace.open_batches', 'trace.events'], array_column($data['kpis'], 'key'));
+        $this->assertSame(['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'inventory.value', 'payables.open', 'farm.members', 'trace.open_batches', 'trace.events'], array_column($data['kpis'], 'key'));
 
         $kpis = collect($data['kpis'])->keyBy('key');
         $this->assertSame(['value' => '120.0000', 'unit' => 'ha'], $kpis['farm.area']['value']);
@@ -79,6 +79,20 @@ class DashboardTest extends TestCase
 
         $this->assertProblem($this->dashboard('owner', $agronomist), 403, 'dashboard_not_available');
         $this->assertProblem($this->dashboard('spaceship', $agronomist), 404, 'not_found');
+    }
+
+    public function test_store_manager_and_accountant_see_stock_and_money_by_permission(): void
+    {
+        $store = $this->memberWithRole($this->farm, 'store_manager');
+        $data = $this->dashboard('store', $store)->assertOk()->json('data');
+        $this->assertSame(['inventory.items', 'inventory.low', 'inventory.out', 'inventory.value', 'inventory.received_today', 'inventory.issued_today', 'inventory.requests_pending', 'deliveries.expected'], array_column($data['kpis'], 'key'));
+        $this->assertSame(['amount' => '0.00', 'currency' => $this->farm->currency], collect($data['kpis'])->firstWhere('key', 'inventory.value')['value']);
+        $this->assertSame(['stock_in', 'issue_stock', 'transfer_stock', 'receive_delivery', 'purchase_request', 'stock_count'], array_column($data['quick_actions'], 'key'));
+
+        $accountant = $this->memberWithRole($this->farm, 'accountant');
+        $books = $this->dashboard('accountant', $accountant)->assertOk()->json('data');
+        $this->assertSame(['payables.open', 'payables.not_invoiced', 'inventory.value', 'trace.open_batches'], array_column($books['kpis'], 'key'));
+        $this->assertContains('invoices_due', array_column($books['widgets'], 'key'));
     }
 
     public function test_periods_are_validated(): void

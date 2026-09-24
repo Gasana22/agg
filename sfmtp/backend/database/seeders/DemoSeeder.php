@@ -17,6 +17,8 @@ use App\Modules\FarmStructure\Domain\Models\Location;
 use App\Modules\FarmStructure\Domain\Models\Plot;
 use App\Modules\Identity\Domain\Enums\UserType;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Inventory\Application\Items;
+use App\Modules\Inventory\Application\StockDesk;
 use App\Modules\Livestock\Application\AnimalRecords;
 use App\Modules\Livestock\Application\AnimalSales;
 use App\Modules\Livestock\Application\Breedings;
@@ -25,6 +27,9 @@ use App\Modules\Livestock\Domain\Enums\AnimalStatus;
 use App\Modules\Livestock\Domain\Enums\BreedingStatus;
 use App\Modules\Livestock\Domain\Models\AnimalGroup;
 use App\Modules\Platform\Application\PlatformPermissions;
+use App\Modules\Procurement\Application\Purchasing;
+use App\Modules\Procurement\Application\Receiving;
+use App\Modules\Procurement\Domain\Models\Supplier;
 use App\Modules\Tenancy\Application\FarmService;
 use App\Modules\Tenancy\Domain\Enums\FarmStatus;
 use App\Modules\Tenancy\Domain\Models\Farm;
@@ -121,6 +126,7 @@ class DemoSeeder extends Seeder
             $structure->create('location', ['code' => 'DAIRY', 'name' => 'Milking parlour', 'kind' => 'building', 'latitude' => 0.4049, 'longitude' => 32.3890]);
             $structure->create('location', ['code' => 'TANK', 'name' => 'Water tank', 'kind' => 'water', 'latitude' => 0.4043, 'longitude' => 32.3899]);
             $structure->create('location', ['code' => 'STORE', 'name' => 'Feed store', 'kind' => 'store', 'latitude' => 0.4051, 'longitude' => 32.3881]);
+            $structure->create('location', ['code' => 'VET', 'name' => 'Vet cabinet', 'kind' => 'store', 'latitude' => 0.4049, 'longitude' => 32.3886]);
         });
 
         // Crop farm layout near Seeta: two blocks of three plots each.
@@ -158,6 +164,120 @@ class DemoSeeder extends Seeder
         $this->seedCrops($crop, $plots, $context, $recorder);
         $this->seedLivestock($mixed, $context);
         $this->seedWorkforce($mixed, $crop, $context);
+        $this->seedInventory($mixed, $context);
+    }
+
+    /**
+     * The mixed farm's stores, run through the inventory and procurement
+     * services: opening stock, a purchase from request to invoice, an order
+     * still on its way, feed issued to the dairy herd, a transfer to the vet
+     * cabinet, a worker's request, a count waiting for approval, a lot close
+     * to expiry and an item below its reorder level.
+     */
+    private function seedInventory(Farm $farm, TenantContext $context): void
+    {
+        $membership = fn (string $email) => FarmUser::where('farm_id', $farm->id)->whereHas('user', fn ($q) => $q->where('email', $email))->firstOrFail();
+        $as = function (string $email, callable $work) use ($context, $farm, $membership) {
+            $who = $membership($email);
+            Auth::setUser($who->user);
+
+            return $context->run($farm, $work, $who);
+        };
+        $category = fn (string $code) => DB::table('global_inventory_categories')->where('code', $code)->value('id');
+        $days = fn (int $ago, string $time = '09:00') => CarbonImmutable::parse(now($farm->timezone)->subDays($ago)->toDateString().' '.$time, $farm->timezone)->utc()->min(CarbonImmutable::now()->subMinutes(5))->toIso8601ZuluString();
+
+        [$store, $vet, $meal, $bran, $lick, $dewormer, $vaccine, $diesel] = $as('store@aggfarms.test', function () use ($category, $days) {
+            $store = Location::where('code', 'STORE')->value('id');
+            $vet = Location::where('code', 'VET')->value('id');
+            $items = app(Items::class);
+            $meal = $items->create(['name' => 'Dairy meal', 'category_id' => $category('animal_feed'), 'unit' => 'kg', 'reorder_level' => 200, 'default_location_id' => $store]);
+            $bran = $items->create(['name' => 'Maize bran', 'category_id' => $category('animal_feed'), 'unit' => 'kg', 'reorder_level' => 150, 'default_location_id' => $store]);
+            $lick = $items->create(['name' => 'Mineral lick', 'category_id' => $category('animal_feed'), 'unit' => 'pcs', 'tracks_lots' => false, 'reorder_level' => 10, 'default_location_id' => $store]);
+            $dewormer = $items->create(['name' => 'Albendazole 10% drench', 'category_id' => $category('veterinary_drugs'), 'unit' => 'l', 'tracks_lots' => true, 'tracks_expiry' => true, 'reorder_level' => 2, 'default_location_id' => $vet]);
+            $vaccine = $items->create(['name' => 'Lumpy skin vaccine', 'category_id' => $category('veterinary_drugs'), 'unit' => 'pcs', 'tracks_lots' => true, 'tracks_expiry' => true, 'notes' => 'Vials of 50 doses; keep cold.', 'default_location_id' => $vet]);
+            $diesel = $items->create(['name' => 'Diesel', 'category_id' => $category('fuel'), 'unit' => 'l', 'tracks_lots' => false, 'reorder_level' => 40, 'default_location_id' => $store]);
+
+            // Opening stock, counted when the farm started using the system.
+            $desk = app(StockDesk::class);
+            foreach ([[$meal, 400, 1800], [$bran, 250, 700], [$lick, 8, 15000], [$diesel, 120, 5200]] as [$item, $qty, $cost]) {
+                $desk->stockIn(['item_id' => $item->id, 'location_id' => $store, 'quantity' => $qty, 'unit_cost' => $cost, 'occurred_at' => $days(20, '08:00'), 'note' => 'Opening count']);
+            }
+            $desk->stockIn(['item_id' => $vaccine->id, 'location_id' => $vet, 'quantity' => 4, 'unit_cost' => 42000, 'lot_number' => 'LSD-2410', 'expires_on' => now()->addDays(18)->toDateString(), 'occurred_at' => $days(20, '08:30'), 'note' => 'Opening count']);
+
+            return [$store, $vet, $meal, $bran, $lick, $dewormer, $vaccine, $diesel];
+        });
+
+        // The store asks for dewormer and feed; the manager approves; the accountant orders; the owner approves.
+        $request = $as('store@aggfarms.test', fn () => app(Purchasing::class)->request(['reason' => 'Dewormer for the goats and feed for the dry season', 'needed_by' => now()->subDays(8)->toDateString(), 'lines' => [
+            ['item_id' => $dewormer->id, 'quantity' => 5], ['item_id' => $meal->id, 'quantity' => 500],
+        ]]));
+        $as('manager@aggfarms.test', fn () => app(Purchasing::class)->decideRequest($request, true, 'Go ahead'));
+        [$supplier, $order] = $as('accountant@aggfarms.test', function () use ($request, $dewormer, $meal, $store) {
+            $buy = app(Purchasing::class);
+            $supplier = $buy->createSupplier(['name' => 'Kakiri Agro-Vet Supplies', 'contact_person' => 'Ruth Namusoke', 'phone' => '+256 700 111222', 'payment_terms_days' => 30, 'address' => 'Kakiri trading centre']);
+            $buy->createSupplier(['name' => 'Wakiso Feeds Ltd', 'phone' => '+256 772 333444', 'payment_terms_days' => 14]);
+            $order = $buy->createOrder(['supplier_id' => $supplier->id, 'purchase_request_id' => $request->id, 'delivery_location_id' => $store, 'expected_on' => now()->subDays(5)->toDateString(), 'lines' => [
+                ['item_id' => $dewormer->id, 'quantity' => 5, 'unit_price' => 38000], ['item_id' => $meal->id, 'quantity' => 500, 'unit_price' => 1850],
+            ]]);
+
+            return [$supplier, $order];
+        });
+        $as('owner@aggfarms.test', fn () => app(Purchasing::class)->approveOrder($order));
+        $as('accountant@aggfarms.test', fn () => app(Purchasing::class)->sendOrder($order));
+
+        // Delivered six days ago: the dewormer lot goes to the vet cabinet, the feed to the store.
+        $as('store@aggfarms.test', function () use ($order, $dewormer, $vet, $store) {
+            $lines = $order->lines()->get()->keyBy('item_id');
+            $receive = app(Receiving::class);
+            $receive->receive($order, ['location_id' => $vet, 'received_on' => now()->subDays(6)->toDateString(), 'supplier_reference' => 'DN-4471', 'lines' => [
+                ['order_line_id' => $lines[$dewormer->id]->id, 'quantity' => 5, 'lot_number' => 'ALB-2607', 'expires_on' => now()->addMonths(14)->toDateString()],
+            ]]);
+            $receive->receive($order->refresh(), ['location_id' => $store, 'received_on' => now()->subDays(6)->toDateString(), 'supplier_reference' => 'DN-4471', 'lines' => [
+                ['order_line_id' => $lines->firstWhere('item_id', '!=', $dewormer->id)->id, 'quantity' => 500],
+            ]]);
+        });
+        $as('accountant@aggfarms.test', function () use ($order, $dewormer) {
+            $lines = $order->lines()->get()->keyBy('item_id');
+            app(Receiving::class)->invoice($order->refresh(), ['invoice_number' => 'KAV-10231', 'invoice_date' => now()->subDays(5)->toDateString(), 'lines' => [
+                ['order_line_id' => $lines[$dewormer->id]->id, 'quantity' => 5, 'unit_price' => 38000],
+                ['order_line_id' => $lines->firstWhere('item_id', '!=', $dewormer->id)->id, 'quantity' => 500, 'unit_price' => 1900],
+            ]]);
+        });
+
+        // A second order for lick and diesel, approved and on its way.
+        $second = $as('accountant@aggfarms.test', fn () => app(Purchasing::class)->createOrder(['supplier_id' => $supplier->id, 'delivery_location_id' => $store, 'expected_on' => now()->addDays(2)->toDateString(), 'lines' => [
+            ['item_id' => $lick->id, 'quantity' => 20, 'unit_price' => 15000], ['item_id' => $diesel->id, 'quantity' => 200, 'unit_price' => 5100],
+        ]]));
+        $as('owner@aggfarms.test', fn () => app(Purchasing::class)->approveOrder($second));
+        $as('accountant@aggfarms.test', fn () => app(Purchasing::class)->sendOrder($second));
+
+        // Daily feed to the dairy herd, some bran to the goats, and a transfer to the vet cabinet.
+        $as('store@aggfarms.test', function () use ($meal, $bran, $lick, $store, $days) {
+            $desk = app(StockDesk::class);
+            $dairy = AnimalGroup::where('code', 'DAIRY')->value('id');
+            $goats = AnimalGroup::where('code', 'GOATS')->value('id');
+            foreach (range(5, 0) as $d) {
+                $desk->issue(['item_id' => $meal->id, 'location_id' => $store, 'quantity' => 45, 'subject_type' => 'animal_group', 'subject_id' => $dairy, 'occurred_at' => $days($d, '06:30'), 'note' => 'Morning ration']);
+            }
+            $desk->issue(['item_id' => $bran->id, 'location_id' => $store, 'quantity' => 60, 'subject_type' => 'animal_group', 'subject_id' => $goats, 'occurred_at' => $days(3, '07:00')]);
+            $desk->issue(['item_id' => $lick->id, 'location_id' => $store, 'quantity' => 2, 'subject_type' => 'animal_group', 'subject_id' => $dairy, 'occurred_at' => $days(2, '07:15')]);
+        });
+
+        // The livestock manager asks for dewormer for the goats.
+        $as('livestock@aggfarms.test', fn () => app(StockDesk::class)->request(['subject_type' => 'animal_group', 'subject_id' => AnimalGroup::where('code', 'GOATS')->value('id'),
+            'location_id' => $vet, 'needed_on' => now()->addDay()->toDateString(), 'note' => 'Second dose in three weeks', 'lines' => [['item_id' => $dewormer->id, 'quantity' => 0.5]]]));
+
+        // Waiting for decisions: more bran (the manager), and a bran order from the feed mill (the owner).
+        $as('livestock@aggfarms.test', fn () => app(Purchasing::class)->request(['reason' => 'Goats kidding next month', 'needed_by' => now()->addDays(10)->toDateString(), 'lines' => [
+            ['item_id' => $bran->id, 'quantity' => 300],
+        ]]));
+        $as('accountant@aggfarms.test', fn () => app(Purchasing::class)->createOrder(['supplier_id' => Supplier::where('name', 'Wakiso Feeds Ltd')->value('id'), 'delivery_location_id' => $store,
+            'expected_on' => now()->addDays(5)->toDateString(), 'notes' => 'Deliver before noon', 'lines' => [['item_id' => $bran->id, 'quantity' => 400, 'unit_price' => 750]]]));
+
+        // A diesel count found less than the book: waiting for the manager.
+        $as('store@aggfarms.test', fn () => app(StockDesk::class)->proposeAdjustment(['location_id' => $store, 'reason' => 'Monthly count: generator used without a record', 'lines' => [
+            ['item_id' => $diesel->id, 'counted_quantity' => 112],
+        ]]));
     }
 
     /**

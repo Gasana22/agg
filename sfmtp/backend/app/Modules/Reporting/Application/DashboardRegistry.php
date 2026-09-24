@@ -23,6 +23,7 @@ class DashboardRegistry
         private readonly CropMetrics $crops,
         private readonly LivestockMetrics $livestock,
         private readonly WorkforceMetrics $workforce,
+        private readonly InventoryMetrics $inventory,
         private readonly FarmPermissions $permissions,
         private readonly TenantContext $context,
     ) {}
@@ -33,10 +34,10 @@ class DashboardRegistry
         $trace = ['trace.open_batches', 'trace.events'];
 
         return match ($dashboard) {
-            'owner' => ['kpis' => ['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'view_map', 'new_batch', 'view_audit_log']],
+            'owner' => ['kpis' => ['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'inventory.value', 'payables.open', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'orders_to_approve', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'view_map', 'new_batch', 'view_audit_log']],
             'manager' => [
-                'kpis' => ['tasks.today', 'tasks.completed', 'tasks.pending', 'tasks.overdue', 'workers.present', 'workers.absent', 'activities.active', 'crop.active_cycles', 'livestock.head_count'],
-                'widgets' => ['verification_queue', 'schedule', 'overdue_tasks', 'leave_requests', 'worker_activity', 'operations_to_verify', 'pest_disease_alerts', 'vaccinations_due', 'recent_trace_events'],
+                'kpis' => ['tasks.today', 'tasks.completed', 'tasks.pending', 'tasks.overdue', 'workers.present', 'workers.absent', 'activities.active', 'crop.active_cycles', 'livestock.head_count', 'inventory.requests_pending', 'inventory.low'],
+                'widgets' => ['verification_queue', 'schedule', 'overdue_tasks', 'leave_requests', 'pending_requests', 'purchase_requests_to_approve', 'worker_activity', 'operations_to_verify', 'pest_disease_alerts', 'vaccinations_due', 'recent_trace_events'],
                 'quick_actions' => ['new_task', 'view_workers', 'invite_member', 'start_cycle', 'register_animal', 'view_map'],
             ],
             'agronomist' => [
@@ -49,8 +50,16 @@ class DashboardRegistry
                 'widgets' => ['vaccinations_due', 'withdrawal_alerts', 'verification_queue', 'expected_births', 'weight_loss_alerts', 'milk_production', 'recent_trace_events'],
                 'quick_actions' => ['register_animal', 'record_health', 'record_weight', 'record_production', 'new_task', 'request_sale', 'view_map'],
             ],
-            'store' => ['kpis' => $trace, 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_map', 'new_batch']],
-            'accountant' => ['kpis' => ['trace.open_batches'], 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_audit_log']],
+            'store' => [
+                'kpis' => ['inventory.items', 'inventory.low', 'inventory.out', 'inventory.value', 'inventory.received_today', 'inventory.issued_today', 'inventory.requests_pending', 'deliveries.expected'],
+                'widgets' => ['pending_requests', 'deliveries_to_receive', 'expiring_lots', 'low_stock', 'purchase_requests_to_approve', 'recent_movements', 'inventory_value'],
+                'quick_actions' => ['stock_in', 'issue_stock', 'transfer_stock', 'receive_delivery', 'purchase_request', 'stock_count'],
+            ],
+            'accountant' => [
+                'kpis' => ['payables.open', 'payables.not_invoiced', 'inventory.value', 'trace.open_batches'],
+                'widgets' => ['invoices_due', 'orders_to_approve', 'inventory_value', 'recent_trace_events'],
+                'quick_actions' => ['view_ledger', 'view_orders', 'view_audit_log'],
+            ],
             'worker' => ['kpis' => ['tasks.today', 'tasks.done_today', 'attendance.status'], 'widgets' => ['today_tasks', 'attendance_week'], 'quick_actions' => ['my_day', 'request_leave']],
         };
     }
@@ -128,6 +137,26 @@ class DashboardRegistry
                 'value' => fn () => ($g = $this->livestock->averageDailyGain()) === null ? null : ['value' => number_format($g, 2, '.', ''), 'unit' => 'kg/day']],
             'livestock.sold' => ['label' => 'Animals sold', 'format' => 'number', 'permission' => 'livestock.animals.view',
                 'value' => fn (Period $p) => $this->livestock->sold($p)],
+            'inventory.items' => ['label' => 'Stock items', 'format' => 'number', 'permission' => 'inventory.view',
+                'value' => fn () => $this->inventory->items()],
+            'inventory.low' => ['label' => 'Low stock', 'format' => 'number', 'permission' => 'inventory.view',
+                'value' => fn () => $this->inventory->lowAndOut()['low']],
+            'inventory.out' => ['label' => 'Out of stock', 'format' => 'number', 'permission' => 'inventory.view',
+                'value' => fn () => $this->inventory->lowAndOut()['out']],
+            'inventory.value' => ['label' => 'Stock value', 'format' => 'money', 'permission' => 'inventory.values.view',
+                'value' => fn () => ['amount' => $this->inventory->stockValue(), 'currency' => $farm->currency]],
+            'inventory.received_today' => ['label' => 'Receipts today', 'format' => 'number', 'permission' => 'inventory.view',
+                'value' => fn () => $this->inventory->movedToday('in')],
+            'inventory.issued_today' => ['label' => 'Issues today', 'format' => 'number', 'permission' => 'inventory.view',
+                'value' => fn () => $this->inventory->movedToday('out')],
+            'inventory.requests_pending' => ['label' => 'Open stock requests', 'format' => 'number', 'permission' => 'inventory.stock.move|inventory.stock.approve',
+                'value' => fn () => $this->inventory->requestsPending()],
+            'deliveries.expected' => ['label' => 'Orders awaiting delivery', 'format' => 'number', 'permission' => 'procurement.deliveries.receive',
+                'value' => fn () => $this->inventory->deliveriesExpected()],
+            'payables.open' => ['label' => 'Supplier invoices unpaid', 'format' => 'money', 'permission' => 'finance.values.view',
+                'value' => fn () => ['amount' => $this->inventory->payablesOpen(), 'currency' => $farm->currency]],
+            'payables.not_invoiced' => ['label' => 'Received, not invoiced', 'format' => 'money', 'permission' => 'finance.values.view',
+                'value' => fn () => ['amount' => $this->inventory->receivedNotInvoiced(), 'currency' => $farm->currency]],
             'trace.open_batches' => ['label' => 'Open batches', 'format' => 'number', 'permission' => 'trace.batches.view',
                 'value' => fn () => $this->metrics->openBatches()],
             'trace.events' => ['label' => 'Traceability events', 'format' => 'number', 'permission' => 'trace.batches.view',
@@ -221,6 +250,32 @@ class DashboardRegistry
                         ],
                     ];
                 }],
+            'pending_requests' => ['type' => 'action_list', 'permission' => 'inventory.stock.move|inventory.stock.approve', 'inline' => true,
+                'data' => fn () => ['items' => $this->inventory->pendingRequests()]],
+            'deliveries_to_receive' => ['type' => 'action_list', 'permission' => 'procurement.deliveries.receive', 'inline' => true,
+                'data' => fn () => ['items' => $this->inventory->deliveriesToReceive()]],
+            'expiring_lots' => ['type' => 'action_list', 'permission' => 'inventory.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->inventory->expiringLots()]],
+            'low_stock' => ['type' => 'action_list', 'permission' => 'inventory.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->inventory->lowStock()]],
+            'recent_movements' => ['type' => 'action_list', 'permission' => 'inventory.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->inventory->recentMovements()]],
+            'purchase_requests_to_approve' => ['type' => 'action_list', 'permission' => 'procurement.requests.approve', 'inline' => true,
+                'data' => fn () => ['items' => $this->inventory->purchaseRequestsToApprove()]],
+            'orders_to_approve' => ['type' => 'action_list', 'permission' => 'procurement.orders.approve', 'inline' => true,
+                'data' => fn () => ['items' => $this->inventory->ordersToApprove()]],
+            'invoices_due' => ['type' => 'action_list', 'permission' => 'finance.values.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->inventory->invoicesDue()]],
+            'inventory_value' => ['type' => 'chart', 'permission' => 'inventory.values.view', 'inline' => false,
+                'data' => function () use ($farm) {
+                    $d = $this->inventory->valueByCategory();
+
+                    return [
+                        'chart' => 'bar',
+                        'x' => ['type' => 'category', 'values' => $d['labels']],
+                        'series' => [['key' => 'value', 'label' => 'Stock value', 'unit' => $farm->currency, 'values' => $d['values']]],
+                    ];
+                }],
             'recent_trace_events' => ['type' => 'action_list', 'permission' => 'trace.batches.view', 'inline' => true,
                 'data' => fn () => ['items' => $this->metrics->recentTraceEvents()]],
             'trace_activity' => ['type' => 'chart', 'permission' => 'trace.batches.view', 'inline' => false,
@@ -259,6 +314,14 @@ class DashboardRegistry
             'record_harvest' => ['label' => 'Record harvest', 'permission' => 'crops.harvest.record', 'target' => "/farms/{$id}/crops?action=harvest"],
             'new_crop_plan' => ['label' => 'New crop plan', 'permission' => 'crops.plans.manage', 'target' => "/farms/{$id}/crops?tab=plans&new=plan"],
             'new_batch' => ['label' => 'New batch', 'permission' => 'trace.batches.create', 'target' => "/farms/{$id}/traceability/batches/new"],
+            'stock_in' => ['label' => 'Stock in', 'permission' => 'inventory.stock.move', 'target' => "/farms/{$id}/inventory?action=stock-in"],
+            'issue_stock' => ['label' => 'Issue stock', 'permission' => 'inventory.stock.move', 'target' => "/farms/{$id}/inventory?action=issue"],
+            'transfer_stock' => ['label' => 'Transfer', 'permission' => 'inventory.stock.move', 'target' => "/farms/{$id}/inventory?action=transfer"],
+            'stock_count' => ['label' => 'Stock count', 'permission' => 'inventory.stock.adjust', 'target' => "/farms/{$id}/inventory?action=count"],
+            'receive_delivery' => ['label' => 'Receive delivery', 'permission' => 'procurement.deliveries.receive', 'target' => "/farms/{$id}/procurement?tab=orders&status=open"],
+            'purchase_request' => ['label' => 'Purchase request', 'permission' => 'procurement.requests.create', 'target' => "/farms/{$id}/procurement?tab=requests&new=1"],
+            'view_orders' => ['label' => 'Purchase orders', 'permission' => 'procurement.orders.manage', 'target' => "/farms/{$id}/procurement"],
+            'view_ledger' => ['label' => 'Ledger', 'permission' => 'finance.view', 'target' => "/farms/{$id}/ledger"],
             'view_audit_log' => ['label' => 'Audit log', 'permission' => 'audit.view', 'target' => "/farms/{$id}/audit-log"],
         ];
     }
@@ -361,7 +424,17 @@ class DashboardRegistry
 
     private function can(?string $permission): bool
     {
-        return $permission === null || $this->permissions->allows($permission);
+        if ($permission === null) {
+            return true;
+        }
+
+        foreach (explode('|', $permission) as $alternative) {
+            if ($this->permissions->allows($alternative)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function delta(mixed $current, mixed $previous): ?array

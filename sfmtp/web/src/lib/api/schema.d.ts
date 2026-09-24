@@ -3308,6 +3308,827 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/farms/{farm}/inventory/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Stock items with on-hand totals
+         * @description Requesters see the list to pick from. Values and costs need inventory.values.view.
+         */
+        get: operations["listInventoryItems"];
+        put?: never;
+        /**
+         * Create a stock item
+         * @description Items track lots by default, so every receipt becomes a trace batch.
+         */
+        post: operations["createInventoryItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/items/{item}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                item: string;
+            };
+            cookie?: never;
+        };
+        /** An item with its balances and recent movements */
+        get: operations["getInventoryItem"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update a stock item
+         * @description Send `version`. The unit and lot tracking cannot change once the item has stock movements.
+         */
+        patch: operations["updateInventoryItem"];
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Stock on hand by item, store and lot
+         * @description Values and costs need inventory.values.view.
+         */
+        get: operations["listStockBalances"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The stock ledger
+         * @description Append-only; newest first. Values and costs need inventory.values.view.
+         */
+        get: operations["listStockMovements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/stock-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record opening or found stock
+         * @description Credits Opening balances (3100) in the ledger. Purchases come in through purchase-order deliveries instead.
+         */
+        post: operations["stockIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue stock to a crop cycle, animal, plot or general use
+         * @description Row-locked: parallel issues never take stock below zero (422 insufficient_stock with `available`). Posts Dr Inputs used / Cr Inventory at average cost and adds an `issued` event to each lot's trace batch.
+         */
+        post: operations["issueStock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Recent transfers between stores */
+        get: operations["listStockTransfers"];
+        put?: never;
+        /**
+         * Move stock between stores
+         * @description Value moves with the stock at average cost; lots keep their identity.
+         */
+        post: operations["transferStock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Low stock, out of stock, expiring and expired lots
+         * @description Expiring means within the next 30 days.
+         */
+        get: operations["getInventoryAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Stock counts and adjustments */
+        get: operations["listStockAdjustments"];
+        put?: never;
+        /**
+         * Propose a count
+         * @description The books do not change until someone else approves.
+         */
+        post: operations["proposeStockAdjustment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/adjustments/{adjustment}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                adjustment: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a count
+         * @description Not by the member who proposed it (unless the owner). A change above the farm's `stock_adjustment_pct` threshold needs the owner. Stock is set to the counted quantity; the difference posts to Stock adjustments (5100).
+         */
+        post: operations["approveStockAdjustment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/adjustments/{adjustment}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                adjustment: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a count */
+        post: operations["rejectStockAdjustment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Stock requests
+         * @description Requesters see their own; the store and approvers see all.
+         */
+        get: operations["listInventoryRequests"];
+        put?: never;
+        /** Ask the store for stock */
+        post: operations["createInventoryRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/requests/{inventoryRequest}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                inventoryRequest: string;
+            };
+            cookie?: never;
+        };
+        /** A stock request */
+        get: operations["getInventoryRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/requests/{inventoryRequest}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                inventoryRequest: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a stock request
+         * @description Not your own request (unless the owner).
+         */
+        post: operations["approveInventoryRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/requests/{inventoryRequest}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                inventoryRequest: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a stock request */
+        post: operations["rejectInventoryRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/requests/{inventoryRequest}/issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                inventoryRequest: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue an approved request, in full or in part
+         * @description Issued to the request's subject; more than requested is 422.
+         */
+        post: operations["issueInventoryRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/inventory/requests/{inventoryRequest}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                inventoryRequest: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a stock request
+         * @description Your own, or any with inventory.stock.approve; not once stock was issued.
+         */
+        post: operations["cancelInventoryRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Suppliers */
+        get: operations["listSuppliers"];
+        put?: never;
+        /** Add a supplier */
+        post: operations["createSupplier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/suppliers/{supplier}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                supplier: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update a supplier
+         * @description Send `version`.
+         */
+        patch: operations["updateSupplier"];
+        trace?: never;
+    };
+    "/farms/{farm}/purchase-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Purchase requests */
+        get: operations["listPurchaseRequests"];
+        put?: never;
+        /** Ask for a purchase */
+        post: operations["createPurchaseRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/purchase-requests/{purchaseRequest}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                purchaseRequest: string;
+            };
+            cookie?: never;
+        };
+        /** A purchase request */
+        get: operations["getPurchaseRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/purchase-requests/{purchaseRequest}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                purchaseRequest: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a purchase request
+         * @description Not your own (unless the owner).
+         */
+        post: operations["approvePurchaseRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/purchase-requests/{purchaseRequest}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                purchaseRequest: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a purchase request */
+        post: operations["rejectPurchaseRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/purchase-requests/{purchaseRequest}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                purchaseRequest: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a purchase request
+         * @description Before it is ordered.
+         */
+        post: operations["cancelPurchaseRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/purchase-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Purchase orders
+         * @description The store sees orders without prices. Prices need procurement.orders.manage or finance.values.view.
+         */
+        get: operations["listPurchaseOrders"];
+        put?: never;
+        /**
+         * Raise a purchase order
+         * @description From an approved purchase request (which becomes `ordered`) or directly. Starts as a draft.
+         */
+        post: operations["createPurchaseOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/purchase-orders/{order}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * A purchase order with deliveries and invoices
+         * @description Prices need procurement.orders.manage or finance.values.view. Invoices are listed only with price access.
+         */
+        get: operations["getPurchaseOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a draft order
+         * @description Drafts only; send `version`. Sending `lines` replaces them.
+         */
+        patch: operations["updatePurchaseOrder"];
+        trace?: never;
+    };
+    "/farms/{farm}/purchase-orders/{order}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve an order
+         * @description Not by its author (unless the owner). Above the farm's `approval_thresholds.purchase_order`, only the owner.
+         */
+        post: operations["approvePurchaseOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/purchase-orders/{order}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark as sent to the supplier
+         * @description From approved.
+         */
+        post: operations["sendPurchaseOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/purchase-orders/{order}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close an order
+         * @description Short-close: nothing more will be received. Orders close by themselves when fully received and invoiced.
+         */
+        post: operations["closePurchaseOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/purchase-orders/{order}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel an order
+         * @description Only before anything was received.
+         */
+        post: operations["cancelPurchaseOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/purchase-orders/{order}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Receive a delivery (goods received note)
+         * @description From sent, approved or partially received orders; no more than is outstanding. Each line becomes a stock lot (an input_lot trace batch naming the supplier and order) valued at the order price: Dr Inventory / Cr Goods received not invoiced.
+         */
+        post: operations["receiveDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/purchase-orders/{order}/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the supplier's invoice
+         * @description Three-way match: no more than received and not yet invoiced. Dr Goods received not invoiced at the order price, the difference to Price variance (5200), Cr Accounts payable. The same invoice number from the same supplier is 409.
+         */
+        post: operations["recordSupplierInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/supplier-invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Supplier invoices */
+        get: operations["listSupplierInvoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/ledger/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Chart of accounts with balances (trial balance) */
+        get: operations["listLedgerAccounts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/ledger/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Journal entries */
+        get: operations["listLedgerEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/ledger/entries/{entry}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                entry: string;
+            };
+            cookie?: never;
+        };
+        /** A journal entry */
+        get: operations["getLedgerEntry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/ledger/entries/{entry}/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                entry: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reverse an entry
+         * @description Entries are never changed or deleted; a reversal posts the mirror image. An entry is reversed at most once (409).
+         */
+        post: operations["reverseLedgerEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5427,6 +6248,697 @@ export interface components {
             })[];
             next_cursor?: string;
             has_more?: boolean;
+        };
+        InventoryItem: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "inventory_item";
+            code?: string;
+            name?: string;
+            category?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+                kind?: string;
+            } | null;
+            unit?: string;
+            sku?: string | null;
+            reorder_level?: number | null;
+            tracks_lots?: boolean;
+            tracks_expiry?: boolean;
+            default_location?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            } | null;
+            is_active?: boolean;
+            on_hand?: number | null;
+            low_stock?: boolean;
+            /** @description Only with inventory.values.view */
+            stock_value?: number;
+            notes?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        InventoryItemInput: {
+            name?: string;
+            /** Format: uuid */
+            category_id?: string;
+            /** @description A unit code */
+            unit?: string;
+            sku?: string | null;
+            reorder_level?: number | null;
+            /** @default true */
+            tracks_lots: boolean;
+            /** @default false */
+            tracks_expiry: boolean;
+            /** Format: uuid */
+            default_location_id?: string | null;
+            is_active?: boolean;
+            notes?: string | null;
+            version?: number;
+        };
+        StockBalance: {
+            /** Format: uuid */
+            id?: string;
+            item?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+                unit?: string;
+            };
+            location?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            lot?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                lot_number?: string | null;
+                /** Format: date */
+                expires_on?: string | null;
+                /** Format: uuid */
+                trace_batch_id?: string | null;
+            } | null;
+            quantity?: number;
+            /** @description Only with inventory.values.view */
+            value?: number;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        StockMovement: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            type?: "receipt" | "opening" | "issue" | "return" | "transfer_out" | "transfer_in" | "adjustment";
+            item?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+                unit?: string;
+            };
+            location?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            lot?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                lot_number?: string | null;
+                /** Format: date */
+                expires_on?: string | null;
+                /** Format: uuid */
+                trace_batch_id?: string | null;
+            } | null;
+            /** @description Signed: negative out of the store */
+            quantity?: number;
+            balance_after?: number;
+            /** @description Only with inventory.values.view */
+            unit_cost?: number | null;
+            /** @description Signed; only with inventory.values.view */
+            value?: number;
+            source?: {
+                type?: string;
+                /** Format: uuid */
+                id?: string | null;
+            };
+            subject?: {
+                type?: string;
+                /** Format: uuid */
+                id?: string | null;
+            } | null;
+            /**
+             * Format: uuid
+             * @description Only with inventory.values.view
+             */
+            ledger_entry_id?: string | null;
+            note?: string | null;
+            /** Format: date-time */
+            occurred_at?: string;
+            recorded_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+        };
+        StockTransfer: {
+            /** Format: uuid */
+            id?: string;
+            code?: string;
+            from?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            to?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            note?: string | null;
+            /** Format: date-time */
+            occurred_at?: string;
+            lines?: {
+                item?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                    unit?: string;
+                };
+                lot?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    lot_number?: string | null;
+                    /** Format: date */
+                    expires_on?: string | null;
+                    /** Format: uuid */
+                    trace_batch_id?: string | null;
+                } | null;
+                quantity?: number;
+            }[];
+        };
+        InventoryAlerts: {
+            low_stock?: {
+                item?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                    unit?: string;
+                };
+                on_hand?: number;
+                reorder_level?: number | null;
+            }[];
+            out_of_stock?: {
+                item?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                    unit?: string;
+                };
+                on_hand?: number;
+                reorder_level?: number | null;
+            }[];
+            expiring?: {
+                item?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                    unit?: string;
+                };
+                lot?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    lot_number?: string | null;
+                };
+                location?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                };
+                /** Format: date */
+                expires_on?: string;
+                quantity?: number;
+            }[];
+            expired?: {
+                item?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                    unit?: string;
+                };
+                lot?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    lot_number?: string | null;
+                };
+                location?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                };
+                /** Format: date */
+                expires_on?: string;
+                quantity?: number;
+            }[];
+        };
+        StockAdjustment: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "stock_adjustment";
+            code?: string;
+            /** @enum {string} */
+            status?: "proposed" | "approved" | "rejected" | "cancelled";
+            location?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            reason?: string;
+            lines?: {
+                /** Format: uuid */
+                id?: string;
+                item?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                    unit?: string;
+                };
+                lot?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    lot_number?: string | null;
+                    /** Format: date */
+                    expires_on?: string | null;
+                    /** Format: uuid */
+                    trace_batch_id?: string | null;
+                } | null;
+                expected_quantity?: number;
+                counted_quantity?: number;
+                difference?: number;
+            }[];
+            /** @description Only with inventory.values.view */
+            value_change?: number | null;
+            proposed_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            decided_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            /** Format: date-time */
+            decided_at?: string | null;
+            decision_note?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        InventoryRequest: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "inventory_request";
+            code?: string;
+            /** @enum {string} */
+            status?: "requested" | "approved" | "partially_issued" | "issued" | "rejected" | "cancelled";
+            subject?: {
+                /** @enum {string} */
+                type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group" | "general";
+                /** Format: uuid */
+                id?: string | null;
+                label?: string | null;
+            };
+            /** Format: uuid */
+            task_id?: string | null;
+            location?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            } | null;
+            /** Format: date */
+            needed_on?: string | null;
+            note?: string | null;
+            lines?: {
+                /** Format: uuid */
+                id?: string;
+                item?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                    unit?: string;
+                };
+                quantity?: number;
+                issued_quantity?: number;
+            }[];
+            requested_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            decided_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            /** Format: date-time */
+            decided_at?: string | null;
+            decision_note?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        Supplier: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "supplier";
+            code?: string;
+            name?: string;
+            contact_person?: string | null;
+            phone?: string | null;
+            email?: string | null;
+            address?: string | null;
+            tax_id?: string | null;
+            payment_terms_days?: number | null;
+            is_active?: boolean;
+            notes?: string | null;
+            version?: number;
+        };
+        SupplierInput: {
+            name?: string;
+            contact_person?: string | null;
+            phone?: string | null;
+            /** Format: email */
+            email?: string | null;
+            address?: string | null;
+            tax_id?: string | null;
+            payment_terms_days?: number | null;
+            is_active?: boolean;
+            notes?: string | null;
+            version?: number;
+        };
+        PurchaseRequest: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "purchase_request";
+            code?: string;
+            /** @enum {string} */
+            status?: "submitted" | "approved" | "rejected" | "ordered" | "cancelled";
+            /** Format: date */
+            needed_by?: string | null;
+            reason?: string | null;
+            lines?: {
+                /** Format: uuid */
+                id?: string;
+                item?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                    unit?: string;
+                } | null;
+                description?: string | null;
+                quantity?: number;
+                unit?: string | null;
+                /** @description Only with price access */
+                estimated_unit_price?: number | null;
+            }[];
+            requested_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            decided_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            /** Format: date-time */
+            decided_at?: string | null;
+            decision_note?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        PurchaseOrder: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "purchase_order";
+            code?: string;
+            /** @enum {string} */
+            status?: "draft" | "approved" | "sent" | "partially_received" | "received" | "closed" | "cancelled";
+            supplier?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            purchase_request?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+            } | null;
+            /** Format: date */
+            expected_on?: string | null;
+            delivery_location?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            } | null;
+            currency?: string;
+            /** @description Only with price access */
+            total_amount?: number;
+            lines?: {
+                /** Format: uuid */
+                id?: string;
+                item?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                    unit?: string;
+                };
+                description?: string | null;
+                quantity?: number;
+                received_quantity?: number;
+                invoiced_quantity?: number;
+                /** @description Only with price access */
+                unit_price?: number;
+            }[];
+            deliveries?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                /** Format: date */
+                received_on?: string;
+                supplier_reference?: string | null;
+                location?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                };
+                received_by?: {
+                    /** Format: uuid */
+                    id?: string;
+                    name?: string;
+                } | null;
+                lines?: {
+                    /** Format: uuid */
+                    order_line_id?: string;
+                    quantity?: number;
+                    lot?: {
+                        /** Format: uuid */
+                        id?: string;
+                        code?: string;
+                        lot_number?: string | null;
+                        /** Format: date */
+                        expires_on?: string | null;
+                        /** Format: uuid */
+                        trace_batch_id?: string | null;
+                    } | null;
+                }[];
+            }[];
+            /** @description Only with price access */
+            invoices?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                invoice_number?: string;
+                /** Format: date */
+                invoice_date?: string;
+                /** Format: date */
+                due_on?: string | null;
+                amount?: number;
+                status?: string;
+            }[];
+            notes?: string | null;
+            created_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            approved_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            /** Format: date-time */
+            approved_at?: string | null;
+            /** Format: date-time */
+            sent_at?: string | null;
+            cancel_reason?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        PurchaseOrderInput: {
+            /**
+             * Format: uuid
+             * @description Create only
+             */
+            supplier_id?: string;
+            /**
+             * Format: uuid
+             * @description Create only; an approved request
+             */
+            purchase_request_id?: string | null;
+            /** Format: date */
+            expected_on?: string | null;
+            /** Format: uuid */
+            delivery_location_id?: string | null;
+            notes?: string | null;
+            version?: number;
+            lines?: {
+                /** Format: uuid */
+                item_id: string;
+                description?: string | null;
+                quantity: number;
+                unit_price: number;
+            }[];
+        };
+        SupplierInvoice: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "supplier_invoice";
+            code?: string;
+            invoice_number?: string;
+            supplier?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            order?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+            };
+            /** Format: date */
+            invoice_date?: string;
+            /** Format: date */
+            due_on?: string | null;
+            amount?: number;
+            /** @enum {string} */
+            status?: "recorded" | "paid" | "cancelled";
+            lines?: {
+                /** Format: uuid */
+                order_line_id?: string;
+                item?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                    unit?: string;
+                };
+                quantity?: number;
+                unit_price?: number;
+                order_unit_price?: number;
+            }[];
+            /** Format: uuid */
+            ledger_entry_id?: string | null;
+            notes?: string | null;
+            recorded_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        LedgerAccount: {
+            /** Format: uuid */
+            id?: string;
+            code?: string;
+            name?: string;
+            /** @enum {string} */
+            type?: "asset" | "liability" | "equity" | "income" | "expense";
+            is_system?: boolean;
+            debit?: number;
+            credit?: number;
+            /** @description Positive in the account's normal direction */
+            balance?: number;
+        };
+        LedgerEntry: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "ledger_entry";
+            number?: string;
+            /** Format: date */
+            posted_on?: string;
+            source?: {
+                type?: string;
+                /** Format: uuid */
+                id?: string | null;
+            };
+            memo?: string | null;
+            /** Format: uuid */
+            reverses_entry_id?: string | null;
+            reversed_by?: {
+                /** Format: uuid */
+                id?: string;
+                number?: string;
+            } | null;
+            lines?: {
+                account?: {
+                    /** Format: uuid */
+                    id?: string;
+                    code?: string;
+                    name?: string;
+                };
+                debit?: number;
+                credit?: number;
+                cost_center?: {
+                    type?: string;
+                    /** Format: uuid */
+                    id?: string;
+                } | null;
+                memo?: string | null;
+            }[];
+            posted_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            /** Format: date-time */
+            created_at?: string;
         };
     };
     responses: {
@@ -11943,6 +13455,1576 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["Problem"];
+        };
+    };
+    listInventoryItems: {
+        parameters: {
+            query?: {
+                "filter[category_id]"?: string;
+                "filter[search]"?: string;
+                "filter[low_stock]"?: boolean;
+                "filter[active]"?: boolean;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InventoryItem"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    createInventoryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InventoryItemInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InventoryItem"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getInventoryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                item: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InventoryItem"] & {
+                            balances?: components["schemas"]["StockBalance"][];
+                            recent_movements?: components["schemas"]["StockMovement"][];
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    updateInventoryItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                item: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InventoryItemInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InventoryItem"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listStockBalances: {
+        parameters: {
+            query?: {
+                "filter[location_id]"?: string;
+                "filter[item_id]"?: string;
+                "filter[include_empty]"?: boolean;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StockBalance"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listStockMovements: {
+        parameters: {
+            query?: {
+                "filter[item_id]"?: string;
+                "filter[location_id]"?: string;
+                "filter[type]"?: "receipt" | "opening" | "issue" | "return" | "transfer_out" | "transfer_in" | "adjustment";
+                "filter[source_id]"?: string;
+                "filter[from]"?: string;
+                "filter[to]"?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["StockMovement"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    stockIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    item_id: string;
+                    /** Format: uuid */
+                    location_id: string;
+                    quantity: number;
+                    /** @description Needs inventory.values.view */
+                    unit_cost?: number | null;
+                    lot_number?: string | null;
+                    /**
+                     * Format: date
+                     * @description Required for items that track expiry
+                     */
+                    expires_on?: string | null;
+                    /** Format: date-time */
+                    occurred_at?: string;
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Received */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StockMovement"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    issueStock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    item_id: string;
+                    /** Format: uuid */
+                    location_id: string;
+                    quantity: number;
+                    /**
+                     * Format: uuid
+                     * @description Omit for first-expiry-first-out
+                     */
+                    lot_id?: string | null;
+                    /** @enum {string} */
+                    subject_type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group" | "general";
+                    /** Format: uuid */
+                    subject_id?: string | null;
+                    /** Format: date-time */
+                    occurred_at?: string;
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description One movement per lot used */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StockMovement"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listStockTransfers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StockTransfer"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    transferStock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    from_location_id: string;
+                    /** Format: uuid */
+                    to_location_id: string;
+                    /** Format: date-time */
+                    occurred_at?: string;
+                    note?: string | null;
+                    lines: {
+                        /** Format: uuid */
+                        item_id: string;
+                        quantity: number;
+                        /** Format: uuid */
+                        lot_id?: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Transferred */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            /** Format: uuid */
+                            id?: string;
+                            code?: string;
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getInventoryAlerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InventoryAlerts"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    listStockAdjustments: {
+        parameters: {
+            query?: {
+                "filter[status]"?: "proposed" | "approved" | "rejected" | "cancelled";
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StockAdjustment"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    proposeStockAdjustment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    location_id: string;
+                    reason: string;
+                    lines: {
+                        /** Format: uuid */
+                        item_id: string;
+                        /**
+                         * Format: uuid
+                         * @description Required for lot-tracked items
+                         */
+                        lot_id?: string | null;
+                        counted_quantity: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Proposed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StockAdjustment"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    approveStockAdjustment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                adjustment: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StockAdjustment"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    rejectStockAdjustment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                adjustment: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StockAdjustment"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listInventoryRequests: {
+        parameters: {
+            query?: {
+                "filter[status]"?: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InventoryRequest"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    createInventoryRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description Takes the subject from the task's activity
+                     */
+                    task_id?: string | null;
+                    /** @enum {string} */
+                    subject_type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group" | "general";
+                    /** Format: uuid */
+                    subject_id?: string | null;
+                    /** Format: uuid */
+                    location_id?: string | null;
+                    /** Format: date */
+                    needed_on?: string | null;
+                    note?: string | null;
+                    lines: {
+                        /** Format: uuid */
+                        item_id: string;
+                        quantity: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Requested */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InventoryRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getInventoryRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                inventoryRequest: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InventoryRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    approveInventoryRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                inventoryRequest: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InventoryRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    rejectInventoryRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                inventoryRequest: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InventoryRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    issueInventoryRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                inventoryRequest: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    location_id: string;
+                    note?: string | null;
+                    lines: {
+                        /** Format: uuid */
+                        line_id: string;
+                        quantity: number;
+                        /** Format: uuid */
+                        lot_id?: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InventoryRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    cancelInventoryRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                inventoryRequest: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InventoryRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    listSuppliers: {
+        parameters: {
+            query?: {
+                include_inactive?: boolean;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Supplier"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    createSupplier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupplierInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Supplier"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    updateSupplier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                supplier: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupplierInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Supplier"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listPurchaseRequests: {
+        parameters: {
+            query?: {
+                "filter[status]"?: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseRequest"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    createPurchaseRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    needed_by?: string | null;
+                    reason?: string | null;
+                    lines: {
+                        /** Format: uuid */
+                        item_id?: string | null;
+                        /** @description Required without item_id */
+                        description?: string | null;
+                        quantity: number;
+                        unit?: string | null;
+                        /** @description 403 money_field_forbidden without price access */
+                        estimated_unit_price?: number | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Submitted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getPurchaseRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                purchaseRequest: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    approvePurchaseRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                purchaseRequest: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    rejectPurchaseRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                purchaseRequest: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    cancelPurchaseRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                purchaseRequest: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    listPurchaseOrders: {
+        parameters: {
+            query?: {
+                "filter[status]"?: string;
+                "filter[supplier_id]"?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["PurchaseOrder"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    createPurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseOrderInput"];
+            };
+        };
+        responses: {
+            /** @description Draft created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getPurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    updatePurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseOrderInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    approvePurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    sendPurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    closePurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    cancelPurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    receiveDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    location_id: string;
+                    /** Format: date */
+                    received_on?: string;
+                    supplier_reference?: string | null;
+                    /**
+                     * Format: uuid
+                     * @description A photo of the delivery note
+                     */
+                    media_id?: string | null;
+                    note?: string | null;
+                    lines: {
+                        /** Format: uuid */
+                        order_line_id: string;
+                        quantity: number;
+                        lot_number?: string | null;
+                        /** Format: date */
+                        expires_on?: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Received; the updated order */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PurchaseOrder"];
+                        meta?: {
+                            delivery?: {
+                                /** Format: uuid */
+                                id?: string;
+                                code?: string;
+                            };
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    recordSupplierInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                order: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    invoice_number: string;
+                    /** Format: date */
+                    invoice_date: string;
+                    /**
+                     * Format: date
+                     * @description Defaults to the supplier's payment terms
+                     */
+                    due_on?: string | null;
+                    notes?: string | null;
+                    lines: {
+                        /** Format: uuid */
+                        order_line_id: string;
+                        quantity: number;
+                        unit_price: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SupplierInvoice"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listSupplierInvoices: {
+        parameters: {
+            query?: {
+                "filter[supplier_id]"?: string;
+                "filter[order_id]"?: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SupplierInvoice"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listLedgerAccounts: {
+        parameters: {
+            query?: {
+                as_of?: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["LedgerAccount"][];
+                        meta?: {
+                            total_debit?: number;
+                            total_credit?: number;
+                            /** Format: date */
+                            as_of?: string | null;
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listLedgerEntries: {
+        parameters: {
+            query?: {
+                "filter[source_type]"?: string;
+                "filter[source_id]"?: string;
+                "filter[account_id]"?: string;
+                "filter[from]"?: string;
+                "filter[to]"?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["LedgerEntry"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getLedgerEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                entry: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["LedgerEntry"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    reverseLedgerEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                entry: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The reversing entry */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["LedgerEntry"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
     };
