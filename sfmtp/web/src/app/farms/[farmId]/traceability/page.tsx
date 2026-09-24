@@ -20,7 +20,7 @@ import { ALERT_TONE, formatQty } from "@/lib/trace";
 import { cn } from "@/lib/utils";
 
 type Kind = components["schemas"]["BatchKind"];
-type Tab = "batches" | "alerts" | "integrity";
+type Tab = "batches" | "alerts" | "qr" | "integrity";
 
 export default function TraceabilityPage() {
   const { farmId } = useParams<{ farmId: string }>();
@@ -59,6 +59,7 @@ export default function TraceabilityPage() {
           [
             ["batches", "Batches"],
             ["alerts", flagged ? `Alerts (${flagged})` : "Alerts"],
+            ["qr", "QR codes"],
             ["integrity", "Integrity"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
@@ -74,7 +75,7 @@ export default function TraceabilityPage() {
           </button>
         ))}
       </div>
-      {tab === "batches" ? <Batches farmId={farmId} /> : tab === "alerts" ? <Alerts farmId={farmId} query={alerts} /> : <Integrity farmId={farmId} canVerify={can(workspace?.permissions, "trace.publish|audit.view")} />}
+      {tab === "batches" ? <Batches farmId={farmId} /> : tab === "alerts" ? <Alerts farmId={farmId} query={alerts} /> : tab === "qr" ? <QrCodes farmId={farmId} /> : <Integrity farmId={farmId} canVerify={can(workspace?.permissions, "trace.publish|audit.view")} />}
     </>
   );
 }
@@ -288,6 +289,80 @@ function Integrity({ farmId, canVerify }: { farmId: string; canVerify: boolean }
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function QrCodes({ farmId }: { farmId: string }) {
+  const stats = useQuery({
+    queryKey: ["qr-stats", farmId],
+    queryFn: async () => (await api.GET("/farms/{farm}/traceability/qr-stats", { params: { path: { farm: farmId }, query: { days: 30 } } })).data!.data!,
+  });
+  const codes = useQuery({
+    queryKey: ["qr-codes", farmId],
+    queryFn: async () => (await api.GET("/farms/{farm}/traceability/qr-codes", { params: { path: { farm: farmId }, query: { per_page: 100 } } })).data!.data ?? [],
+  });
+  if (stats.isLoading || codes.isLoading) return <Skeleton className="h-48 w-full" />;
+  if (stats.error || codes.error) return <ErrorNotice error={stats.error ?? codes.error} />;
+  const days = stats.data?.days ?? [];
+  const peak = Math.max(1, ...days.map((d) => d.scans ?? 0));
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Scans in the last 30 days</CardTitle>
+          <span className="text-sm font-semibold tabular-nums">{stats.data?.total ?? 0}</span>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-28 items-end gap-1" role="img" aria-label={`QR scans per day, ${stats.data?.total ?? 0} in total`}>
+            {days.map((d) => (
+              <div key={d.date} title={`${d.date}: ${d.scans}`} className="flex-1 rounded-t bg-primary/70" style={{ height: `${Math.max(2, ((d.scans ?? 0) / peak) * 100)}%` }} />
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-muted">
+            By country: {(stats.data?.countries ?? []).map((c) => `${c.country === "ZZ" ? "unknown" : c.country} ${c.scans}`).join(" · ") || "no scans yet"}. Only the day and
+            country of a scan are kept.
+          </p>
+        </CardContent>
+      </Card>
+      {(codes.data ?? []).length === 0 ? (
+        <EmptyState title="No QR codes yet">Open a batch, approve its public fields on the “Public page &amp; QR” tab, then issue a code.</EmptyState>
+      ) : (
+        <Table>
+          <thead>
+            <tr>
+              <Th>Code</Th>
+              <Th>Batch</Th>
+              <Th>Status</Th>
+              <Th className="text-right">Scans</Th>
+              <Th>Issued</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {(codes.data ?? []).map((c) => (
+              <tr key={c.id}>
+                <Td>
+                  <a href={`/q/${c.code}`} target="_blank" rel="noreferrer" className="font-mono text-primary hover:underline">
+                    {c.code}
+                  </a>
+                  {c.label ? <p className="text-xs text-muted">{c.label}</p> : null}
+                </Td>
+                <Td>
+                  <Link href={`/farms/${farmId}/traceability/batches/${c.batch?.id}?tab=publish`} className="font-mono text-sm hover:underline">
+                    {c.batch?.batch_code}
+                  </Link>
+                  <p className="text-xs text-muted">{c.batch?.name}</p>
+                </Td>
+                <Td>
+                  <Badge tone={c.status === "active" ? "success" : "danger"}>{c.status}</Badge>
+                </Td>
+                <Td className="text-right tabular-nums">{c.scan_count}</Td>
+                <Td className="text-muted">{formatDateTime(c.issued_at)}</Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
     </div>
   );
 }

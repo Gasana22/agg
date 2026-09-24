@@ -10,7 +10,7 @@ import { ACCESS_COOKIE, clearSession, REFRESH_COOKIE, setSession, type TokenPair
  * Adds the bearer token from the httpOnly cookie, refreshes an expired
  * session once, and enforces same-origin for state-changing requests.
  */
-const RESPONSE_HEADERS = ["content-type", "x-request-id", "idempotent-replayed", "retry-after"];
+const RESPONSE_HEADERS = ["content-type", "content-disposition", "x-request-id", "idempotent-replayed", "retry-after"];
 
 /** API paths that also work signed out: the emailed invitation link. */
 function isPublicApiPath(path: string[]): boolean {

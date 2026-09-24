@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useCustomers } from "@/components/finance/queries";
 import { CorrectDialog, DispatchDialog, RecallDialog, SplitDialog, TransformDialog } from "@/components/trace/dialogs";
 import { JourneyGraph } from "@/components/trace/journey-graph";
+import { PublishPanel } from "@/components/trace/publish";
 import { KIND_LABELS, STATUS_TONE } from "@/components/trace/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ const TABS = [
   { key: "workers", label: "Workers" },
   { key: "sales", label: "Customers" },
   { key: "map", label: "Map" },
+  { key: "publish", label: "Public page & QR" },
   { key: "history", label: "This batch's events" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
@@ -173,6 +175,8 @@ export default function BatchPage() {
         <Sales farmId={farmId} batchId={batchId} />
       ) : tab === "map" ? (
         <Places farmId={farmId} batchId={batchId} />
+      ) : tab === "publish" ? (
+        <PublishPanel farmId={farmId} batchId={batchId} canPublish={can(perms, "trace.publish")} recalled={batch.status === "recalled"} />
       ) : (
         <History farmId={farmId} batchId={batchId} canAdd={can(perms, "trace.events.create")} />
       )}
