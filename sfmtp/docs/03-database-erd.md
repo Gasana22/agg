@@ -648,6 +648,31 @@ gives one timeline, one verification flow and one activity map across all
 modules. Payroll lives in Finance (`payroll_runs`, `payroll_lines`), fed by
 attendance and verified tasks.
 
+As built in Phase 6, the model differs from the diagram in these places:
+
+- **Coordinates** are `lat` / `lng` / `accuracy_m` decimals (ADR-0009), on
+  task logs, photos, attendance check-in and check-out, and GPS points.
+- **Activities** carry the `module` of their activity type, a
+  `subject_label` (so lists and phones need no joins), `plot_id` and
+  `location_id` derived from the subject, a priority and an optional target
+  quantity. Status is open, completed or cancelled.
+- **Tasks** (`worker_tasks`) hold `started_at`, `submitted_at`,
+  `worked_minutes`, the quantity done, and `review_note` (verification
+  note, rejection or cancellation reason). There is no separate "reassign":
+  a task is cancelled and a new one assigned.
+- **Task logs** record `from_status`, `to_status` and `applied`; a refused
+  offline step is kept with `applied = false`.
+- **Photos** are `worker_task_photos` rows pointing at `media` (one row per
+  file and farm, unique by SHA-256).
+- **Attendance** has one row per worker and day with check-in and check-out
+  on the same row, a `source` (mobile, web, manual) and a note.
+- **Sync tables:** `sync_mutations` (the result of every pushed mutation,
+  unique per farm, user and mutation id) and `sync_changes` (the change feed;
+  its id is the pull cursor). See ADR-0010.
+- `crop_operations`, the animal record tables and `trace_events` now have
+  composite foreign keys to `workers`; the operational records also have an
+  `activity_id`.
+
 ## 7. Inventory & procurement
 
 ```mermaid

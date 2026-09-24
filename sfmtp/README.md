@@ -17,7 +17,8 @@ REST API.
 | 3 — Farm management | ✅ Done: farm map with blocks / sections / plots / locations and soil tests, member invitations, member management, custom roles and the role editor, farm policies, "My farms" |
 | 4 — Crop management | ✅ Done: crop list and seasons, plans with approval, cycles from nursery to harvest, field work with inputs and withholding periods, pest and disease reports, harvests, all feeding traceability; agronomist dashboard |
 | 5 — Livestock | ✅ Done: animals and groups with lineage, breeding and births, feeding, health and vaccinations with milk and meat withdrawal periods, weights, milk and egg records with daily lots, movements, deaths and culls, sale requests with approval, all feeding traceability; livestock dashboard |
-| 6 — Workers & activities | Next |
+| 6 — Workers & activities | ✅ Done: workers, activities and tasks with a state machine and verification, attendance with GPS and photos, leave, photo uploads, the offline sync API, manager and field-worker dashboards, and the Flutter field app v0 (offline outbox, push / pull) |
+| 7 — Procurement & inventory | Next |
 
 ## Repository layout
 
@@ -25,7 +26,7 @@ REST API.
 sfmtp/
 ├── backend/                 Laravel 12 API (modular monolith)          → backend/README.md
 ├── web/                     Next.js 16 web app + backend-for-frontend  → web/README.md
-├── mobile/                  Flutter app (added in Phase 6)
+├── mobile/                  Flutter field app (offline-first)          → mobile/README.md
 ├── packages/api-contracts/  OpenAPI 3.1 contract (source of the typed clients)
 ├── infra/docker/            Dockerfiles and the local compose stack
 └── docs/                    Architecture and design documents
@@ -58,6 +59,7 @@ CI (`.github/workflows/sfmtp-ci.yml`) runs on every change under `sfmtp/`:
   farm's owner and must answer 404 without changing data
 - OpenAPI lint, and a check that routes, contract and generated web types agree
 - web lint, type-check, unit tests and production build
+- mobile analyze, unit and widget tests, and the offline scenario against a live API
 - Docker image builds
 
 ## Design documents

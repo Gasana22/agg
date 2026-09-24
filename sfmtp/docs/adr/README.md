@@ -14,6 +14,7 @@ consequences.
 | [0007](0007-web-session-handling.md) | Web session handling: BFF cookies, CSRF, refresh-race handling | Accepted |
 | [0008](0008-subscription-lifecycle.md) | Subscription lifecycle and how billing gates farm access | Accepted |
 | [0009](0009-geojson-geometry.md) | Farm geometry as GeoJSON, measured in the application | Accepted |
+| [0010](0010-sync-protocol.md) | Offline sync as built: ordered mutations through the normal services, a change feed with a lag | Accepted |
 
 ## Product-owner decisions (2026-09-23)
 

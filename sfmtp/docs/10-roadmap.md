@@ -119,6 +119,55 @@ Everything in the Phase 4 row below, with these notes:
   cross-tenant sweep over every crop route. The agronomist's journey was
   checked end to end in a browser.
 
+### Phase 6 — delivered
+
+Everything in the Phase 6 row below, with these notes:
+
+- **Work model.** An activity is work on a subject (a crop cycle, plot,
+  location, animal, group, or general work) with one task per worker. Tasks
+  follow assigned → in progress ⇄ paused → submitted → verified or rejected
+  (rework), or cancelled; every step is an append-only log entry with the
+  time and place it happened. Worked time comes from the log. The activity
+  completes when all its tasks are verified or cancelled.
+- **Who sees what.** Work belongs to a module (from the activity type):
+  crop roles plan and verify crop work, livestock roles animal work; general
+  work is visible to all of them. Field workers see only their own tasks,
+  no rates and no other workers. Nobody verifies their own work.
+- **Assignments drive the `assigned` scope.** An open task on a crop cycle
+  (or its plot) lets a field worker record crop work there; on an animal or
+  group, animal records. Submitting the task ends it.
+- **Traceability.** Verified work on a crop cycle or an animal adds a
+  `work_done` event to its batch, with the worker's code, the place and the
+  quantity (no names or money). Crop operations, animal records and trace
+  events now have foreign keys to workers, and operational records an
+  `activity_id` for linking them to work (used by the mobile crop and
+  livestock flows in Phase 11).
+- **Attendance** is one record per worker and day (farm time zone), from the
+  phone or entered by a manager with an audited reason. GPS points are
+  kept only during a work session. Leave needs approval; work cannot be
+  assigned on approved leave.
+- **Media and sync** are separate modules: photos are stored once per farm by
+  SHA-256 (MinIO in Docker), and the sync API applies ordered offline
+  mutations through the same services and pulls a change feed
+  ([ADR-0010](adr/0010-sync-protocol.md)).
+- **Flutter app v0** (`sfmtp/mobile`): sign-in, farm choice, check in and
+  out, today's tasks with start / pause / resume / done, photos, and a sync
+  screen; offline-first with a Drift database and an ordered outbox.
+- **Deferred:** payroll from attendance (Phase 8); background GPS tracks,
+  push notifications, the encrypted local database, conflict screens for
+  editable records and the other roles' mobile flows (Phase 11); a
+  generated Dart client (Phase 11); trimming the change feed (Phase 11/15).
+- **Test gate met:** 193 API tests on PostgreSQL (190 on MySQL, plus 3 that
+  need PostgreSQL features), 43 web unit tests, and 5 Flutter tests plus a
+  live one. They include assign → execute → submit → verify with the trace
+  event, reject and rework, own-tasks-only and no-money for field workers,
+  module rules and four-eyes, the assigned scope on crop cycles,
+  attendance, GPS and leave, the airplane-mode day with duplicates,
+  conflicts, rejections and removals, and the cross-tenant sweep over every
+  workforce, media and sync route. The Flutter app runs the offline day
+  against the real API in CI, and the manager's and field worker's web
+  journeys were checked in a browser.
+
 ### Phase 5 — delivered
 
 Everything in the Phase 5 row below, with these notes:

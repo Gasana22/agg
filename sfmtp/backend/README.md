@@ -14,6 +14,9 @@ own routes, migrations, domain, application services and HTTP layer
 | `Platform` | Platform roles and capabilities, farm administration, accounts and staff, settings, integrations, system pages |
 | `Catalog` | Global catalogues (crops, varieties, species, breeds, units, inventory categories, activity types) |
 | `Crops` | Farm crops, seasons, crop plans, cycles, field operations and inputs, observations, harvests; writes the crop trace history |
+| `Workforce` | Workers, activities and tasks (state machine, logs, verification), attendance, GPS points, task photos, leave; the `assigned` scope for crops and livestock |
+| `Media` | Photo and document uploads, stored once per farm by SHA-256 (local disk or S3 / MinIO) |
+| `Sync` | Offline push (ordered mutations through the normal services) and pull (snapshot or change feed) for the mobile app (ADR-0010) |
 | `Livestock` | Animals and groups, breeding and births, health and vaccinations with withdrawal periods, feeding, weights, milk and egg production, movements, exits and sale requests; writes the animal trace history |
 | `FarmStructure` | Blocks, sections, plots and locations with GeoJSON boundaries, soil profiles, geometry warnings (ADR-0009) |
 | `Support` | Tickets, internal notes, owner-granted read-only support access |
@@ -51,6 +54,12 @@ The crop farm also has a full maize season on B-3 (seed lot → crop lot →
 harvest → dried → packed, with a fall armyworm spray and its withholding
 period) and the current season's cycles on A-1, A-2, B-1 (nursery) and B-2.
 The agronomist and the field worker belong to both farms.
+
+The mixed farm also has a small workforce, managed by the manager: Wilson
+(the `worker@` account) and three casual workers, a week of attendance,
+today's schedule with the milking under way, a deworming waiting for
+verification, an overdue fence repair and a leave request. On the crop farm
+Wilson has a weeding task on the A-1 maize, so he may record crop work there.
 
 The mixed farm keeps a herd, recorded by the livestock manager: a dairy
 herd with two weeks of milking, Ankole cattle, a goat flock with a death on

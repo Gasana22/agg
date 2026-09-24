@@ -1,5 +1,16 @@
 # 08 — Offline-First Sync Design
 
+> **Phase 6 status.** The protocol below is implemented for the field
+> worker's data: task steps, task photos, attendance, GPS points and leave
+> requests are pushed; tasks, attendance, leave and the worker profile are
+> pulled. Push results also include `deferred` (a photo not uploaded yet)
+> and `error` (retry later). How the server applies mutations and builds the
+> feed is in [ADR-0010](adr/0010-sync-protocol.md). Field-level merge and
+> `sync/conflicts` (editable master data), SQLCipher and background sync
+> come in Phase 11. The airplane-mode, duplicate-push and conflicting-
+> transition tests in §6 already pass (backend `SyncTest`, the Flutter tests,
+> and the live offline scenario in CI).
+
 ```
 LOCAL DATA → SYNC QUEUE → SERVER → CONFLICT CHECK → DATABASE
 ```
