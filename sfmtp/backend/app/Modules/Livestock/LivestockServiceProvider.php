@@ -10,6 +10,9 @@ use App\Modules\Livestock\Domain\Models\HealthRecord;
 use App\Modules\Livestock\Domain\Models\ProductionRecord;
 use App\Modules\Livestock\Domain\Models\SaleRequest;
 use App\Modules\Livestock\Domain\Models\Weight;
+use App\Modules\Workforce\Application\WorkSubjects;
+use App\Modules\Workforce\Contracts\WorkSubject;
+use App\Modules\Workforce\Domain\Enums\SubjectType;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,5 +29,20 @@ class LivestockServiceProvider extends ServiceProvider
         Route::model('production', ProductionRecord::class);
         Route::model('breeding', Breeding::class);
         Route::model('sale', SaleRequest::class);
+
+        // Work can be planned on an animal or a group; verified work lands on the animal's history.
+        $subjects = $this->app->make(WorkSubjects::class);
+        $subjects->register(SubjectType::Animal, function (string $id): ?WorkSubject {
+            $animal = Animal::find($id);
+
+            return $animal ? new WorkSubject('animal', $animal->id, $animal->label(), 'livestock',
+                locationId: $animal->location_id, traceBatchId: $animal->trace_batch_id, active: $animal->isActive()) : null;
+        });
+        $subjects->register(SubjectType::AnimalGroup, function (string $id): ?WorkSubject {
+            $group = AnimalGroup::find($id);
+
+            return $group ? new WorkSubject('animal_group', $group->id, trim("{$group->code} {$group->name}"), 'livestock',
+                locationId: $group->location_id, active: $group->is_active) : null;
+        });
     }
 }

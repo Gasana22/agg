@@ -2567,6 +2567,747 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/farms/{farm}/me/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The field worker's day
+         * @description Tasks due, today's attendance and upcoming leave for the signed-in member's worker profile, in one call (the mobile home screen). An empty day when the member has no worker profile.
+         */
+        get: operations["myDay"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/workers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Worker profiles
+         * @description With the `own` scope, only your own profile. `daily_rate` needs finance.values.view.
+         */
+        get: operations["listWorkers"];
+        put?: never;
+        /**
+         * Create a worker profile
+         * @description Optionally linked to a farm member (one profile per member). `daily_rate` needs finance.values.view.
+         */
+        post: operations["createWorker"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/workers/{worker}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                worker: string;
+            };
+            cookie?: never;
+        };
+        /** A worker profile */
+        get: operations["getWorker"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update a worker profile
+         * @description Send `version` (or If-Match). Deactivating needs the worker's open tasks cancelled first.
+         */
+        patch: operations["updateWorker"];
+        trace?: never;
+    };
+    "/farms/{farm}/workers/{worker}/track": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                worker: string;
+            };
+            cookie?: never;
+        };
+        /** A worker's GPS track for a day */
+        get: operations["getWorkerTrack"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Activities
+         * @description Crop, livestock, asset and store work is listed to members who can see that module; `assigned` and `own` scopes see the activities holding their tasks.
+         */
+        get: operations["listActivities"];
+        put?: never;
+        /**
+         * Plan work and assign it
+         * @description The activity type's module must be one you can see, and must match the subject (crop work on a crop cycle, animal work on an animal or group). Workers on approved leave that day are refused (409 worker_on_leave).
+         */
+        post: operations["createActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/activities/{activity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                activity: string;
+            };
+            cookie?: never;
+        };
+        /** An activity and its tasks */
+        get: operations["getActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change an open activity */
+        patch: operations["updateActivity"];
+        trace?: never;
+    };
+    "/farms/{farm}/activities/{activity}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                activity: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add workers to an activity */
+        post: operations["assignActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/activities/{activity}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                activity: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel an activity and its open tasks */
+        post: operations["cancelActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Tasks
+         * @description A field worker (`assigned` scope) sees only their own tasks.
+         */
+        get: operations["listTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/tasks/{task}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * A task with its log and photos
+         * @description Locations in the log and photos are shown to the worker and to members with worker.gps.view.
+         */
+        get: operations["getTask"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/tasks/{task}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start (or restart after a rejection)
+         * @description Your own task only (404 otherwise). From assigned or rejected. An invalid step is 409 invalid_state_transition with the current `status`.
+         */
+        post: operations["startTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/tasks/{task}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause
+         * @description Your own task only (404 otherwise). From in progress. An invalid step is 409 invalid_state_transition with the current `status`.
+         */
+        post: operations["pauseTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/tasks/{task}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume
+         * @description Your own task only (404 otherwise). From paused. An invalid step is 409 invalid_state_transition with the current `status`.
+         */
+        post: operations["resumeTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/tasks/{task}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit for verification
+         * @description Your own task only (404 otherwise). With the quantity done. Worked time is computed from the log. An invalid step is 409 invalid_state_transition with the current `status`.
+         */
+        post: operations["submitTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/tasks/{task}/note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a progress note
+         * @description Your own task only (404 otherwise). Changes nothing but the log (and the quantity, if sent). An invalid step is 409 invalid_state_transition with the current `status`.
+         */
+        post: operations["noteTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/tasks/{task}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify submitted work
+         * @description Nobody verifies their own work. Work on a traceable subject adds a work_done event to its history.
+         */
+        post: operations["verifyTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/tasks/{task}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send work back */
+        post: operations["rejectTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/tasks/{task}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a task */
+        post: operations["cancelTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/tasks/{task}/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach a photo to your task
+         * @description Upload the file to media/uploads first; only your own uploads can be attached.
+         */
+        post: operations["addTaskPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Attendance
+         * @description With the `own` scope, only your own days.
+         */
+        get: operations["listAttendance"];
+        put?: never;
+        /**
+         * Enter a day by hand
+         * @description For workers without a phone. The note is required and audited.
+         */
+        post: operations["enterAttendance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/attendance/{attendance}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                attendance: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Correct attendance times
+         * @description The reason is required; old and new times are audited.
+         */
+        patch: operations["correctAttendance"];
+        trace?: never;
+    };
+    "/farms/{farm}/attendance/check-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check in
+         * @description One record per worker and day (farm time zone); a second check-in is 409 already_checked_in.
+         */
+        post: operations["checkIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/attendance/check-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check out
+         * @description Closes your open day; 409 not_checked_in without one.
+         */
+        post: operations["checkOut"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/gps-points": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record GPS points
+         * @description Points outside a work session (checked in, or one of your tasks in progress) are skipped.
+         */
+        post: operations["recordGpsPoints"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Leave requests
+         * @description Approvers see everyone; others their own.
+         */
+        get: operations["listLeave"];
+        put?: never;
+        /**
+         * Request leave
+         * @description For yourself; approvers may also enter leave for any worker (`worker_id`). Overlapping leave is 409 overlapping_leave.
+         */
+        post: operations["requestLeave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/leave/{leave}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                leave: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve leave
+         * @description Nobody decides their own request unless they are the owner.
+         */
+        post: operations["approveLeave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/leave/{leave}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                leave: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject leave */
+        post: operations["rejectLeave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/leave/{leave}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                leave: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel leave
+         * @description Requested leave, or approved leave that has not started.
+         */
+        post: operations["cancelLeave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/media/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a photo or document
+         * @description JPEG, PNG, WebP or PDF, up to 10 MB by default. Any member may upload; linking a file to a record is checked there.
+         */
+        post: operations["uploadMedia"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/media/{media}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                media: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Media metadata
+         * @description The uploader, or members with worker.gps.view, tasks.verify or attendance.approve.
+         */
+        get: operations["getMedia"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/media/{media}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                media: string;
+            };
+            cookie?: never;
+        };
+        /** The file */
+        get: operations["getMediaContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/sync/push": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Push offline changes
+         * @description Mutations are applied in order, each with the permission of the matching endpoint. Supported: worker_task_logs.insert (task steps), worker_task_photos.insert, worker_attendance.check_in / check_out, worker_gps_points.insert, worker_leave.insert. 30 pushes per minute per device.
+         */
+        post: operations["syncPush"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/sync/pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Pull changes
+         * @description The phone's mirror: your own tasks for the coming 14 days and recent ones, your recent attendance and leave, your worker profile. `remove` means the record left your mirror.
+         */
+        get: operations["syncPull"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4247,6 +4988,443 @@ export interface components {
             reason?: string | null;
             buyer?: string | null;
             expected_price?: number | null;
+        };
+        Worker: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "worker";
+            worker_code?: string;
+            full_name?: string;
+            phone?: string | null;
+            /** @description Only with workers.manage */
+            national_id?: string | null;
+            job_title?: string | null;
+            /** @enum {string} */
+            employment_type?: "permanent" | "casual" | "contract" | "seasonal";
+            /** @description Only with finance.values.view */
+            daily_rate?: number | null;
+            /** Format: date */
+            started_on?: string | null;
+            /** Format: date */
+            left_on?: string | null;
+            /** @enum {string} */
+            status?: "active" | "inactive";
+            member?: {
+                /** Format: uuid */
+                id?: string;
+                user?: {
+                    /** Format: uuid */
+                    id?: string;
+                    name?: string;
+                    email?: string;
+                } | null;
+            } | null;
+            notes?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        WorkerInput: {
+            full_name?: string;
+            /** Format: uuid */
+            farm_user_id?: string | null;
+            phone?: string | null;
+            national_id?: string | null;
+            job_title?: string | null;
+            /** @enum {string} */
+            employment_type?: "permanent" | "casual" | "contract" | "seasonal";
+            daily_rate?: number | null;
+            /** Format: date */
+            started_on?: string | null;
+            /** Format: date */
+            left_on?: string | null;
+            /** @enum {string} */
+            status?: "active" | "inactive";
+            notes?: string | null;
+            version?: number;
+        };
+        Activity: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "activity";
+            code?: string;
+            activity_type?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            /** @enum {string} */
+            module?: "crops" | "livestock" | "assets" | "inventory" | "general";
+            title?: string;
+            instructions?: string | null;
+            subject?: {
+                /** @enum {string} */
+                type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group" | "general";
+                /** Format: uuid */
+                id?: string | null;
+                label?: string | null;
+            };
+            plot?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            } | null;
+            location?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            } | null;
+            /** Format: date */
+            planned_on?: string;
+            /** Format: date */
+            due_on?: string | null;
+            /** @enum {string} */
+            priority?: "low" | "normal" | "high";
+            target_quantity?: number | null;
+            target_unit?: string | null;
+            /** @enum {string} */
+            status?: "open" | "completed" | "cancelled";
+            /** Format: date-time */
+            completed_at?: string | null;
+            task_counts?: {
+                total?: number;
+                open?: number;
+                submitted?: number;
+                verified?: number;
+            };
+            tasks?: components["schemas"]["Task"][];
+            created_by?: components["schemas"]["Ref"] | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        ActivityInput: {
+            /** Format: uuid */
+            activity_type_id: string;
+            title?: string | null;
+            instructions?: string | null;
+            /**
+             * @default general
+             * @enum {string}
+             */
+            subject_type: "crop_cycle" | "plot" | "location" | "animal" | "animal_group" | "general";
+            /** Format: uuid */
+            subject_id?: string | null;
+            /** Format: date */
+            planned_on?: string;
+            /** Format: date */
+            due_on?: string | null;
+            /** @enum {string} */
+            priority?: "low" | "normal" | "high";
+            target_quantity?: number | null;
+            /** @description A unit code */
+            target_unit?: string | null;
+            worker_ids: string[];
+        };
+        TaskLogEntry: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            event?: "start" | "pause" | "resume" | "submit" | "verify" | "reject" | "cancel" | "note";
+            from_status?: string;
+            to_status?: string | null;
+            /** @description false: an offline step the server refused, kept as evidence */
+            applied?: boolean;
+            /** Format: date-time */
+            occurred_at?: string;
+            point?: {
+                lat?: number;
+                lng?: number;
+                accuracy_m?: number | null;
+            } | null;
+            quantity?: number | null;
+            unit?: string | null;
+            note?: string | null;
+            recorded_by?: components["schemas"]["Ref"] | null;
+        };
+        TaskPhotoRef: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            task_id?: string;
+            /** Format: uuid */
+            media_id?: string;
+            /** Format: date-time */
+            taken_at?: string | null;
+            point?: {
+                lat?: number;
+                lng?: number;
+                accuracy_m?: number | null;
+            } | null;
+            caption?: string | null;
+        };
+        Task: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "task";
+            code?: string;
+            /** @enum {string} */
+            status?: "assigned" | "in_progress" | "paused" | "submitted" | "verified" | "rejected" | "cancelled";
+            /** Format: date */
+            due_on?: string | null;
+            overdue?: boolean;
+            /** Format: date-time */
+            started_at?: string | null;
+            /** Format: date-time */
+            submitted_at?: string | null;
+            worked_minutes?: number | null;
+            quantity?: number | null;
+            unit?: string | null;
+            submit_note?: string | null;
+            /** @description Verification note, rejection or cancellation reason */
+            review_note?: string | null;
+            /** Format: date-time */
+            verified_at?: string | null;
+            verified_by?: components["schemas"]["Ref"] | null;
+            worker?: {
+                /** Format: uuid */
+                id?: string;
+                worker_code?: string;
+                full_name?: string;
+            };
+            activity?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                title?: string;
+                module?: string;
+                activity_type?: {
+                    code?: string;
+                    name?: string;
+                } | null;
+                instructions?: string | null;
+                subject?: {
+                    /** @enum {string} */
+                    type?: "crop_cycle" | "plot" | "location" | "animal" | "animal_group" | "general";
+                    /** Format: uuid */
+                    id?: string | null;
+                    label?: string | null;
+                };
+                /** Format: uuid */
+                plot_id?: string | null;
+                /** Format: uuid */
+                location_id?: string | null;
+                /** Format: date */
+                planned_on?: string;
+                priority?: string;
+                target_quantity?: number | null;
+                target_unit?: string | null;
+                status?: string;
+            } | null;
+            logs?: components["schemas"]["TaskLogEntry"][];
+            photos?: components["schemas"]["TaskPhotoRef"][];
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        Attendance: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "attendance";
+            worker?: {
+                /** Format: uuid */
+                id?: string;
+                worker_code?: string;
+                full_name?: string;
+            };
+            /** Format: uuid */
+            worker_id?: string;
+            /** Format: date */
+            work_date?: string;
+            /** Format: date-time */
+            check_in_at?: string;
+            check_in_point?: {
+                lat?: number;
+                lng?: number;
+                accuracy_m?: number | null;
+            } | null;
+            /** Format: uuid */
+            check_in_photo_id?: string | null;
+            /** Format: date-time */
+            check_out_at?: string | null;
+            check_out_point?: {
+                lat?: number;
+                lng?: number;
+                accuracy_m?: number | null;
+            } | null;
+            /** Format: uuid */
+            check_out_photo_id?: string | null;
+            minutes?: number | null;
+            /** @enum {string} */
+            source?: "mobile" | "web" | "manual";
+            note?: string | null;
+            version?: number;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        GpsPoint: {
+            /** Format: date-time */
+            recorded_at?: string;
+            lat?: number;
+            lng?: number;
+            accuracy_m?: number | null;
+            /** Format: uuid */
+            task_id?: string | null;
+        };
+        Leave: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "leave";
+            worker?: {
+                /** Format: uuid */
+                id?: string;
+                worker_code?: string;
+                full_name?: string;
+            };
+            /** Format: uuid */
+            worker_id?: string;
+            /** @enum {string} */
+            kind?: "annual" | "sick" | "compassionate" | "unpaid" | "other";
+            /** Format: date */
+            from_on?: string;
+            /** Format: date */
+            to_on?: string;
+            days?: number;
+            reason?: string | null;
+            /** @enum {string} */
+            status?: "requested" | "approved" | "rejected" | "cancelled";
+            requested_by?: components["schemas"]["Ref"] | null;
+            decided_by?: components["schemas"]["Ref"] | null;
+            /** Format: date-time */
+            decided_at?: string | null;
+            decision_note?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        LeaveInput: {
+            /**
+             * Format: uuid
+             * @description Client id (offline)
+             */
+            id?: string;
+            /**
+             * Format: uuid
+             * @description Approvers only
+             */
+            worker_id?: string;
+            /** @enum {string} */
+            kind: "annual" | "sick" | "compassionate" | "unpaid" | "other";
+            /** Format: date */
+            from_on: string;
+            /** Format: date */
+            to_on: string;
+            reason?: string | null;
+        };
+        MyDay: {
+            worker?: components["schemas"]["Worker"] | null;
+            /** Format: date */
+            date?: string;
+            tasks?: components["schemas"]["Task"][];
+            attendance?: components["schemas"]["Attendance"] | null;
+            leave?: components["schemas"]["Leave"][];
+            counts?: {
+                open?: number;
+                done_today?: number;
+            };
+        };
+        Media: {
+            /** Format: uuid */
+            id?: string;
+            sha256?: string;
+            mime?: string;
+            size_bytes?: number;
+            original_name?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        SyncMutation: {
+            /**
+             * Format: uuid
+             * @description Unique per change; a repeat returns `duplicate`
+             */
+            mutation_id: string;
+            /** @enum {string} */
+            entity: "worker_task_logs" | "worker_task_photos" | "worker_attendance" | "worker_gps_points" | "worker_leave";
+            /** @enum {string} */
+            op: "insert" | "check_in" | "check_out";
+            /**
+             * Format: uuid
+             * @description Client-generated id of the new record
+             */
+            id?: string | null;
+            base_version?: number | null;
+            /** Format: date-time */
+            occurred_at?: string | null;
+            data: {
+                [key: string]: unknown;
+            };
+        };
+        SyncPush: {
+            /** Format: uuid */
+            device_id?: string | null;
+            mutations: components["schemas"]["SyncMutation"][];
+        };
+        SyncRecord: {
+            /** @enum {string} */
+            entity?: "tasks" | "attendance" | "leave" | "workers";
+            /** Format: uuid */
+            id?: string;
+            version?: number | null;
+            data?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        SyncResult: {
+            /** Format: uuid */
+            mutation_id?: string;
+            entity?: string;
+            op?: string;
+            /** Format: uuid */
+            id?: string | null;
+            /** @enum {string} */
+            status?: "applied" | "duplicate" | "conflict" | "rejected" | "deferred" | "error";
+            /** @description For duplicates: the first result */
+            original_status?: string;
+            version?: number | null;
+            error?: {
+                code?: string;
+                message?: string;
+                errors?: Record<string, never>;
+                /** Format: uuid */
+                media_id?: string;
+            } | null;
+            /** @description The server's record after applying, or on conflict */
+            server?: components["schemas"]["SyncRecord"] | null;
+        };
+        SyncPull: {
+            changes?: (components["schemas"]["SyncRecord"] & {
+                /** @enum {string} */
+                op?: "upsert" | "remove";
+            })[];
+            next_cursor?: string;
+            has_more?: boolean;
         };
     };
     responses: {
@@ -9381,6 +10559,1389 @@ export interface operations {
         };
         responses: {
             201: components["responses"]["Ticket"];
+        };
+    };
+    myDay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["MyDay"];
+                    };
+                };
+            };
+        };
+    };
+    listWorkers: {
+        parameters: {
+            query?: {
+                "filter[status]"?: "active" | "inactive";
+                "filter[search]"?: string;
+                "filter[linked]"?: boolean;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Worker"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    createWorker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkerInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Worker"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getWorker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                worker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Worker"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    updateWorker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                worker: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkerInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Worker"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getWorkerTrack: {
+        parameters: {
+            query: {
+                date: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                worker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["GpsPoint"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    listActivities: {
+        parameters: {
+            query?: {
+                "filter[status]"?: "open" | "completed" | "cancelled";
+                "filter[module]"?: string;
+                "filter[subject_type]"?: string;
+                "filter[subject_id]"?: string;
+                "filter[from]"?: string;
+                "filter[to]"?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["Activity"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    createActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityInput"];
+            };
+        };
+        responses: {
+            /** @description Created with one task per worker */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Activity"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                activity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Activity"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    updateActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                activity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                    instructions?: string | null;
+                    /** Format: date */
+                    due_on?: string | null;
+                    /** @enum {string} */
+                    priority?: "low" | "normal" | "high";
+                    target_quantity?: number | null;
+                    target_unit?: string | null;
+                    version?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Activity"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    assignActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                activity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    worker_ids: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Activity"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    cancelActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                activity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Activity"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listTasks: {
+        parameters: {
+            query?: {
+                "filter[status]"?: string;
+                "filter[worker_id]"?: string;
+                "filter[activity_id]"?: string;
+                "filter[module]"?: string;
+                "filter[due_from]"?: string;
+                "filter[due_to]"?: string;
+                "filter[overdue]"?: boolean;
+                "filter[mine]"?: boolean;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["Task"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    getTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Task"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    startTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: date-time
+                     * @description When it happened (device time); not in the future.
+                     */
+                    occurred_at?: string;
+                    lat?: number | null;
+                    lng?: number | null;
+                    accuracy_m?: number | null;
+                    quantity?: number | null;
+                    unit?: string | null;
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Task"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    pauseTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: date-time
+                     * @description When it happened (device time); not in the future.
+                     */
+                    occurred_at?: string;
+                    lat?: number | null;
+                    lng?: number | null;
+                    accuracy_m?: number | null;
+                    quantity?: number | null;
+                    unit?: string | null;
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Task"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    resumeTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: date-time
+                     * @description When it happened (device time); not in the future.
+                     */
+                    occurred_at?: string;
+                    lat?: number | null;
+                    lng?: number | null;
+                    accuracy_m?: number | null;
+                    quantity?: number | null;
+                    unit?: string | null;
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Task"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    submitTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: date-time
+                     * @description When it happened (device time); not in the future.
+                     */
+                    occurred_at?: string;
+                    lat?: number | null;
+                    lng?: number | null;
+                    accuracy_m?: number | null;
+                    quantity?: number | null;
+                    unit?: string | null;
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Task"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    noteTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: date-time
+                     * @description When it happened (device time); not in the future.
+                     */
+                    occurred_at?: string;
+                    lat?: number | null;
+                    lng?: number | null;
+                    accuracy_m?: number | null;
+                    quantity?: number | null;
+                    unit?: string | null;
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Task"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    verifyTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Task"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    rejectTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Task"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    cancelTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Task"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    addTaskPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                task: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    media_id: string;
+                    /** Format: date-time */
+                    taken_at?: string | null;
+                    lat?: number | null;
+                    lng?: number | null;
+                    accuracy_m?: number | null;
+                    caption?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Already attached */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Attached */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["TaskPhotoRef"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listAttendance: {
+        parameters: {
+            query?: {
+                "filter[from]"?: string;
+                "filter[to]"?: string;
+                "filter[worker_id]"?: string;
+                "filter[open]"?: boolean;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["Attendance"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    enterAttendance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    worker_id: string;
+                    /** Format: date-time */
+                    check_in_at: string;
+                    /** Format: date-time */
+                    check_out_at?: string | null;
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Attendance"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    correctAttendance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                attendance: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date-time */
+                    check_in_at?: string;
+                    /** Format: date-time */
+                    check_out_at?: string | null;
+                    note: string;
+                    version?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Attendance"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    checkIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description Client id (offline)
+                     */
+                    id?: string;
+                    /** Format: date-time */
+                    occurred_at?: string;
+                    lat?: number | null;
+                    lng?: number | null;
+                    accuracy_m?: number | null;
+                    /** Format: uuid */
+                    photo_id?: string | null;
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Checked in */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Attendance"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    checkOut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description Client id (offline)
+                     */
+                    id?: string;
+                    /** Format: date-time */
+                    occurred_at?: string;
+                    lat?: number | null;
+                    lng?: number | null;
+                    accuracy_m?: number | null;
+                    /** Format: uuid */
+                    photo_id?: string | null;
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Attendance"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    recordGpsPoints: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    points: {
+                        /** Format: uuid */
+                        id?: string;
+                        /** Format: date-time */
+                        recorded_at: string;
+                        lat: number;
+                        lng: number;
+                        accuracy_m?: number | null;
+                        /** Format: uuid */
+                        task_id?: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            accepted?: number;
+                            skipped?: number;
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listLeave: {
+        parameters: {
+            query?: {
+                "filter[status]"?: "requested" | "approved" | "rejected" | "cancelled";
+                "filter[worker_id]"?: string;
+                "filter[from]"?: string;
+                "filter[to]"?: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Leave"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    requestLeave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveInput"];
+            };
+        };
+        responses: {
+            /** @description Requested */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Leave"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    approveLeave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                leave: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Leave"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    rejectLeave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                leave: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Leave"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    cancelLeave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                leave: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Leave"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    uploadMedia: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+                "X-Content-SHA256"?: string;
+            };
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /** @description Hex SHA-256 of the file; a mismatch is 422 checksum_mismatch. */
+                    sha256?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Already stored (same SHA-256): the existing media */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Media"];
+                    };
+                };
+            };
+            /** @description Stored */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Media"];
+                    };
+                };
+            };
+            413: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                media: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Media"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    getMediaContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                media: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The bytes, with the stored content type */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    syncPush: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required from mobile clients. A repeat returns the first response with the header Idempotent-Replayed: true. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncPush"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            results?: components["schemas"]["SyncResult"][];
+                        };
+                    };
+                };
+            };
+            422: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    syncPull: {
+        parameters: {
+            query?: {
+                cursor?: number | null;
+                entities?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SyncPull"];
+                    };
+                };
+            };
+            422: components["responses"]["Problem"];
         };
     };
 }

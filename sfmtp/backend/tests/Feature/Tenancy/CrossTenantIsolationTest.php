@@ -16,14 +16,21 @@ use App\Modules\Livestock\Application\AnimalRecords;
 use App\Modules\Livestock\Application\AnimalSales;
 use App\Modules\Livestock\Application\Breedings;
 use App\Modules\Livestock\Application\Herd;
+use App\Modules\Media\Domain\Models\Media;
 use App\Modules\Tenancy\Domain\Models\Farm;
 use App\Modules\Tenancy\Domain\Models\FarmUser;
 use App\Modules\Tenancy\TenantContext;
 use App\Modules\Traceability\Application\Recorder;
 use App\Modules\Traceability\Domain\Enums\BatchKind;
 use App\Modules\Traceability\Domain\Models\TraceEvent;
+use App\Modules\Workforce\Application\Activities;
+use App\Modules\Workforce\Application\LeaveDesk;
+use App\Modules\Workforce\Application\Workers;
+use App\Modules\Workforce\Domain\Models\Attendance;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route as Router;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -45,6 +52,10 @@ class CrossTenantIsolationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // The sweep calls every route; rate limits are tested elsewhere.
+        foreach (['api', 'sync'] as $limiter) {
+            RateLimiter::for($limiter, fn () => Limit::none());
+        }
 
         $this->seed(CatalogSeeder::class);
         $this->victim = $this->farm();
@@ -79,6 +90,7 @@ class CrossTenantIsolationTest extends TestCase
         });
         $this->victimRecords += $this->victimCropRecords($this->victimRecords['plot']);
         $this->victimRecords += $this->victimLivestockRecords();
+        $this->victimRecords += $this->victimWorkforceRecords();
     }
 
     /** One of each livestock record, created as the victim's owner. */
@@ -104,6 +116,33 @@ class CrossTenantIsolationTest extends TestCase
                 'production' => $records->production(['animal_id' => $cow->id, 'product' => 'milk', 'produced_on' => now()->toDateString(), 'quantity' => 9, 'unit' => 'l'])->id,
                 'breeding' => $this->app->make(Breedings::class)->serve(['dam_id' => $cow->id, 'sire_id' => $bull->id, 'method' => 'natural', 'served_on' => now()->toDateString()])->id,
                 'sale' => $this->app->make(AnimalSales::class)->request(['animal_id' => $bull->id])->id,
+            ];
+        }, $owner);
+    }
+
+    /** One of each workforce record and a stored photo, created as the victim's owner (also their worker). */
+    private function victimWorkforceRecords(): array
+    {
+        $owner = FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail();
+        $this->actingAs($owner->user, 'api');
+
+        return $this->app->make(TenantContext::class)->run($this->victim, function () use ($owner) {
+            $worker = $this->app->make(Workers::class)->create(['full_name' => 'Victim Worker', 'employment_type' => 'casual', 'farm_user_id' => $owner->id]);
+            $activity = $this->app->make(Activities::class)->create([
+                'activity_type_id' => DB::table('global_activity_types')->where('code', 'general_labour')->value('id'),
+                'subject_type' => 'general', 'worker_ids' => [$worker->id],
+            ]);
+            $media = Media::create(['sha256' => str_repeat('b', 64), 'mime' => 'image/png', 'size_bytes' => 10, 'disk' => 'local', 'path' => 'victim.png', 'uploaded_by' => $owner->user_id]);
+            $attendance = Attendance::create(['worker_id' => $worker->id, 'work_date' => now()->toDateString(), 'check_in_at' => now()->subHour(), 'source' => 'manual']);
+            $leave = $this->app->make(LeaveDesk::class)->request(['kind' => 'annual', 'from_on' => now()->addMonth()->toDateString(), 'to_on' => now()->addMonth()->toDateString()]);
+
+            return [
+                'worker' => $worker->id,
+                'activity' => $activity->id,
+                'task' => $activity->tasks()->value('id'),
+                'attendance' => $attendance->id,
+                'leave' => $leave->id,
+                'media' => $media->id,
             ];
         }, $owner);
     }
@@ -231,6 +270,20 @@ class CrossTenantIsolationTest extends TestCase
             "/api/v1/farms/{$this->attackerFarm->id}/traceability/batches/{$own->id}/links",
             ['parent_batch_id' => $this->victimRecords['batch'], 'link_type' => 'derived'],
         )->assertStatus(422)->assertJsonValidationErrors('parent_batch_id');
+
+        // Assigning another farm's worker, or syncing a step on another farm's task.
+        $farm = "/api/v1/farms/{$this->attackerFarm->id}";
+        $this->asUser($attacker)->postJson("{$farm}/activities", [
+            'activity_type_id' => DB::table('global_activity_types')->where('code', 'general_labour')->value('id'),
+            'worker_ids' => [$this->victimRecords['worker']],
+        ])->assertStatus(422)->assertJsonValidationErrors('worker_ids.0');
+        $this->asUser($attacker)->postJson("{$farm}/workers", ['full_name' => 'Borrowed', 'employment_type' => 'casual', 'farm_user_id' => FarmUser::where('farm_id', $this->victim->id)->value('id')])
+            ->assertStatus(422)->assertJsonValidationErrors('farm_user_id');
+        $result = $this->asUser($attacker)->postJson("{$farm}/sync/push", ['mutations' => [[
+            'mutation_id' => (string) Str::uuid7(), 'entity' => 'worker_task_logs', 'op' => 'insert', 'id' => (string) Str::uuid7(),
+            'data' => ['task_id' => $this->victimRecords['task'], 'event' => 'start'],
+        ]]])->assertOk()->json('data.results.0');
+        $this->assertSame('rejected', $result['status']);
     }
 
     public function test_random_farm_ids_are_indistinguishable_from_forbidden_ones(): void

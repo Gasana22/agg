@@ -199,6 +199,7 @@ class AnimalRecords
 
             if (! empty($data['group_id'])) {
                 $group = AnimalGroup::find($data['group_id']) ?? throw $this->invalid('group_id', 'The selected group does not exist in this farm.');
+                $this->access->assertCanRecordOn('livestock.records.record', ['animal_group' => $group->id]);
                 $move(null, $group, $group->location_id);
                 $group->forceFill(['location_id' => $to->id])->save();
                 foreach ($group->activeAnimals()->with('batch')->get() as $a) {
@@ -269,10 +270,10 @@ class AnimalRecords
      */
     private function subject(array $data, bool $groupAllowed = true): array
     {
-        $this->access->assertCanRecordOn('livestock.records.record');
-
         if (! empty($data['animal_id'])) {
             $animal = Animal::find($data['animal_id']) ?? throw $this->invalid('animal_id', 'The selected animal does not exist in this farm.');
+            // Field workers record on the animals (or groups) their tasks point to.
+            $this->access->assertCanRecordOn('livestock.records.record', ['animal' => $animal->id, 'animal_group' => $animal->group_id]);
             if (! $animal->isActive()) {
                 throw ApiException::conflict('animal_inactive', "{$animal->animal_code} has left the herd.");
             }
@@ -281,9 +282,12 @@ class AnimalRecords
         }
         if ($groupAllowed && ! empty($data['group_id'])) {
             $group = AnimalGroup::find($data['group_id']) ?? throw $this->invalid('group_id', 'The selected group does not exist in this farm.');
+            $this->access->assertCanRecordOn('livestock.records.record', ['animal_group' => $group->id]);
 
             return [null, $group];
         }
+
+        $this->access->assertCanRecordOn('livestock.records.record');
 
         throw $this->invalid('animal_id', $groupAllowed ? 'Choose an animal or a group.' : 'Choose an animal.');
     }

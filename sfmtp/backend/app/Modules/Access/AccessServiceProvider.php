@@ -3,6 +3,8 @@
 namespace App\Modules\Access;
 
 use App\Modules\Access\Application\FarmMfaRequirement;
+use App\Modules\Access\Application\NoAssignments;
+use App\Modules\Access\Contracts\Assignments;
 use App\Modules\Access\Listeners\InstallRoleTemplates;
 use App\Modules\Identity\Contracts\MfaRequirement;
 use App\Modules\Tenancy\Domain\Events\FarmCreated;
@@ -14,6 +16,7 @@ class AccessServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(MfaRequirement::class, FarmMfaRequirement::class);
+        $this->app->bindIf(Assignments::class, NoAssignments::class);
     }
 
     public function boot(): void

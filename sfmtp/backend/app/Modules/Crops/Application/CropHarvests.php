@@ -32,7 +32,7 @@ class CropHarvests
 
     public function record(CropCycle $cycle, array $data): CropHarvest
     {
-        $this->access->assertCanRecordOn('crops.harvest.record');
+        $this->access->assertCanRecordOn('crops.harvest.record', ['crop_cycle' => $cycle->id, 'plot' => $cycle->plot_id]);
         if (! in_array($cycle->stage->value, CycleStage::inField(), true) || $cycle->cropLot === null) {
             throw ApiException::conflict('invalid_state_transition', 'Only a crop in the field can be harvested.');
         }

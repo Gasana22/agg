@@ -18,6 +18,7 @@ use App\Modules\Traceability\Domain\Enums\BatchKind;
 use App\Modules\Traceability\Domain\Enums\BatchStatus;
 use App\Modules\Traceability\Domain\Enums\LinkType;
 use App\Modules\Traceability\Domain\Models\TraceBatch;
+use App\Support\Database\Codes;
 use App\Support\Http\ApiException;
 use App\Support\Time\EventTime;
 use Carbon\CarbonImmutable;

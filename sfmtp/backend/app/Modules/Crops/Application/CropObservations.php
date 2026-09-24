@@ -22,7 +22,7 @@ class CropObservations
 
     public function report(CropCycle $cycle, array $data): CropObservation
     {
-        $this->access->assertCanRecordOn('crops.operations.record');
+        $this->access->assertCanRecordOn('crops.operations.record', ['crop_cycle' => $cycle->id, 'plot' => $cycle->plot_id]);
         if (! $cycle->isOpen()) {
             throw ApiException::conflict('cycle_closed', 'The crop cycle is closed.');
         }
@@ -57,7 +57,7 @@ class CropObservations
     /** Change severity or status; resolving is recorded in the trace history. */
     public function update(CropObservation $observation, array $data): CropObservation
     {
-        $this->access->assertCanRecordOn('crops.operations.record');
+        $this->access->assertCanRecordOn('crops.operations.record', ['crop_cycle' => $observation->cycle_id, 'plot' => $observation->loadMissing('cycle')->cycle?->plot_id]);
         if ($observation->status === ObservationStatus::Resolved) {
             throw ApiException::conflict('invalid_state_transition', 'The observation is resolved.');
         }

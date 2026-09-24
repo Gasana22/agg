@@ -6,6 +6,7 @@ use App\Modules\Access\Application\FarmPermissions;
 use App\Modules\Tenancy\TenantContext;
 use App\Support\Http\ApiException;
 use Closure;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Server-driven dashboards (docs/05, docs/06 §3). Each dashboard lists its
@@ -21,6 +22,7 @@ class DashboardRegistry
         private readonly FarmMetrics $metrics,
         private readonly CropMetrics $crops,
         private readonly LivestockMetrics $livestock,
+        private readonly WorkforceMetrics $workforce,
         private readonly FarmPermissions $permissions,
         private readonly TenantContext $context,
     ) {}
@@ -31,21 +33,25 @@ class DashboardRegistry
         $trace = ['trace.open_batches', 'trace.events'];
 
         return match ($dashboard) {
-            'owner' => ['kpis' => ['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'view_map', 'new_batch', 'view_audit_log']],
-            'manager' => ['kpis' => ['crop.active_cycles', 'crop.incidents_open', 'livestock.head_count', 'livestock.vaccinations_due', 'structure.plots', 'farm.members', ...$trace], 'widgets' => ['operations_to_verify', 'pest_disease_alerts', 'vaccinations_due', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'start_cycle', 'register_animal', 'view_map', 'new_batch']],
+            'owner' => ['kpis' => ['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'view_map', 'new_batch', 'view_audit_log']],
+            'manager' => [
+                'kpis' => ['tasks.today', 'tasks.completed', 'tasks.pending', 'tasks.overdue', 'workers.present', 'workers.absent', 'activities.active', 'crop.active_cycles', 'livestock.head_count'],
+                'widgets' => ['verification_queue', 'schedule', 'overdue_tasks', 'leave_requests', 'worker_activity', 'operations_to_verify', 'pest_disease_alerts', 'vaccinations_due', 'recent_trace_events'],
+                'quick_actions' => ['new_task', 'view_workers', 'invite_member', 'start_cycle', 'register_animal', 'view_map'],
+            ],
             'agronomist' => [
                 'kpis' => ['crop.active_cycles', 'crop.planted_area', 'crop.near_harvest', 'crop.expected_yield', 'crop.actual_yield', 'crop.yield_per_ha', 'crop.incidents_open', 'crop.treatments_active'],
-                'widgets' => ['pest_disease_alerts', 'operations_to_verify', 'upcoming_harvests', 'expected_vs_actual_yield', 'recent_trace_events'],
-                'quick_actions' => ['start_cycle', 'record_operation', 'report_observation', 'record_harvest', 'new_crop_plan', 'view_map'],
+                'widgets' => ['pest_disease_alerts', 'operations_to_verify', 'verification_queue', 'upcoming_harvests', 'expected_vs_actual_yield', 'recent_trace_events'],
+                'quick_actions' => ['start_cycle', 'record_operation', 'report_observation', 'record_harvest', 'new_task', 'new_crop_plan', 'view_map'],
             ],
             'livestock' => [
                 'kpis' => ['livestock.head_count', 'livestock.new_animals', 'livestock.pregnant', 'livestock.vaccinations_due', 'livestock.under_withdrawal', 'livestock.mortality_rate', 'livestock.milk', 'livestock.daily_gain', 'livestock.sold'],
-                'widgets' => ['vaccinations_due', 'withdrawal_alerts', 'expected_births', 'weight_loss_alerts', 'milk_production', 'recent_trace_events'],
-                'quick_actions' => ['register_animal', 'record_health', 'record_weight', 'record_production', 'request_sale', 'view_map'],
+                'widgets' => ['vaccinations_due', 'withdrawal_alerts', 'verification_queue', 'expected_births', 'weight_loss_alerts', 'milk_production', 'recent_trace_events'],
+                'quick_actions' => ['register_animal', 'record_health', 'record_weight', 'record_production', 'new_task', 'request_sale', 'view_map'],
             ],
             'store' => ['kpis' => $trace, 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_map', 'new_batch']],
             'accountant' => ['kpis' => ['trace.open_batches'], 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_audit_log']],
-            'worker' => ['kpis' => [], 'widgets' => [], 'quick_actions' => []],
+            'worker' => ['kpis' => ['tasks.today', 'tasks.done_today', 'attendance.status'], 'widgets' => ['today_tasks', 'attendance_week'], 'quick_actions' => ['my_day', 'request_leave']],
         };
     }
 
@@ -65,6 +71,26 @@ class DashboardRegistry
                 'value' => fn () => $this->metrics->plots()],
             'structure.mapped_area' => ['label' => 'Mapped area', 'format' => 'quantity', 'permission' => 'structure.view',
                 'value' => fn () => ['value' => number_format($this->metrics->mappedAreaHa(), 2, '.', ''), 'unit' => 'ha']],
+            'tasks.today' => ['label' => 'Tasks due today', 'format' => 'number', 'permission' => 'tasks.view',
+                'value' => fn () => $this->workforce->tasksToday()],
+            'tasks.completed' => ['label' => 'Tasks verified', 'format' => 'number', 'permission' => 'tasks.view',
+                'value' => fn (Period $p) => $this->workforce->tasksVerified($p),
+                'previous' => fn (Period $p) => $this->workforce->tasksVerified($p->previous())],
+            'tasks.pending' => ['label' => 'Tasks to verify', 'format' => 'number', 'permission' => 'tasks.verify',
+                'value' => fn () => $this->workforce->tasksAwaitingReview()],
+            'tasks.overdue' => ['label' => 'Overdue tasks', 'format' => 'number', 'permission' => 'tasks.view',
+                'value' => fn () => $this->workforce->tasksOverdue()],
+            'tasks.done_today' => ['label' => 'Done today', 'format' => 'number', 'permission' => 'tasks.execute',
+                'value' => fn () => $this->workforce->myDoneToday()],
+            'activities.active' => ['label' => 'Open activities', 'format' => 'number', 'permission' => 'tasks.view',
+                'value' => fn () => $this->workforce->activitiesOpen()],
+            'workers.present' => ['label' => 'Workers present', 'format' => 'number', 'permission' => 'attendance.approve',
+                'value' => fn () => $this->workforce->workersPresent(),
+                'meta' => fn () => ['active_workers' => $this->workforce->workersActive()]],
+            'workers.absent' => ['label' => 'Not checked in', 'format' => 'number', 'permission' => 'attendance.approve',
+                'value' => fn () => $this->workforce->workersAbsent()],
+            'attendance.status' => ['label' => 'Attendance', 'format' => 'status', 'permission' => 'attendance.record',
+                'value' => fn () => $this->workforce->myAttendanceStatus()],
             'crop.active_cycles' => ['label' => 'Active crop cycles', 'format' => 'number', 'permission' => 'crops.plans.view',
                 'value' => fn () => $this->crops->activeCycles()],
             'crop.planted_area' => ['label' => 'Planted area', 'format' => 'quantity', 'permission' => 'crops.plans.view',
@@ -126,6 +152,36 @@ class DashboardRegistry
                     ['key' => 'members', 'label' => 'Invite your team', 'done' => $this->metrics->membersActive() > 1, 'href' => "/farms/{$farm->id}/members"],
                     ['key' => 'approval', 'label' => 'Farm approved by SFMTP', 'done' => $farm->status->value === 'active', 'href' => null],
                 ]]],
+            'verification_queue' => ['type' => 'action_list', 'permission' => 'tasks.verify', 'inline' => true,
+                'data' => fn () => ['items' => $this->workforce->verificationQueue()]],
+            'schedule' => ['type' => 'action_list', 'permission' => 'tasks.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->workforce->schedule()]],
+            'overdue_tasks' => ['type' => 'action_list', 'permission' => 'tasks.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->workforce->overdueTasks()]],
+            'leave_requests' => ['type' => 'action_list', 'permission' => 'leave.approve', 'inline' => true,
+                'data' => fn () => ['items' => $this->workforce->leaveRequests()]],
+            'today_tasks' => ['type' => 'action_list', 'permission' => 'tasks.execute', 'inline' => true,
+                'data' => fn () => ['items' => $this->workforce->myTasks()]],
+            'worker_activity' => ['type' => 'chart', 'permission' => 'tasks.view', 'inline' => false,
+                'data' => function (Period $p) {
+                    $d = $this->workforce->verifiedPerDay($p);
+
+                    return [
+                        'chart' => 'bar',
+                        'x' => ['type' => 'date', 'values' => $d['labels']],
+                        'series' => [['key' => 'verified', 'label' => 'Tasks verified', 'unit' => 'tasks', 'values' => $d['verified']]],
+                    ];
+                }],
+            'attendance_week' => ['type' => 'chart', 'permission' => 'attendance.record', 'inline' => false,
+                'data' => function () {
+                    $d = $this->workforce->myWeek();
+
+                    return [
+                        'chart' => 'bar',
+                        'x' => ['type' => 'date', 'values' => $d['labels']],
+                        'series' => [['key' => 'hours', 'label' => 'Hours worked', 'unit' => 'h', 'values' => $d['hours']]],
+                    ];
+                }],
             'vaccinations_due' => ['type' => 'action_list', 'permission' => 'livestock.animals.view', 'inline' => true,
                 'data' => fn () => ['items' => $this->livestock->vaccinationsDue()]],
             'withdrawal_alerts' => ['type' => 'action_list', 'permission' => 'livestock.animals.view', 'inline' => true,
@@ -187,6 +243,10 @@ class DashboardRegistry
 
         return [
             'invite_member' => ['label' => 'Invite member', 'permission' => 'members.invite_workers', 'target' => "/farms/{$id}/members?invite=1"],
+            'new_task' => ['label' => 'Assign work', 'permission' => 'tasks.manage', 'target' => "/farms/{$id}/tasks?new=1"],
+            'view_workers' => ['label' => 'Workers & attendance', 'permission' => 'workers.view', 'target' => "/farms/{$id}/workers"],
+            'my_day' => ['label' => 'My day', 'permission' => 'tasks.execute', 'target' => "/farms/{$id}/my-day"],
+            'request_leave' => ['label' => 'Request leave', 'permission' => 'leave.request', 'target' => "/farms/{$id}/my-day?leave=1"],
             'view_map' => ['label' => 'Farm map', 'permission' => 'structure.view', 'target' => "/farms/{$id}/structure"],
             'register_animal' => ['label' => 'Register animal', 'permission' => 'livestock.animals.manage', 'target' => "/farms/{$id}/livestock?new=animal"],
             'record_health' => ['label' => 'Treatment / vaccination', 'permission' => 'livestock.records.record', 'target' => "/farms/{$id}/livestock?action=health"],
@@ -275,13 +335,18 @@ class DashboardRegistry
         return ['key' => $widget, 'type' => $def['type']] + ($def['data'])($period);
     }
 
-    /** Cache key part: two members see the same data only with the same permissions. */
+    /**
+     * Cache key part: two members see the same data only with the same
+     * permissions and scopes. Anything narrower than `all` (own tasks, own
+     * attendance) is personal, so the member is part of the key.
+     */
     public function permissionFingerprint(): string
     {
-        $keys = array_keys($this->permissions->current());
-        sort($keys);
+        $grants = array_map(fn ($scope) => $scope->value, $this->permissions->current());
+        ksort($grants);
+        $personal = array_filter($grants, fn ($scope) => $scope !== 'all') !== [];
 
-        return substr(hash('sha256', implode(',', $keys)), 0, 16);
+        return substr(hash('sha256', json_encode($grants)), 0, 16).($personal ? ':u:'.Auth::id() : '');
     }
 
     private function authorize(string $dashboard): void

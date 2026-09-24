@@ -26,8 +26,11 @@ return [
         'Platform',
         'Catalog',
         'FarmStructure',
+        'Media',
+        'Workforce',
         'Crops',
         'Livestock',
+        'Sync',
         'Support',
         'Traceability',
         'Reporting',
@@ -68,5 +71,28 @@ return [
 
     'dashboards' => [
         'cache_ttl' => (int) env('DASHBOARD_CACHE_TTL', 60),
+    ],
+
+    /*
+    | Photos and documents (docs/08 §3). Files are stored under their SHA-256,
+    | so a retried upload is deduplicated. Use an S3-compatible disk in
+    | production (MinIO in the Docker stack).
+    */
+    'media' => [
+        'disk' => env('SFMTP_MEDIA_DISK', 'local'),
+        'max_kb' => (int) env('SFMTP_MEDIA_MAX_KB', 10240),
+        'mimes' => ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+    ],
+
+    /*
+    | Offline sync (docs/08). Push batches are capped; pull hides changes
+    | younger than the lag so a slow transaction cannot be skipped by a cursor.
+    */
+    'sync' => [
+        'max_mutations' => 200,
+        'pull_limit' => 500,
+        'pull_lag_seconds' => 2,
+        'task_window_days' => 14,
+        'max_clock_skew_seconds' => 300,
     ],
 ];

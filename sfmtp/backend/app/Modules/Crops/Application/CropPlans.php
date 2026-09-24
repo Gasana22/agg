@@ -9,6 +9,7 @@ use App\Modules\Crops\Domain\Models\Crop;
 use App\Modules\Crops\Domain\Models\CropPlan;
 use App\Modules\Crops\Domain\Models\Season;
 use App\Modules\Tenancy\TenantContext;
+use App\Support\Database\Codes;
 use App\Support\Http\ApiException;
 use Illuminate\Support\Facades\Auth;
 

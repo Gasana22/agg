@@ -33,7 +33,7 @@ class DashboardTest extends TestCase
 
         $this->assertSame('owner', $data['dashboard']);
         $this->assertSame('7d', $data['period']['key']);
-        $this->assertSame(['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'farm.members', 'trace.open_batches', 'trace.events'], array_column($data['kpis'], 'key'));
+        $this->assertSame(['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'farm.members', 'trace.open_batches', 'trace.events'], array_column($data['kpis'], 'key'));
 
         $kpis = collect($data['kpis'])->keyBy('key');
         $this->assertSame(['value' => '120.0000', 'unit' => 'ha'], $kpis['farm.area']['value']);
@@ -69,10 +69,13 @@ class DashboardTest extends TestCase
         $agronomist = $this->memberWithRole($this->farm, 'agronomist');
         $data = $this->dashboard('agronomist', $agronomist)->assertOk()->json('data');
         $this->assertSame(['crop.active_cycles', 'crop.planted_area', 'crop.near_harvest', 'crop.expected_yield', 'crop.actual_yield', 'crop.yield_per_ha', 'crop.incidents_open', 'crop.treatments_active'], array_column($data['kpis'], 'key'));
-        $this->assertSame(['start_cycle', 'record_operation', 'report_observation', 'record_harvest', 'new_crop_plan', 'view_map'], array_column($data['quick_actions'], 'key'));
+        $this->assertSame(['start_cycle', 'record_operation', 'report_observation', 'record_harvest', 'new_task', 'new_crop_plan', 'view_map'], array_column($data['quick_actions'], 'key'));
 
         $worker = $this->memberWithRole($this->farm, 'field_worker');
-        $this->dashboard('worker', $worker)->assertOk()->assertJsonPath('data.kpis', [])->assertJsonPath('data.widgets', []);
+        $mine = $this->dashboard('worker', $worker)->assertOk()->json('data');
+        $this->assertSame(['tasks.today', 'tasks.done_today', 'attendance.status'], array_column($mine['kpis'], 'key'));
+        $this->assertSame(['today_tasks', 'attendance_week'], array_column($mine['widgets'], 'key'));
+        $this->assertNull($mine['kpis'][2]['value']);   // no worker profile yet
 
         $this->assertProblem($this->dashboard('owner', $agronomist), 403, 'dashboard_not_available');
         $this->assertProblem($this->dashboard('spaceship', $agronomist), 404, 'not_found');

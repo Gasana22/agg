@@ -36,7 +36,7 @@ class CropOperations
      */
     public function record(CropCycle $cycle, array $data): CropOperation
     {
-        $this->access->assertCanRecordOn('crops.operations.record');
+        $this->access->assertCanRecordOn('crops.operations.record', ['crop_cycle' => $cycle->id, 'plot' => $cycle->plot_id]);
         $this->access->assertNoMoneyUnlessAllowed($data, ['cost_amount']);
         if (! $cycle->isOpen()) {
             throw ApiException::conflict('cycle_closed', 'The crop cycle is closed.');

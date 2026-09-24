@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SFMTP API
-  version: 1.4.0-phase5
+  version: 1.5.0-phase6
   description: |
     Smart Farm Management & Traceability Platform REST API.
 
@@ -26,6 +26,12 @@ tags:
     description: Farm (tenant) profile and lifecycle.
   - name: Access
     description: Members, invitations, roles and the permission registry.
+  - name: Workforce
+    description: Workers, activities and tasks with their state machine, attendance with GPS and photos, leave, and the field worker's day.
+  - name: Media
+    description: Photo and document uploads, stored once per farm by SHA-256.
+  - name: Sync
+    description: Offline push and pull for the mobile app (docs/08).
   - name: Livestock
     description: Groups, animals, health and vaccination with withdrawal periods, feeding, weights, production into daily product lots, movements, breeding and sale requests. Records are append-only; mistakes are voided.
   - name: Crops
@@ -4038,6 +4044,1861 @@ paths:
       responses:
         '201': { $ref: '#/components/responses/Ticket' }
 
+  /farms/{farm}/me/today:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Workforce
+      operationId: myDay
+      summary: The field worker's day
+      description: Tasks due, today's attendance and upcoming leave for the signed-in member's worker profile, in one call (the mobile home screen). An empty day when the member has no worker profile.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MyDay'
+  /farms/{farm}/workers:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Workforce
+      operationId: listWorkers
+      summary: Worker profiles
+      description: With the `own` scope, only your own profile. `daily_rate` needs finance.values.view.
+      x-permission: workers.view
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          enum:
+          - active
+          - inactive
+          default: active
+      - name: filter[search]
+        in: query
+        schema:
+          type: string
+      - name: filter[linked]
+        in: query
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Worker'
+        '403':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Workforce
+      operationId: createWorker
+      summary: Create a worker profile
+      description: Optionally linked to a farm member (one profile per member). `daily_rate` needs finance.values.view.
+      x-permission: workers.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkerInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Worker'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/workers/{worker}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: worker
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Workforce
+      operationId: getWorker
+      summary: A worker profile
+      x-permission: workers.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Worker'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags:
+      - Workforce
+      operationId: updateWorker
+      summary: Update a worker profile
+      description: Send `version` (or If-Match). Deactivating needs the worker's open tasks cancelled first.
+      x-permission: workers.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkerInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Worker'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/workers/{worker}/track:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: worker
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Workforce
+      operationId: getWorkerTrack
+      summary: A worker's GPS track for a day
+      x-permission: worker.gps.view
+      parameters:
+      - name: date
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GpsPoint'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/activities:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Workforce
+      operationId: listActivities
+      summary: Activities
+      description: Crop, livestock, asset and store work is listed to members who can see that module; `assigned` and `own` scopes see the activities holding their tasks.
+      x-permission: tasks.view
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          enum:
+          - open
+          - completed
+          - cancelled
+      - name: filter[module]
+        in: query
+        schema:
+          type: string
+      - name: filter[subject_type]
+        in: query
+        schema:
+          type: string
+      - name: filter[subject_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[from]
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: filter[to]
+        in: query
+        schema:
+          type: string
+          format: date
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/CursorPage'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Activity'
+        '403':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Workforce
+      operationId: createActivity
+      summary: Plan work and assign it
+      description: The activity type's module must be one you can see, and must match the subject (crop work on a crop cycle, animal work on an animal or group). Workers on approved leave that day are refused (409 worker_on_leave).
+      x-permission: tasks.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityInput'
+      responses:
+        '201':
+          description: Created with one task per worker
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Activity'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/activities/{activity}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: activity
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Workforce
+      operationId: getActivity
+      summary: An activity and its tasks
+      x-permission: tasks.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Activity'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags:
+      - Workforce
+      operationId: updateActivity
+      summary: Change an open activity
+      x-permission: tasks.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                instructions:
+                  type:
+                  - string
+                  - 'null'
+                due_on:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                priority:
+                  type: string
+                  enum:
+                  - low
+                  - normal
+                  - high
+                target_quantity:
+                  type:
+                  - number
+                  - 'null'
+                target_unit:
+                  type:
+                  - string
+                  - 'null'
+                version:
+                  type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Activity'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/activities/{activity}/assign:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: activity
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: assignActivity
+      summary: Add workers to an activity
+      x-permission: tasks.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - worker_ids
+              properties:
+                worker_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Activity'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/activities/{activity}/cancel:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: activity
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: cancelActivity
+      summary: Cancel an activity and its open tasks
+      x-permission: tasks.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Activity'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/tasks:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Workforce
+      operationId: listTasks
+      summary: Tasks
+      description: A field worker (`assigned` scope) sees only their own tasks.
+      x-permission: tasks.view
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          description: Comma-separated statuses
+      - name: filter[worker_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[activity_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[module]
+        in: query
+        schema:
+          type: string
+      - name: filter[due_from]
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: filter[due_to]
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: filter[overdue]
+        in: query
+        schema:
+          type: boolean
+      - name: filter[mine]
+        in: query
+        schema:
+          type: boolean
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/CursorPage'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Task'
+        '403':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/tasks/{task}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: task
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Workforce
+      operationId: getTask
+      summary: A task with its log and photos
+      description: Locations in the log and photos are shown to the worker and to members with worker.gps.view.
+      x-permission: tasks.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/tasks/{task}/start:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: task
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: startTask
+      summary: Start (or restart after a rejection)
+      description: Your own task only (404 otherwise). From assigned or rejected. An invalid step is 409 invalid_state_transition with the current `status`.
+      x-permission: tasks.execute
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                occurred_at:
+                  type: string
+                  format: date-time
+                  description: When it happened (device time); not in the future.
+                lat:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -90
+                  maximum: 90
+                lng:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -180
+                  maximum: 180
+                accuracy_m:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: 0
+                quantity:
+                  type:
+                  - number
+                  - 'null'
+                unit:
+                  type:
+                  - string
+                  - 'null'
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/tasks/{task}/pause:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: task
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: pauseTask
+      summary: Pause
+      description: Your own task only (404 otherwise). From in progress. An invalid step is 409 invalid_state_transition with the current `status`.
+      x-permission: tasks.execute
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                occurred_at:
+                  type: string
+                  format: date-time
+                  description: When it happened (device time); not in the future.
+                lat:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -90
+                  maximum: 90
+                lng:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -180
+                  maximum: 180
+                accuracy_m:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: 0
+                quantity:
+                  type:
+                  - number
+                  - 'null'
+                unit:
+                  type:
+                  - string
+                  - 'null'
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/tasks/{task}/resume:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: task
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: resumeTask
+      summary: Resume
+      description: Your own task only (404 otherwise). From paused. An invalid step is 409 invalid_state_transition with the current `status`.
+      x-permission: tasks.execute
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                occurred_at:
+                  type: string
+                  format: date-time
+                  description: When it happened (device time); not in the future.
+                lat:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -90
+                  maximum: 90
+                lng:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -180
+                  maximum: 180
+                accuracy_m:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: 0
+                quantity:
+                  type:
+                  - number
+                  - 'null'
+                unit:
+                  type:
+                  - string
+                  - 'null'
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/tasks/{task}/submit:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: task
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: submitTask
+      summary: Submit for verification
+      description: Your own task only (404 otherwise). With the quantity done. Worked time is computed from the log. An invalid step is 409 invalid_state_transition with the current `status`.
+      x-permission: tasks.execute
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                occurred_at:
+                  type: string
+                  format: date-time
+                  description: When it happened (device time); not in the future.
+                lat:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -90
+                  maximum: 90
+                lng:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -180
+                  maximum: 180
+                accuracy_m:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: 0
+                quantity:
+                  type:
+                  - number
+                  - 'null'
+                unit:
+                  type:
+                  - string
+                  - 'null'
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/tasks/{task}/note:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: task
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: noteTask
+      summary: Add a progress note
+      description: Your own task only (404 otherwise). Changes nothing but the log (and the quantity, if sent). An invalid step is 409 invalid_state_transition with the current `status`.
+      x-permission: tasks.execute
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                occurred_at:
+                  type: string
+                  format: date-time
+                  description: When it happened (device time); not in the future.
+                lat:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -90
+                  maximum: 90
+                lng:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -180
+                  maximum: 180
+                accuracy_m:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: 0
+                quantity:
+                  type:
+                  - number
+                  - 'null'
+                unit:
+                  type:
+                  - string
+                  - 'null'
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/tasks/{task}/verify:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: task
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: verifyTask
+      summary: Verify submitted work
+      description: Nobody verifies their own work. Work on a traceable subject adds a work_done event to its history.
+      x-permission: tasks.verify
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/tasks/{task}/reject:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: task
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: rejectTask
+      summary: Send work back
+      x-permission: tasks.verify
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/tasks/{task}/cancel:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: task
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: cancelTask
+      summary: Cancel a task
+      x-permission: tasks.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/tasks/{task}/photos:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: task
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: addTaskPhoto
+      summary: Attach a photo to your task
+      description: Upload the file to media/uploads first; only your own uploads can be attached.
+      x-permission: tasks.execute
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - media_id
+              properties:
+                media_id:
+                  type: string
+                  format: uuid
+                taken_at:
+                  type:
+                  - string
+                  - 'null'
+                  format: date-time
+                lat:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -90
+                  maximum: 90
+                lng:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -180
+                  maximum: 180
+                accuracy_m:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: 0
+                caption:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '201':
+          description: Attached
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TaskPhotoRef'
+        '200':
+          description: Already attached
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/attendance:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Workforce
+      operationId: listAttendance
+      summary: Attendance
+      description: With the `own` scope, only your own days.
+      x-permission: attendance.view
+      parameters:
+      - name: filter[from]
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: filter[to]
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: filter[worker_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[open]
+        in: query
+        schema:
+          type: boolean
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/CursorPage'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Attendance'
+        '403':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Workforce
+      operationId: enterAttendance
+      summary: Enter a day by hand
+      description: For workers without a phone. The note is required and audited.
+      x-permission: attendance.approve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - worker_id
+              - check_in_at
+              - note
+              properties:
+                worker_id:
+                  type: string
+                  format: uuid
+                check_in_at:
+                  type: string
+                  format: date-time
+                check_out_at:
+                  type:
+                  - string
+                  - 'null'
+                  format: date-time
+                note:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Attendance'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/attendance/{attendance}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: attendance
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    patch:
+      tags:
+      - Workforce
+      operationId: correctAttendance
+      summary: Correct attendance times
+      description: The reason is required; old and new times are audited.
+      x-permission: attendance.approve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - note
+              properties:
+                check_in_at:
+                  type: string
+                  format: date-time
+                check_out_at:
+                  type:
+                  - string
+                  - 'null'
+                  format: date-time
+                note:
+                  type: string
+                version:
+                  type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Attendance'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/attendance/check-in:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    post:
+      tags:
+      - Workforce
+      operationId: checkIn
+      summary: Check in
+      description: One record per worker and day (farm time zone); a second check-in is 409 already_checked_in.
+      x-permission: attendance.record
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                  description: Client id (offline)
+                occurred_at:
+                  type: string
+                  format: date-time
+                lat:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -90
+                  maximum: 90
+                lng:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -180
+                  maximum: 180
+                accuracy_m:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: 0
+                photo_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '201':
+          description: Checked in
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Attendance'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/attendance/check-out:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    post:
+      tags:
+      - Workforce
+      operationId: checkOut
+      summary: Check out
+      description: Closes your open day; 409 not_checked_in without one.
+      x-permission: attendance.record
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                  description: Client id (offline)
+                occurred_at:
+                  type: string
+                  format: date-time
+                lat:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -90
+                  maximum: 90
+                lng:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: -180
+                  maximum: 180
+                accuracy_m:
+                  type:
+                  - number
+                  - 'null'
+                  minimum: 0
+                photo_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Attendance'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/gps-points:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    post:
+      tags:
+      - Workforce
+      operationId: recordGpsPoints
+      summary: Record GPS points
+      description: Points outside a work session (checked in, or one of your tasks in progress) are skipped.
+      x-permission: attendance.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - points
+              properties:
+                points:
+                  type: array
+                  maxItems: 500
+                  items:
+                    type: object
+                    required:
+                    - recorded_at
+                    - lat
+                    - lng
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      recorded_at:
+                        type: string
+                        format: date-time
+                      lat:
+                        type: number
+                      lng:
+                        type: number
+                      accuracy_m:
+                        type:
+                        - number
+                        - 'null'
+                      task_id:
+                        type:
+                        - string
+                        - 'null'
+                        format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      accepted:
+                        type: integer
+                      skipped:
+                        type: integer
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/leave:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Workforce
+      operationId: listLeave
+      summary: Leave requests
+      description: Approvers see everyone; others their own.
+      x-permission: leave.request | leave.approve
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          enum:
+          - requested
+          - approved
+          - rejected
+          - cancelled
+      - name: filter[worker_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[from]
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: filter[to]
+        in: query
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Leave'
+        '403':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Workforce
+      operationId: requestLeave
+      summary: Request leave
+      description: For yourself; approvers may also enter leave for any worker (`worker_id`). Overlapping leave is 409 overlapping_leave.
+      x-permission: leave.request | leave.approve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaveInput'
+      responses:
+        '201':
+          description: Requested
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Leave'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/leave/{leave}/approve:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: leave
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: approveLeave
+      summary: Approve leave
+      description: Nobody decides their own request unless they are the owner.
+      x-permission: leave.approve
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Leave'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/leave/{leave}/reject:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: leave
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: rejectLeave
+      summary: Reject leave
+      x-permission: leave.approve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - note
+              properties:
+                note:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Leave'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/leave/{leave}/cancel:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: leave
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Workforce
+      operationId: cancelLeave
+      summary: Cancel leave
+      description: Requested leave, or approved leave that has not started.
+      x-permission: leave.request | leave.approve
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Leave'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/media/uploads:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    post:
+      tags:
+      - Media
+      operationId: uploadMedia
+      summary: Upload a photo or document
+      description: JPEG, PNG, WebP or PDF, up to 10 MB by default. Any member may upload; linking a file to a record is checked there.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - name: X-Content-SHA256
+        in: header
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                sha256:
+                  type: string
+                  description: Hex SHA-256 of the file; a mismatch is 422 checksum_mismatch.
+      responses:
+        '201':
+          description: Stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Media'
+        '200':
+          description: 'Already stored (same SHA-256): the existing media'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Media'
+        '413':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/media/{media}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: media
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Media
+      operationId: getMedia
+      summary: Media metadata
+      description: The uploader, or members with worker.gps.view, tasks.verify or attendance.approve.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Media'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/media/{media}/content:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: media
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Media
+      operationId: getMediaContent
+      summary: The file
+      responses:
+        '200':
+          description: The bytes, with the stored content type
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/sync/push:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    post:
+      tags:
+      - Sync
+      operationId: syncPush
+      summary: Push offline changes
+      description: 'Mutations are applied in order, each with the permission of the matching endpoint. Supported: worker_task_logs.insert (task steps), worker_task_photos.insert, worker_attendance.check_in / check_out, worker_gps_points.insert, worker_leave.insert. 30 pushes per minute per device.'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncPush'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SyncResult'
+        '422':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/sync/pull:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Sync
+      operationId: syncPull
+      summary: Pull changes
+      description: 'The phone''s mirror: your own tasks for the coming 14 days and recent ones, your recent attendance and leave, your worker profile. `remove` means the record left your mirror.'
+      parameters:
+      - name: cursor
+        in: query
+        schema:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          description: Omit for a full snapshot
+      - name: entities
+        in: query
+        schema:
+          type: string
+          description: 'Comma-separated: tasks, attendance, leave, workers'
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 500
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SyncPull'
+        '422':
+          $ref: '#/components/responses/Problem'
+
 components:
   securitySchemes:
     bearer:
@@ -5851,3 +7712,1018 @@ components:
         reason: { type: [string, 'null'] }
         buyer: { type: [string, 'null'] }
         expected_price: { type: [number, 'null'], minimum: 0 }
+    Worker:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: worker
+        worker_code:
+          type: string
+        full_name:
+          type: string
+        phone:
+          type:
+          - string
+          - 'null'
+        national_id:
+          type:
+          - string
+          - 'null'
+          description: Only with workers.manage
+        job_title:
+          type:
+          - string
+          - 'null'
+        employment_type:
+          type: string
+          enum:
+          - permanent
+          - casual
+          - contract
+          - seasonal
+        daily_rate:
+          type:
+          - number
+          - 'null'
+          description: Only with finance.values.view
+        started_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        left_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        status:
+          type: string
+          enum:
+          - active
+          - inactive
+        member:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              user:
+                oneOf:
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                    email:
+                      type: string
+                - type: 'null'
+          - type: 'null'
+        notes:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    WorkerInput:
+      type: object
+      properties:
+        full_name:
+          type: string
+          minLength: 2
+          maxLength: 150
+        farm_user_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        phone:
+          type:
+          - string
+          - 'null'
+        national_id:
+          type:
+          - string
+          - 'null'
+        job_title:
+          type:
+          - string
+          - 'null'
+        employment_type:
+          type: string
+          enum:
+          - permanent
+          - casual
+          - contract
+          - seasonal
+        daily_rate:
+          type:
+          - number
+          - 'null'
+          minimum: 0
+        started_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        left_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        status:
+          type: string
+          enum:
+          - active
+          - inactive
+        notes:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+    Activity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: activity
+        code:
+          type: string
+        activity_type:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        module:
+          type: string
+          enum:
+          - crops
+          - livestock
+          - assets
+          - inventory
+          - general
+        title:
+          type: string
+        instructions:
+          type:
+          - string
+          - 'null'
+        subject:
+          type: object
+          properties:
+            type:
+              type: string
+              enum:
+              - crop_cycle
+              - plot
+              - location
+              - animal
+              - animal_group
+              - general
+            id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+            label:
+              type:
+              - string
+              - 'null'
+        plot:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
+          - type: 'null'
+        location:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
+          - type: 'null'
+        planned_on:
+          type: string
+          format: date
+        due_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        priority:
+          type: string
+          enum:
+          - low
+          - normal
+          - high
+        target_quantity:
+          type:
+          - number
+          - 'null'
+        target_unit:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          enum:
+          - open
+          - completed
+          - cancelled
+        completed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        task_counts:
+          type: object
+          properties:
+            total:
+              type: integer
+            open:
+              type: integer
+            submitted:
+              type: integer
+            verified:
+              type: integer
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        created_by:
+          oneOf:
+          - $ref: '#/components/schemas/Ref'
+          - type: 'null'
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ActivityInput:
+      type: object
+      required:
+      - activity_type_id
+      - worker_ids
+      properties:
+        activity_type_id:
+          type: string
+          format: uuid
+        title:
+          type:
+          - string
+          - 'null'
+        instructions:
+          type:
+          - string
+          - 'null'
+        subject_type:
+          type: string
+          enum:
+          - crop_cycle
+          - plot
+          - location
+          - animal
+          - animal_group
+          - general
+          default: general
+        subject_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        planned_on:
+          type: string
+          format: date
+        due_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        priority:
+          type: string
+          enum:
+          - low
+          - normal
+          - high
+        target_quantity:
+          type:
+          - number
+          - 'null'
+        target_unit:
+          type:
+          - string
+          - 'null'
+          description: A unit code
+        worker_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 50
+    TaskLogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        event:
+          type: string
+          enum:
+          - start
+          - pause
+          - resume
+          - submit
+          - verify
+          - reject
+          - cancel
+          - note
+        from_status:
+          type: string
+        to_status:
+          type:
+          - string
+          - 'null'
+        applied:
+          type: boolean
+          description: 'false: an offline step the server refused, kept as evidence'
+        occurred_at:
+          type: string
+          format: date-time
+        point:
+          oneOf:
+          - type: object
+            properties:
+              lat:
+                type: number
+              lng:
+                type: number
+              accuracy_m:
+                type:
+                - number
+                - 'null'
+          - type: 'null'
+        quantity:
+          type:
+          - number
+          - 'null'
+        unit:
+          type:
+          - string
+          - 'null'
+        note:
+          type:
+          - string
+          - 'null'
+        recorded_by:
+          oneOf:
+          - $ref: '#/components/schemas/Ref'
+          - type: 'null'
+    TaskPhotoRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        media_id:
+          type: string
+          format: uuid
+        taken_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        point:
+          oneOf:
+          - type: object
+            properties:
+              lat:
+                type: number
+              lng:
+                type: number
+              accuracy_m:
+                type:
+                - number
+                - 'null'
+          - type: 'null'
+        caption:
+          type:
+          - string
+          - 'null'
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: task
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - assigned
+          - in_progress
+          - paused
+          - submitted
+          - verified
+          - rejected
+          - cancelled
+        due_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        overdue:
+          type: boolean
+        started_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        submitted_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        worked_minutes:
+          type:
+          - integer
+          - 'null'
+        quantity:
+          type:
+          - number
+          - 'null'
+        unit:
+          type:
+          - string
+          - 'null'
+        submit_note:
+          type:
+          - string
+          - 'null'
+        review_note:
+          type:
+          - string
+          - 'null'
+          description: Verification note, rejection or cancellation reason
+        verified_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        verified_by:
+          oneOf:
+          - $ref: '#/components/schemas/Ref'
+          - type: 'null'
+        worker:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            worker_code:
+              type: string
+            full_name:
+              type: string
+        activity:
+          type:
+          - object
+          - 'null'
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            title:
+              type: string
+            module:
+              type: string
+            activity_type:
+              type:
+              - object
+              - 'null'
+              properties:
+                code:
+                  type: string
+                name:
+                  type: string
+            instructions:
+              type:
+              - string
+              - 'null'
+            subject:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum:
+                  - crop_cycle
+                  - plot
+                  - location
+                  - animal
+                  - animal_group
+                  - general
+                id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                label:
+                  type:
+                  - string
+                  - 'null'
+            plot_id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+            location_id:
+              type:
+              - string
+              - 'null'
+              format: uuid
+            planned_on:
+              type: string
+              format: date
+            priority:
+              type: string
+            target_quantity:
+              type:
+              - number
+              - 'null'
+            target_unit:
+              type:
+              - string
+              - 'null'
+            status:
+              type: string
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskLogEntry'
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskPhotoRef'
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Attendance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: attendance
+        worker:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            worker_code:
+              type: string
+            full_name:
+              type: string
+        worker_id:
+          type: string
+          format: uuid
+        work_date:
+          type: string
+          format: date
+        check_in_at:
+          type: string
+          format: date-time
+        check_in_point:
+          oneOf:
+          - type: object
+            properties:
+              lat:
+                type: number
+              lng:
+                type: number
+              accuracy_m:
+                type:
+                - number
+                - 'null'
+          - type: 'null'
+        check_in_photo_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        check_out_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        check_out_point:
+          oneOf:
+          - type: object
+            properties:
+              lat:
+                type: number
+              lng:
+                type: number
+              accuracy_m:
+                type:
+                - number
+                - 'null'
+          - type: 'null'
+        check_out_photo_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        minutes:
+          type:
+          - integer
+          - 'null'
+        source:
+          type: string
+          enum:
+          - mobile
+          - web
+          - manual
+        note:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+        updated_at:
+          type: string
+          format: date-time
+    GpsPoint:
+      type: object
+      properties:
+        recorded_at:
+          type: string
+          format: date-time
+        lat:
+          type: number
+        lng:
+          type: number
+        accuracy_m:
+          type:
+          - number
+          - 'null'
+        task_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+    Leave:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: leave
+        worker:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            worker_code:
+              type: string
+            full_name:
+              type: string
+        worker_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+          - annual
+          - sick
+          - compassionate
+          - unpaid
+          - other
+        from_on:
+          type: string
+          format: date
+        to_on:
+          type: string
+          format: date
+        days:
+          type: integer
+        reason:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          enum:
+          - requested
+          - approved
+          - rejected
+          - cancelled
+        requested_by:
+          oneOf:
+          - $ref: '#/components/schemas/Ref'
+          - type: 'null'
+        decided_by:
+          oneOf:
+          - $ref: '#/components/schemas/Ref'
+          - type: 'null'
+        decided_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        decision_note:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    LeaveInput:
+      type: object
+      required:
+      - kind
+      - from_on
+      - to_on
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Client id (offline)
+        worker_id:
+          type: string
+          format: uuid
+          description: Approvers only
+        kind:
+          type: string
+          enum:
+          - annual
+          - sick
+          - compassionate
+          - unpaid
+          - other
+        from_on:
+          type: string
+          format: date
+        to_on:
+          type: string
+          format: date
+        reason:
+          type:
+          - string
+          - 'null'
+    MyDay:
+      type: object
+      properties:
+        worker:
+          oneOf:
+          - $ref: '#/components/schemas/Worker'
+          - type: 'null'
+        date:
+          type: string
+          format: date
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        attendance:
+          oneOf:
+          - $ref: '#/components/schemas/Attendance'
+          - type: 'null'
+        leave:
+          type: array
+          items:
+            $ref: '#/components/schemas/Leave'
+        counts:
+          type: object
+          properties:
+            open:
+              type: integer
+            done_today:
+              type: integer
+    Media:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sha256:
+          type: string
+        mime:
+          type: string
+        size_bytes:
+          type: integer
+        original_name:
+          type:
+          - string
+          - 'null'
+        created_at:
+          type: string
+          format: date-time
+    SyncMutation:
+      type: object
+      required:
+      - mutation_id
+      - entity
+      - op
+      - data
+      properties:
+        mutation_id:
+          type: string
+          format: uuid
+          description: Unique per change; a repeat returns `duplicate`
+        entity:
+          type: string
+          enum:
+          - worker_task_logs
+          - worker_task_photos
+          - worker_attendance
+          - worker_gps_points
+          - worker_leave
+        op:
+          type: string
+          enum:
+          - insert
+          - check_in
+          - check_out
+        id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Client-generated id of the new record
+        base_version:
+          type:
+          - integer
+          - 'null'
+        occurred_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        data:
+          type: object
+          additionalProperties: true
+    SyncPush:
+      type: object
+      required:
+      - mutations
+      properties:
+        device_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        mutations:
+          type: array
+          maxItems: 200
+          items:
+            $ref: '#/components/schemas/SyncMutation'
+    SyncRecord:
+      type: object
+      properties:
+        entity:
+          type: string
+          enum:
+          - tasks
+          - attendance
+          - leave
+          - workers
+        id:
+          type: string
+          format: uuid
+        version:
+          type:
+          - integer
+          - 'null'
+        data:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+    SyncResult:
+      type: object
+      properties:
+        mutation_id:
+          type: string
+          format: uuid
+        entity:
+          type: string
+        op:
+          type: string
+        id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        status:
+          type: string
+          enum:
+          - applied
+          - duplicate
+          - conflict
+          - rejected
+          - deferred
+          - error
+        original_status:
+          type: string
+          description: 'For duplicates: the first result'
+        version:
+          type:
+          - integer
+          - 'null'
+        error:
+          type:
+          - object
+          - 'null'
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            errors:
+              type: object
+            media_id:
+              type: string
+              format: uuid
+        server:
+          oneOf:
+          - $ref: '#/components/schemas/SyncRecord'
+          - type: 'null'
+          description: The server's record after applying, or on conflict
+    SyncPull:
+      type: object
+      properties:
+        changes:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/SyncRecord'
+            - type: object
+              properties:
+                op:
+                  type: string
+                  enum:
+                  - upsert
+                  - remove
+        next_cursor:
+          type: string
+        has_more:
+          type: boolean

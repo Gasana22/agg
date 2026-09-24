@@ -11,8 +11,10 @@ use App\Modules\Crops\Application\CropPlans;
 use App\Modules\Crops\Application\CropSetup;
 use App\Modules\Crops\Domain\Enums\CloseReason;
 use App\Modules\Crops\Domain\Enums\CycleStage;
+use App\Modules\Crops\Domain\Models\CropCycle;
 use App\Modules\FarmStructure\Application\StructureService;
 use App\Modules\FarmStructure\Domain\Models\Location;
+use App\Modules\FarmStructure\Domain\Models\Plot;
 use App\Modules\Identity\Domain\Enums\UserType;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Livestock\Application\AnimalRecords;
@@ -31,6 +33,15 @@ use App\Modules\Tenancy\TenantContext;
 use App\Modules\Traceability\Application\Recorder;
 use App\Modules\Traceability\Domain\Enums\BatchKind;
 use App\Modules\Traceability\Domain\Enums\LinkType;
+use App\Modules\Workforce\Application\Activities;
+use App\Modules\Workforce\Application\AttendanceBook;
+use App\Modules\Workforce\Application\LeaveDesk;
+use App\Modules\Workforce\Application\TaskFlow;
+use App\Modules\Workforce\Application\Workers;
+use App\Modules\Workforce\Domain\Enums\TaskEvent;
+use App\Modules\Workforce\Domain\Enums\TaskStatus;
+use App\Modules\Workforce\Domain\Models\Attendance;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -146,6 +157,108 @@ class DemoSeeder extends Seeder
 
         $this->seedCrops($crop, $plots, $context, $recorder);
         $this->seedLivestock($mixed, $context);
+        $this->seedWorkforce($mixed, $crop, $context);
+    }
+
+    /**
+     * A small workforce, run through the workforce services: Wilson (the
+     * field worker account) and three casual workers on the mixed farm, a
+     * week of attendance, today's schedule with work to verify and an overdue
+     * fence, a leave request; Wilson also weeds maize on the crop farm.
+     */
+    private function seedWorkforce(Farm $mixed, Farm $cropFarm, TenantContext $context): void
+    {
+        $membership = fn (Farm $farm, string $email) => FarmUser::where('farm_id', $farm->id)->whereHas('user', fn ($q) => $q->where('email', $email))->firstOrFail();
+        $as = function (Farm $farm, FarmUser $who, callable $work) use ($context) {
+            Auth::setUser($who->user);
+
+            return $context->run($farm, $work, $who);
+        };
+        $type = fn (string $code) => DB::table('global_activity_types')->where('code', $code)->value('id');
+        $tz = $mixed->timezone;
+        $at = fn (int $daysAgo, string $time) => CarbonImmutable::parse(now($tz)->subDays($daysAgo)->toDateString().' '.$time, $tz)->utc();
+
+        $manager = $membership($mixed, 'manager@aggfarms.test');
+        $wilsonMember = $membership($mixed, 'worker@aggfarms.test');
+
+        // Profiles and a week of attendance (entered as check-ins from the phone).
+        [$wilson, $okello, $nakato, $mugisha] = $as($mixed, $manager, function () use ($wilsonMember, $at) {
+            $workers = app(Workers::class);
+            $wilson = $workers->create(['full_name' => 'Wilson Worker', 'employment_type' => 'permanent', 'job_title' => 'Herdsman', 'phone' => '+256 772 100200', 'farm_user_id' => $wilsonMember->id, 'started_on' => '2024-02-01']);
+            $okello = $workers->create(['full_name' => 'Okello Joseph', 'employment_type' => 'casual', 'job_title' => 'General hand', 'phone' => '+256 701 300400']);
+            $nakato = $workers->create(['full_name' => 'Nakato Sarah', 'employment_type' => 'casual', 'job_title' => 'Milker']);
+            $mugisha = $workers->create(['full_name' => 'Mugisha Peter', 'employment_type' => 'contract', 'job_title' => 'Fencer']);
+            foreach (range(6, 1) as $d) {
+                foreach ([$wilson, $okello, $nakato] as $i => $w) {
+                    if ($d === 3 && $i === 2) {
+                        continue;   // Nakato was off
+                    }
+                    Attendance::create(['worker_id' => $w->id, 'work_date' => $at($d, '07:00')->setTimezone(app(TenantContext::class)->farm()->timezone)->toDateString(),
+                        'check_in_at' => $at($d, sprintf('06:%02d', 50 + $i * 4)), 'check_out_at' => $at($d, sprintf('16:%02d', 10 + $i * 7)),
+                        'check_in_lat' => 0.4046, 'check_in_lng' => 32.3864, 'source' => $i === 0 ? 'mobile' : 'manual', 'note' => $i === 0 ? null : 'Paper register']);
+                }
+            }
+
+            return [$wilson, $okello, $nakato, $mugisha];
+        });
+
+        // The manager plans the work.
+        [$vaccinate, $milking, $herding] = $as($mixed, $manager, function () use ($type, $wilson, $okello, $nakato, $mugisha) {
+            $plan = app(Activities::class);
+            $group = fn (string $code) => AnimalGroup::where('code', $code)->value('id');
+            $plot = fn (string $code) => Plot::where('code', $code)->value('id');
+
+            $planned = [
+                $plan->create(['activity_type_id' => $type('deworming'), 'subject_type' => 'animal_group', 'subject_id' => $group('GOATS'), 'planned_on' => now()->subDay()->toDateString(),
+                    'instructions' => 'Albendazole 10%, 1 ml per 10 kg. Weigh the does first.', 'worker_ids' => [$wilson->id]]),
+                $plan->create(['activity_type_id' => $type('milking'), 'subject_type' => 'animal_group', 'subject_id' => $group('DAIRY'), 'title' => 'Morning and evening milking',
+                    'instructions' => 'Record each cow on the milking sheet. Bella is under milk withdrawal: milk into the discard can.', 'worker_ids' => [$wilson->id, $nakato->id]]),
+                $plan->create(['activity_type_id' => $type('herding'), 'subject_type' => 'animal_group', 'subject_id' => $group('BEEF'), 'title' => 'Graze the Ankole on Paddock 3',
+                    'planned_on' => now()->subDay()->toDateString(), 'worker_ids' => [$okello->id]]),
+                $plan->create(['activity_type_id' => $type('fencing'), 'subject_type' => 'plot', 'subject_id' => $plot('PAD-2'), 'title' => 'Repair the Paddock 2 fence',
+                    'planned_on' => now()->subDays(4)->toDateString(), 'due_on' => now()->subDays(2)->toDateString(), 'priority' => 'high', 'target_quantity' => 120, 'target_unit' => 'm', 'worker_ids' => [$mugisha->id]]),
+                $plan->create(['activity_type_id' => $type('cleaning_housing'), 'subject_type' => 'location', 'subject_id' => Location::where('code', 'GOAT')->value('id'),
+                    'title' => 'Clean the goat house', 'worker_ids' => [$okello->id]]),
+            ];
+
+            return array_slice($planned, 0, 3);
+        });
+
+        // Wilson's work from his phone: yesterday's deworming (waiting for
+        // verification), and today's milking under way after checking in.
+        $as($mixed, $wilsonMember, function () use ($vaccinate, $milking, $at) {
+            $flow = app(TaskFlow::class);
+            $mine = fn ($activity) => $activity->tasks()->whereHas('worker', fn ($q) => $q->whereNotNull('farm_user_id'))->firstOrFail();
+            $point = ['lat' => 0.4047, 'lng' => 32.3876, 'accuracy_m' => 7];
+            $task = $mine($vaccinate);
+            $flow->workerStep($task, TaskEvent::Start, $point + ['occurred_at' => $at(1, '09:10')]);
+            $flow->workerStep($task, TaskEvent::Submit, $point + ['occurred_at' => $at(1, '10:25'), 'quantity' => 11, 'unit' => 'head', 'note' => 'All 11 goats dewormed; Mimi was not in the house.']);
+            app(AttendanceBook::class)->checkIn(['occurred_at' => $at(0, '06:52'), 'lat' => 0.4046, 'lng' => 32.3864, 'accuracy_m' => 9]);
+            $flow->workerStep($mine($milking), TaskEvent::Start, ['occurred_at' => $at(0, '07:05'), 'lat' => 0.4049, 'lng' => 32.3890, 'accuracy_m' => 5]);
+        });
+
+        // Okello's herding yesterday was verified (on paper, entered by the manager's team).
+        $as($mixed, $manager, function () use ($herding, $at) {
+            $task = $herding->tasks()->firstOrFail();
+            $task->forceFill(['status' => TaskStatus::Submitted, 'started_at' => $at(1, '08:00'), 'submitted_at' => $at(1, '15:30'), 'worked_minutes' => 450])->save();
+            app(TaskFlow::class)->verify($task, 'Cattle back in the kraal by 16:00');
+        });
+
+        // Nakato asks for leave next week.
+        $as($mixed, $membership($mixed, 'owner@aggfarms.test'), fn () => app(LeaveDesk::class)->request([
+            'worker_id' => $nakato->id, 'kind' => 'annual', 'from_on' => now()->addDays(7)->toDateString(), 'to_on' => now()->addDays(9)->toDateString(), 'reason' => 'Family visit in Masaka',
+        ]));
+
+        // On the crop farm, Wilson weeds the maize on A-1.
+        $cropWilson = $membership($cropFarm, 'worker@aggfarms.test');
+        $agronomist = $membership($cropFarm, 'agronomist@aggfarms.test');
+        $as($cropFarm, $agronomist, function () use ($type, $cropWilson) {
+            $w = app(Workers::class)->create(['full_name' => 'Wilson Worker', 'employment_type' => 'permanent', 'farm_user_id' => $cropWilson->id]);
+            $cycle = CropCycle::whereHas('plot', fn ($q) => $q->where('code', 'A-1'))->where('stage', '!=', 'closed')->firstOrFail();
+
+            return app(Activities::class)->create(['activity_type_id' => $type('weeding'), 'subject_type' => 'crop_cycle', 'subject_id' => $cycle->id,
+                'instructions' => 'Second weeding; watch for fall armyworm and report it.', 'target_quantity' => 2, 'target_unit' => 'ha', 'worker_ids' => [$w->id]]);
+        });
     }
 
     /**
