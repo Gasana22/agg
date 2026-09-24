@@ -50,6 +50,8 @@ use App\Modules\Tenancy\TenantContext;
 use App\Modules\Traceability\Application\BatchOperations;
 use App\Modules\Traceability\Application\ChainVerifier;
 use App\Modules\Traceability\Application\JourneyProjector;
+use App\Modules\Traceability\Application\PublicPayload;
+use App\Modules\Traceability\Application\Publishing;
 use App\Modules\Traceability\Application\Recorder;
 use App\Modules\Traceability\Domain\Enums\BatchKind;
 use App\Modules\Traceability\Domain\Models\TraceBatch;
@@ -205,7 +207,7 @@ class DemoSeeder extends Seeder
     {
         $owner = FarmUser::where('farm_id', $farm->id)->where('is_owner', true)->firstOrFail();
         Auth::setUser($owner->user);
-        $context->run($farm, function () {
+        $context->run($farm, function () use ($farm) {
             $sales = app(Invoicing::class);
             $miller = $sales->createCustomer(['name' => 'Kampala Millers Ltd', 'contact_person' => 'Joseph Okot', 'phone' => '+256772100200', 'address' => 'Plot 4, Industrial Area, Kampala']);
             $trader = $sales->createCustomer(['name' => 'Seeta Market Traders', 'phone' => '+256701555010', 'address' => 'Seeta market, stall 12']);
@@ -217,6 +219,22 @@ class DemoSeeder extends Seeder
             $shipments->deliver($first, ['received_by' => 'Joseph Okot', 'delivered_at' => now()->subDays(3)->setTime(14, 10)->toIso8601String()]);
             $shipments->dispatch(['customer_id' => $trader->id, 'dispatched_at' => now()->subDays(9)->setTime(8, 0)->toIso8601String(),
                 'lines' => [['batch_id' => $bags->id, 'quantity' => 100]]]);
+
+            // The bags are published: a QR on each bag, scanned by buyers over the last two weeks.
+            $publishing = app(Publishing::class);
+            $publishing->approve($bags, [...PublicPayload::DEFAULT_FIELDS, 'origin', 'seed_source', 'inputs', 'journey'], 'Checked against the field records');
+            $qr = $publishing->issue($bags, 'Bag labels, run 1');
+            $tz = $farm->timezone;
+            foreach (range(13, 0) as $ago) {
+                foreach (['UG' => 3, 'KE' => 1] as $country => $weight) {
+                    $scans = ($ago * 7 + strlen($country) * 3) % 5 * $weight;
+                    if ($scans > 0) {
+                        DB::table('trace_qr_scans')->insert(['farm_id' => $farm->id, 'qr_code_id' => $qr->id, 'day' => now($tz)->subDays($ago)->toDateString(), 'country' => $country, 'scans' => $scans]);
+                    }
+                }
+            }
+            $total = (int) DB::table('trace_qr_scans')->where('qr_code_id', $qr->id)->sum('scans');
+            DB::table('trace_qr_codes')->where('id', $qr->id)->update(['scan_count' => $total, 'last_scanned_at' => now()->subHours(3)]);
         }, $owner);
         Auth::forgetGuards();
     }

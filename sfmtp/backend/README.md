@@ -24,7 +24,7 @@ own routes, migrations, domain, application services and HTTP layer
 | `Livestock` | Animals and groups, breeding and births, health and vaccinations with withdrawal periods, feeding, weights, milk and egg production, movements, exits and sale requests; writes the animal trace history |
 | `FarmStructure` | Blocks, sections, plots and locations with GeoJSON boundaries, soil profiles, geometry warnings (ADR-0009) |
 | `Support` | Tickets, internal notes, owner-granted read-only support access |
-| `Traceability` | Batch graph, hash-chained events, recorder, split / merge / process / package and recall (ADR-0013), journey views and the `product_journeys` projection, chain verification and alerts |
+| `Traceability` | Batch graph, hash-chained events, recorder, split / merge / process / package and recall (ADR-0013), journey views and the `product_journeys` projection, chain verification and alerts; public QR pages with approved fields, signed payloads, scan counts and PDF labels (ADR-0014) |
 | `Reporting` | Server-driven role dashboards, "My farms" overview, the admin dashboard, financial reports (P&L, cash flow and forecast, cost per crop and animal group) |
 
 Shared plumbing is in `app/Support` (problem+json errors, request IDs,
@@ -97,7 +97,9 @@ The B-3 maize has a full journey:
 - 100 kg dispatched to a market trader nine days ago and not yet
   confirmed, which raises a traceability alert.
 
-The harvest's moisture reading is corrected. `trace:refresh-journeys`
+The harvest's moisture reading is corrected. The bags are published with
+a QR code and two weeks of scans; open `/q/<code>` on the web app signed
+out to see the public page. `trace:refresh-journeys`
 rebuilds the journey projection, and `trace:verify-chain` runs the tamper
 check.
 

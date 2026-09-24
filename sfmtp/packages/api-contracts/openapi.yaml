@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SFMTP API
-  version: 1.8.0-phase9
+  version: 1.9.0-phase10
   description: |
     Smart Farm Management & Traceability Platform REST API.
 
@@ -49,7 +49,7 @@ tags:
   - name: Structure
     description: Blocks, sections, plots and locations with GeoJSON boundaries (ADR-0009).
   - name: Traceability
-    description: Batches, append-only events, links, split / merge / process / package, recall, journeys with their timeline, worker, input, sales and location views, the hash-chain integrity check and alerts.
+    description: Public QR pages (approved fields only, signed, rate limited), approvals, QR codes and labels. Batches, append-only events, links, split / merge / process / package, recall, journeys with their timeline, worker, input, sales and location views, the hash-chain integrity check and alerts.
   - name: Dashboards
     description: Server-driven, permission-aware role dashboards.
   - name: Audit
@@ -10838,6 +10838,546 @@ paths:
         '422':
           $ref: '#/components/responses/Problem'
 
+  /farms/{farm}/traceability/batches/{batch}/approvals:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
+    get:
+      tags:
+      - Traceability
+      operationId: listTraceApprovals
+      summary: Public-field approvals of a batch, newest first
+      x-permission: trace.batches.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TraceApproval'
+                  meta:
+                    type: object
+                    properties:
+                      fields:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            key:
+                              type: string
+                              enum:
+                              - product
+                              - batch_code
+                              - farm
+                              - region
+                              - origin
+                              - crop
+                              - dates
+                              - seed_source
+                              - inputs
+                              - processing
+                              - certifications
+                              - journey
+                            description:
+                              type: string
+                      default_fields:
+                        type: array
+                        items:
+                          type: string
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Traceability
+      operationId: approvePublicFields
+      summary: Approve the public fields of a batch
+      description: 'Stores the exact payload the public will see. A newer approval replaces it for every code of the batch. Prices, costs, people, quantities and GPS are never public, whatever is approved. Recalled batches: 409 trace_batch_recalled; input lots: 422 trace_not_publishable.'
+      x-permission: trace.publish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - public_fields
+              properties:
+                public_fields:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                    enum:
+                    - product
+                    - batch_code
+                    - farm
+                    - region
+                    - origin
+                    - crop
+                    - dates
+                    - seed_source
+                    - inputs
+                    - processing
+                    - certifications
+                    - journey
+                note:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '201':
+          description: Approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TraceApproval'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/batches/{batch}/public-preview:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
+    get:
+      tags:
+      - Traceability
+      operationId: previewPublicFields
+      summary: What these fields would publish
+      x-permission: trace.publish
+      parameters:
+      - name: fields[]
+        in: query
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - product
+            - batch_code
+            - farm
+            - region
+            - origin
+            - crop
+            - dates
+            - seed_source
+            - inputs
+            - processing
+            - certifications
+            - journey
+        style: form
+        explode: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    additionalProperties: true
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/batches/{batch}/qr-codes:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - $ref: '#/components/parameters/Batch'
+    get:
+      tags:
+      - Traceability
+      operationId: listBatchQrCodes
+      summary: QR codes of a batch
+      x-permission: trace.batches.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TraceQrCode'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Traceability
+      operationId: issueQrCode
+      summary: Issue a QR code
+      description: Needs an approval first (422 not_approved). The code is 10 random Crockford base32 characters, unique across all farms.
+      x-permission: trace.publish | trace.qr.manage
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '201':
+          description: Issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TraceQrCode'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/qr-codes:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Traceability
+      operationId: listQrCodes
+      summary: QR codes of the farm
+      x-permission: trace.batches.view
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          enum:
+          - active
+          - revoked
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/CursorPage'
+                - type: object
+                  properties:
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/TraceQrCode'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/qr-codes/{qrCode}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: qrCode
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Traceability
+      operationId: getQrCode
+      summary: A QR code with 30 days of scans
+      x-permission: trace.batches.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TraceQrCode'
+                  meta:
+                    type: object
+                    properties:
+                      scans:
+                        $ref: '#/components/schemas/QrScanStats'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/qr-codes/{qrCode}/revoke:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: qrCode
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Traceability
+      operationId: revokeQrCode
+      summary: Revoke a QR code
+      description: The public page then shows a withdrawn notice. A recall revokes the codes of every recalled batch.
+      x-permission: trace.publish | trace.qr.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 300
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TraceQrCode'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/qr-codes/{qrCode}/image.svg:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: qrCode
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Traceability
+      operationId: getQrImage
+      summary: The QR image
+      x-permission: trace.batches.view
+      responses:
+        '200':
+          description: SVG
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/qr-codes/{qrCode}/labels.pdf:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: qrCode
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Traceability
+      operationId: getQrLabels
+      summary: Printable labels (A4, 24 per sheet)
+      description: Each label has the QR, the code and only approved text (product, farm).
+      x-permission: trace.batches.view
+      parameters:
+      - name: copies
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 240
+          default: 24
+      responses:
+        '200':
+          description: PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/traceability/qr-stats:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Traceability
+      operationId: getQrStats
+      summary: QR scans per day and country
+      x-permission: trace.batches.view
+      parameters:
+      - name: days
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 30
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/QrScanStats'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /public/trace/{code}:
+    parameters:
+    - name: code
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^[A-Za-z0-9-]{6,20}$
+      description: Case-insensitive; O, I and L read as 0, 1 and 1
+    get:
+      tags:
+      - Traceability
+      operationId: getPublicTrace
+      summary: Scan a QR code (public)
+      description: No sign-in. 60 requests a minute per IP. Counts the scan (day and country from CF-IPCountry only). Only approved fields; a revoked code or recalled batch returns a notice and just the product, code and farm.
+      responses:
+        '200':
+          description: The public view
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicTrace'
+                  signature:
+                    $ref: '#/components/schemas/PublicSignature'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+      security: []
+  /traceability/qr/{code}:
+    parameters:
+    - name: code
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^[A-Za-z0-9-]{6,20}$
+      description: Case-insensitive; O, I and L read as 0, 1 and 1
+    get:
+      tags:
+      - Traceability
+      operationId: getPublicTraceAlias
+      summary: Scan a QR code (public, alias)
+      description: No sign-in. 60 requests a minute per IP. Counts the scan (day and country from CF-IPCountry only). Only approved fields; a revoked code or recalled batch returns a notice and just the product, code and farm.
+      responses:
+        '200':
+          description: The public view
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicTrace'
+                  signature:
+                    $ref: '#/components/schemas/PublicSignature'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+      security: []
+  /public/trace/keys:
+    get:
+      tags:
+      - Traceability
+      operationId: getPublicTraceKeys
+      summary: Public keys that verify signed payloads
+      description: 'Verify `signature.value` (base64 Ed25519) over the canonical JSON of `data`: keys sorted at every level, no whitespace, slashes and unicode unescaped.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        alg:
+                          type: string
+                          const: Ed25519
+                        key_id:
+                          type: string
+                        public_key:
+                          type: string
+                          description: base64
+        '429':
+          $ref: '#/components/responses/Problem'
+      security: []
+
 components:
   securitySchemes:
     bearer:
@@ -16923,3 +17463,316 @@ components:
         created_at:
           type: string
           format: date-time
+    TraceApproval:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: trace_approval
+        public_fields:
+          type: array
+          items:
+            type: string
+            enum:
+            - product
+            - batch_code
+            - farm
+            - region
+            - origin
+            - crop
+            - dates
+            - seed_source
+            - inputs
+            - processing
+            - certifications
+            - journey
+        payload:
+          type: object
+          additionalProperties: true
+        note:
+          type:
+          - string
+          - 'null'
+        approved_by:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        approved_at:
+          type: string
+          format: date-time
+        current:
+          type: boolean
+    TraceQrCode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: trace_qr_code
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - active
+          - revoked
+        url:
+          type: string
+          format: uri
+        label:
+          type:
+          - string
+          - 'null'
+        batch:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            batch_code:
+              type: string
+            kind:
+              $ref: '#/components/schemas/BatchKind'
+            name:
+              type:
+              - string
+              - 'null'
+            status:
+              $ref: '#/components/schemas/BatchStatus'
+        approval_id:
+          type: string
+          format: uuid
+        issued_by:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        issued_at:
+          type: string
+          format: date-time
+        revoked_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        revoke_reason:
+          type:
+          - string
+          - 'null'
+        scan_count:
+          type: integer
+        last_scanned_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        version:
+          type: integer
+    QrScanStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        days:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              scans:
+                type: integer
+        countries:
+          type: array
+          items:
+            type: object
+            properties:
+              country:
+                type: string
+                description: ISO 3166 alpha-2; ZZ unknown
+              scans:
+                type: integer
+    PublicTrace:
+      type: object
+      properties:
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - active
+          - withdrawn
+          - recalled
+        notice:
+          oneOf:
+          - type: object
+            properties:
+              type:
+                type: string
+                enum:
+                - withdrawn
+                - recalled
+              title:
+                type: string
+              message:
+                type: string
+          - type: 'null'
+        approved_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        fields:
+          type: object
+          description: Only the approved fields
+          properties:
+            product:
+              type: object
+              properties:
+                name:
+                  type:
+                  - string
+                  - 'null'
+                kind:
+                  type:
+                  - string
+                  - 'null'
+            batch_code:
+              type: string
+            farm:
+              type: string
+            region:
+              type: object
+              properties:
+                district:
+                  type:
+                  - string
+                  - 'null'
+                country:
+                  type:
+                  - string
+                  - 'null'
+            origin:
+              type: array
+              items:
+                type: string
+            crop:
+              type: array
+              items:
+                type: string
+            dates:
+              type: object
+              properties:
+                planted:
+                  type: string
+                  format: date
+                harvested:
+                  type: string
+                  format: date
+                processed:
+                  type: string
+                  format: date
+                packed:
+                  type: string
+                  format: date
+            seed_source:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  lot_number:
+                    type: string
+                  supplier:
+                    type: string
+            inputs:
+              type: array
+              items:
+                type: object
+                properties:
+                  product:
+                    type: string
+                  type:
+                    type: string
+                  date:
+                    type: string
+                    format: date
+                  withholding_days:
+                    type: integer
+                  meat_withdrawal_days:
+                    type: integer
+                  milk_withdrawal_days:
+                    type: integer
+            processing:
+              type: array
+              items:
+                type: object
+                properties:
+                  step:
+                    type: string
+                  product:
+                    type: string
+                  method:
+                    type: string
+                  packages:
+                    type: integer
+                  package_size:
+                    type: string
+                  date:
+                    type: string
+                    format: date
+            certifications:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  note:
+                    type: string
+                  date:
+                    type: string
+                    format: date
+            journey:
+              type: array
+              items:
+                type: object
+                properties:
+                  kind:
+                    type:
+                    - string
+                    - 'null'
+                  batch_code:
+                    type: string
+                  date:
+                    type:
+                    - string
+                    - 'null'
+                    format: date
+        generated_at:
+          type: string
+          format: date-time
+    PublicSignature:
+      type: object
+      properties:
+        alg:
+          type: string
+          const: Ed25519
+        key_id:
+          type: string
+        value:
+          type: string
+          description: base64 signature of the canonical JSON of `data`

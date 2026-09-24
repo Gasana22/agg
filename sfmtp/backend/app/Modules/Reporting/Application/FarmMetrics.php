@@ -43,6 +43,14 @@ class FarmMetrics
         return TraceBatch::where('status', BatchStatus::Open->value)->count();
     }
 
+    /** QR scans in the period, by the farm's local day. */
+    public function qrScans(Period $period, string $timezone): int
+    {
+        return (int) DB::table('trace_qr_scans')->where('farm_id', $this->context->farmId())
+            ->whereBetween('day', [$period->from->setTimezone($timezone)->toDateString(), $period->to->setTimezone($timezone)->toDateString()])
+            ->sum('scans');
+    }
+
     public function traceEvents(Period $period): int
     {
         return TraceEvent::whereBetween('recorded_at', [$period->from, $period->to])->count();

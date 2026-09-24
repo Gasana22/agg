@@ -5206,6 +5206,264 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/farms/{farm}/traceability/batches/{batch}/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        /** Public-field approvals of a batch, newest first */
+        get: operations["listTraceApprovals"];
+        put?: never;
+        /**
+         * Approve the public fields of a batch
+         * @description Stores the exact payload the public will see. A newer approval replaces it for every code of the batch. Prices, costs, people, quantities and GPS are never public, whatever is approved. Recalled batches: 409 trace_batch_recalled; input lots: 422 trace_not_publishable.
+         */
+        post: operations["approvePublicFields"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/batches/{batch}/public-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        /** What these fields would publish */
+        get: operations["previewPublicFields"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/batches/{batch}/qr-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        /** QR codes of a batch */
+        get: operations["listBatchQrCodes"];
+        put?: never;
+        /**
+         * Issue a QR code
+         * @description Needs an approval first (422 not_approved). The code is 10 random Crockford base32 characters, unique across all farms.
+         */
+        post: operations["issueQrCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/qr-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** QR codes of the farm */
+        get: operations["listQrCodes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/qr-codes/{qrCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                qrCode: string;
+            };
+            cookie?: never;
+        };
+        /** A QR code with 30 days of scans */
+        get: operations["getQrCode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/qr-codes/{qrCode}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                qrCode: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke a QR code
+         * @description The public page then shows a withdrawn notice. A recall revokes the codes of every recalled batch.
+         */
+        post: operations["revokeQrCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/qr-codes/{qrCode}/image.svg": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                qrCode: string;
+            };
+            cookie?: never;
+        };
+        /** The QR image */
+        get: operations["getQrImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/qr-codes/{qrCode}/labels.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                qrCode: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Printable labels (A4, 24 per sheet)
+         * @description Each label has the QR, the code and only approved text (product, farm).
+         */
+        get: operations["getQrLabels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/traceability/qr-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** QR scans per day and country */
+        get: operations["getQrStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/trace/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Case-insensitive; O, I and L read as 0, 1 and 1 */
+                code: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Scan a QR code (public)
+         * @description No sign-in. 60 requests a minute per IP. Counts the scan (day and country from CF-IPCountry only). Only approved fields; a revoked code or recalled batch returns a notice and just the product, code and farm.
+         */
+        get: operations["getPublicTrace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/traceability/qr/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Case-insensitive; O, I and L read as 0, 1 and 1 */
+                code: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Scan a QR code (public, alias)
+         * @description No sign-in. 60 requests a minute per IP. Counts the scan (day and country from CF-IPCountry only). Only approved fields; a revoked code or recalled batch returns a notice and just the product, code and farm.
+         */
+        get: operations["getPublicTraceAlias"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/trace/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public keys that verify signed payloads
+         * @description Verify `signature.value` (base64 Ed25519) over the canonical JSON of `data`: keys sorted at every level, no whitespace, slashes and unicode unescaped.
+         */
+        get: operations["getPublicTraceKeys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -8834,6 +9092,153 @@ export interface components {
             version?: number;
             /** Format: date-time */
             created_at?: string;
+        };
+        TraceApproval: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "trace_approval";
+            public_fields?: ("product" | "batch_code" | "farm" | "region" | "origin" | "crop" | "dates" | "seed_source" | "inputs" | "processing" | "certifications" | "journey")[];
+            payload?: {
+                [key: string]: unknown;
+            };
+            note?: string | null;
+            approved_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            /** Format: date-time */
+            approved_at?: string;
+            current?: boolean;
+        };
+        TraceQrCode: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "trace_qr_code";
+            code?: string;
+            /** @enum {string} */
+            status?: "active" | "revoked";
+            /** Format: uri */
+            url?: string;
+            label?: string | null;
+            batch?: {
+                /** Format: uuid */
+                id?: string;
+                batch_code?: string;
+                kind?: components["schemas"]["BatchKind"];
+                name?: string | null;
+                status?: components["schemas"]["BatchStatus"];
+            };
+            /** Format: uuid */
+            approval_id?: string;
+            /** Format: uuid */
+            issued_by?: string | null;
+            /** Format: date-time */
+            issued_at?: string;
+            /** Format: date-time */
+            revoked_at?: string | null;
+            revoke_reason?: string | null;
+            scan_count?: number;
+            /** Format: date-time */
+            last_scanned_at?: string | null;
+            version?: number;
+        };
+        QrScanStats: {
+            total?: number;
+            days?: {
+                /** Format: date */
+                date?: string;
+                scans?: number;
+            }[];
+            countries?: {
+                /** @description ISO 3166 alpha-2; ZZ unknown */
+                country?: string;
+                scans?: number;
+            }[];
+        };
+        PublicTrace: {
+            code?: string;
+            /** @enum {string} */
+            status?: "active" | "withdrawn" | "recalled";
+            notice?: {
+                /** @enum {string} */
+                type?: "withdrawn" | "recalled";
+                title?: string;
+                message?: string;
+            } | null;
+            /** Format: date-time */
+            approved_at?: string | null;
+            /** @description Only the approved fields */
+            fields?: {
+                product?: {
+                    name?: string | null;
+                    kind?: string | null;
+                };
+                batch_code?: string;
+                farm?: string;
+                region?: {
+                    district?: string | null;
+                    country?: string | null;
+                };
+                origin?: string[];
+                crop?: string[];
+                dates?: {
+                    /** Format: date */
+                    planted?: string;
+                    /** Format: date */
+                    harvested?: string;
+                    /** Format: date */
+                    processed?: string;
+                    /** Format: date */
+                    packed?: string;
+                };
+                seed_source?: {
+                    name?: string;
+                    lot_number?: string;
+                    supplier?: string;
+                }[];
+                inputs?: {
+                    product?: string;
+                    type?: string;
+                    /** Format: date */
+                    date?: string;
+                    withholding_days?: number;
+                    meat_withdrawal_days?: number;
+                    milk_withdrawal_days?: number;
+                }[];
+                processing?: {
+                    step?: string;
+                    product?: string;
+                    method?: string;
+                    packages?: number;
+                    package_size?: string;
+                    /** Format: date */
+                    date?: string;
+                }[];
+                certifications?: {
+                    type?: string;
+                    note?: string;
+                    /** Format: date */
+                    date?: string;
+                }[];
+                journey?: {
+                    kind?: string | null;
+                    batch_code?: string;
+                    /** Format: date */
+                    date?: string | null;
+                }[];
+            };
+            /** Format: date-time */
+            generated_at?: string;
+        };
+        PublicSignature: {
+            /** @constant */
+            alg?: "Ed25519";
+            key_id?: string;
+            /** @description base64 signature of the canonical JSON of `data` */
+            value?: string;
         };
     };
     responses: {
@@ -19055,6 +19460,434 @@ export interface operations {
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+        };
+    };
+    listTraceApprovals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["TraceApproval"][];
+                        meta?: {
+                            fields?: {
+                                /** @enum {string} */
+                                key?: "product" | "batch_code" | "farm" | "region" | "origin" | "crop" | "dates" | "seed_source" | "inputs" | "processing" | "certifications" | "journey";
+                                description?: string;
+                            }[];
+                            default_fields?: string[];
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    approvePublicFields: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    public_fields: ("product" | "batch_code" | "farm" | "region" | "origin" | "crop" | "dates" | "seed_source" | "inputs" | "processing" | "certifications" | "journey")[];
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Approved */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["TraceApproval"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    previewPublicFields: {
+        parameters: {
+            query: {
+                "fields[]": ("product" | "batch_code" | "farm" | "region" | "origin" | "crop" | "dates" | "seed_source" | "inputs" | "processing" | "certifications" | "journey")[];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listBatchQrCodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["TraceQrCode"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    issueQrCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                batch: components["parameters"]["Batch"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    label?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Issued */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["TraceQrCode"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listQrCodes: {
+        parameters: {
+            query?: {
+                "filter[status]"?: "active" | "revoked";
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["TraceQrCode"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getQrCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                qrCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["TraceQrCode"];
+                        meta?: {
+                            scans?: components["schemas"]["QrScanStats"];
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    revokeQrCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                qrCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["TraceQrCode"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getQrImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                qrCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SVG */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/svg+xml": string;
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    getQrLabels: {
+        parameters: {
+            query?: {
+                copies?: number;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                qrCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getQrStats: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["QrScanStats"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getPublicTrace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Case-insensitive; O, I and L read as 0, 1 and 1 */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The public view */
+            200: {
+                headers: {
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PublicTrace"];
+                        signature?: components["schemas"]["PublicSignature"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    getPublicTraceAlias: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Case-insensitive; O, I and L read as 0, 1 and 1 */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The public view */
+            200: {
+                headers: {
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PublicTrace"];
+                        signature?: components["schemas"]["PublicSignature"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    getPublicTraceKeys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            /** @constant */
+                            alg?: "Ed25519";
+                            key_id?: string;
+                            /** @description base64 */
+                            public_key?: string;
+                        }[];
+                    };
+                };
+            };
+            429: components["responses"]["Problem"];
         };
     };
 }

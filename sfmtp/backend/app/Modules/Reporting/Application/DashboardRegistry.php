@@ -34,7 +34,7 @@ class DashboardRegistry
     /** @return array{kpis:array<int,string>, widgets:array<int,string>, quick_actions:array<int,string>} */
     private function layout(string $dashboard): array
     {
-        $trace = ['trace.open_batches', 'trace.events'];
+        $trace = ['trace.open_batches', 'trace.events', 'trace.qr_scans'];
 
         return match ($dashboard) {
             'owner' => ['kpis' => ['farm.area', 'finance.revenue', 'finance.expenses', 'finance.net_profit', 'approvals.pending', 'finance.receivables', 'finance.payables', 'inventory.value', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'expenses_to_approve', 'payroll_pending', 'orders_to_approve', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'trace_alerts', 'recent_trace_events', 'income_vs_expenses', 'trace_activity'], 'quick_actions' => ['view_pnl', 'invite_member', 'view_map', 'new_batch', 'view_audit_log']],
@@ -186,6 +186,9 @@ class DashboardRegistry
             'trace.events' => ['label' => 'Traceability events', 'format' => 'number', 'permission' => 'trace.batches.view',
                 'value' => fn (Period $p) => $this->metrics->traceEvents($p),
                 'previous' => fn (Period $p) => $this->metrics->traceEvents($p->previous())],
+            'trace.qr_scans' => ['label' => 'QR scans', 'format' => 'number', 'permission' => 'trace.batches.view',
+                'value' => fn (Period $p) => $this->metrics->qrScans($p, $farm->timezone),
+                'previous' => fn (Period $p) => $this->metrics->qrScans($p->previous(), $farm->timezone)],
         ];
     }
 

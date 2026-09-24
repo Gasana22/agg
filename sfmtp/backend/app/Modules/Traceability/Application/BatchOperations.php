@@ -202,6 +202,8 @@ class BatchOperations
                 ])]);
                 $changed[] = $b;
             }
+            // Public pages of recalled batches show the recall; their codes stop confirming the product.
+            app(Publishing::class)->revokeForBatches(array_map(fn (TraceBatch $b) => $b->id, $changed), 'Recalled: '.$reason);
 
             return $changed;
         });

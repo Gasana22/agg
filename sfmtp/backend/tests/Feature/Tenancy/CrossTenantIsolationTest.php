@@ -35,6 +35,7 @@ use App\Modules\Sales\Application\Shipments;
 use App\Modules\Tenancy\Domain\Models\Farm;
 use App\Modules\Tenancy\Domain\Models\FarmUser;
 use App\Modules\Tenancy\TenantContext;
+use App\Modules\Traceability\Application\Publishing;
 use App\Modules\Traceability\Application\Recorder;
 use App\Modules\Traceability\Domain\Enums\BatchKind;
 use App\Modules\Traceability\Domain\Models\TraceEvent;
@@ -138,12 +139,14 @@ class CrossTenantIsolationTest extends TestCase
                 'lines' => [['order_line_id' => $order->lines[0]->id, 'quantity' => 5, 'unit_price' => 100]]]);
             $goods = $this->app->make(Recorder::class)->createBatch(BatchKind::Packaged, ['name' => 'Victim eggs', 'quantity' => 30, 'unit' => 'pcs']);
             $shipment = $this->app->make(Shipments::class)->dispatch(['customer_id' => $customer->id, 'lines' => [['batch_id' => $goods->id, 'quantity' => 10]]]);
+            $this->app->make(Publishing::class)->approve($goods, ['product', 'farm']);
+            $qr = $this->app->make(Publishing::class)->issue($goods);
 
             return [
                 'ledgerAccount' => $account->id, 'expense' => $expense->id, 'income' => $income->id, 'payment' => $payment->id,
                 'payrollRun' => $run->id, 'payrollLine' => $run->lines()->value('id'), 'budget' => $budget->id,
                 'customer' => $customer->id, 'customerInvoice' => $invoice->id, 'supplierInvoice' => $supplierInvoice->id,
-                'shipment' => $shipment->id,
+                'shipment' => $shipment->id, 'qrCode' => $qr->id,
             ];
         }, $owner);
     }

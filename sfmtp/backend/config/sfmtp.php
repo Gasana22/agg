@@ -8,6 +8,14 @@ return [
     'web_url' => env('SFMTP_WEB_URL', 'http://localhost:3000'),
 
     /*
+    | Public traceability (Phase 10): QR codes encode {trace_url}/{code}.
+    | Public payloads are signed with Ed25519; the key comes from
+    | SFMTP_TRACE_SIGNING_SEED (base64, 32 bytes) or is derived from APP_KEY.
+    */
+    'trace_url' => env('SFMTP_TRACE_URL', env('SFMTP_WEB_URL', 'http://localhost:3000').'/q'),
+    'trace_signing_seed' => env('SFMTP_TRACE_SIGNING_SEED'),
+
+    /*
     | Proxies (web BFF, load balancer) whose X-Forwarded-* headers are trusted:
     | comma-separated IPs/CIDRs, or "*". Empty = trust none.
     */
