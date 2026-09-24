@@ -13,7 +13,7 @@ export function useUnits() {
   });
 }
 
-export function useCatalog(catalog: "crops" | "crop-varieties" | "animal-species" | "animal-breeds" | "activity-types", parentId?: string) {
+export function useCatalog(catalog: "crops" | "crop-varieties" | "animal-species" | "animal-breeds" | "activity-types" | "inventory-categories", parentId?: string) {
   return useQuery({
     queryKey: ["catalog", catalog, parentId ?? null],
     queryFn: async () =>

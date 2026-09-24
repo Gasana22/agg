@@ -76,7 +76,7 @@ class InventoryMetrics
             ->map(fn (InventoryRequest $r) => [
                 'id' => $r->id,
                 'title' => "{$r->code} for {$r->subject_label}",
-                'subtitle' => $r->lines->map(fn ($l) => rtrim(rtrim((string) $l->quantity, '0'), '.')." {$l->item->unit} {$l->item->name}")->implode(', ').' · '.($r->requester?->name ?? ''),
+                'subtitle' => $r->lines->map(fn ($l) => self::qty($l->quantity)." {$l->item->unit} {$l->item->name}")->implode(', ').' · '.($r->requester?->name ?? ''),
                 'at' => $r->created_at?->toIso8601ZuluString(),
                 'badge' => match ($r->status) {
                     'approved' => ['label' => 'To issue', 'tone' => 'warning'],
@@ -134,7 +134,7 @@ class InventoryMetrics
         return StockMovement::with(['item', 'location'])->orderByDesc('occurred_at')->orderByDesc('created_at')->limit(10)->get()
             ->map(fn (StockMovement $m) => [
                 'id' => $m->id,
-                'title' => ucfirst(str_replace('_', ' ', $m->type)).': '.rtrim(rtrim((string) abs((float) $m->quantity), '0'), '.')." {$m->item->unit} {$m->item->name}",
+                'title' => ucfirst(str_replace('_', ' ', $m->type)).': '.self::qty(abs((float) $m->quantity))." {$m->item->unit} {$m->item->name}",
                 'subtitle' => $m->location->name.($m->note ? " · {$m->note}" : ''),
                 'at' => $m->occurred_at->toIso8601ZuluString(),
                 'href' => "/farms/{$m->farm_id}/inventory/items/{$m->item_id}",
@@ -198,6 +198,12 @@ class InventoryMetrics
             ->selectRaw('COALESCE(SUM(l.debit), 0) AS d, COALESCE(SUM(l.credit), 0) AS c')->first();
 
         return Money::fromCents($credit ? Money::cents($row->c) - Money::cents($row->d) : Money::cents($row->d) - Money::cents($row->c));
+    }
+
+    /** 500 → "500", 0.500 → "0.5": up to three decimals, trailing zeros dropped. */
+    private static function qty(string|float $n): string
+    {
+        return rtrim(rtrim(number_format((float) $n, 3, '.', ''), '0'), '.');
     }
 
     /** @return array{0: CarbonImmutable, 1: CarbonImmutable} */

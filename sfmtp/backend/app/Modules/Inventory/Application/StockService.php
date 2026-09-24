@@ -176,12 +176,17 @@ class StockService
     }
 
     /** Bring one balance to a counted quantity; returns the value change (cents) for the adjustment's entry. */
-    public function adjustTo(InventoryItem $item, string $locationId, ?string $lotId, string|float $counted, string $sourceId, CarbonImmutable $at, string $note, ?string $entryId = null): int
+    public function adjustTo(InventoryItem $item, string $locationId, ?string $lotId, string|float $counted, string $sourceId, CarbonImmutable $at, string $note, ?string $entryId = null, string|float|null $expected = null): int
     {
         $balance = $this->lock($item, $locationId, $lotId);
-        $delta = Qty::milli($counted) - Qty::milli($balance->quantity);
+        // A count describes the shelf when it was taken: with the book quantity
+        // of that moment, apply the difference, keeping movements recorded since.
+        $delta = Qty::milli($counted) - Qty::milli($expected ?? $balance->quantity);
         if ($delta === 0) {
             return 0;
+        }
+        if (Qty::milli($balance->quantity) + $delta < 0) {
+            throw ApiException::conflict('count_outdated', "{$item->name} has moved since this count; count it again.");
         }
         if ($delta < 0) {
             $value = -$this->valueOf($balance, -$delta);

@@ -162,7 +162,7 @@ class StockDesk
             }
             $values = [];
             foreach ($lines as $line) {
-                $values[] = $v = $this->stock->adjustTo($line->item, $adjustment->location_id, $line->lot_id, $line->counted_quantity, $adjustment->id, $at, "Count {$adjustment->code}: {$adjustment->reason}");
+                $values[] = $v = $this->stock->adjustTo($line->item, $adjustment->location_id, $line->lot_id, $line->counted_quantity, $adjustment->id, $at, "Count {$adjustment->code}: {$adjustment->reason}", null, $line->expected_quantity);
                 $change += $v;
             }
             if ($threshold !== null && ! $this->access->isOwner()) {

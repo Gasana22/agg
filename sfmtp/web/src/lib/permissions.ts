@@ -6,7 +6,7 @@ export type NavItem = {
   key: string;
   label: string;
   href: (farmId: string) => string;
-  /** Permission required to see the item; the server still enforces it. */
+  /** Permission required to see the item (`a|b`: any of them); the server still enforces it. */
   permission: string | null;
   /** Only with this scope (e.g. `all`: supervisors, not the field worker who sees their own). */
   scope?: string;
@@ -15,7 +15,7 @@ export type NavItem = {
 
 /**
  * Farm navigation, filtered by the member's permissions (docs/01 §8).
- * Later phases add Inventory, Finance … here.
+ * Later phases add Sales, Assets … here.
  */
 export const FARM_NAV: NavItem[] = [
   { key: "dashboard", label: "Dashboard", href: (id) => `/farms/${id}`, permission: null, icon: "dashboard" },
@@ -24,7 +24,10 @@ export const FARM_NAV: NavItem[] = [
   { key: "structure", label: "Farm map", href: (id) => `/farms/${id}/structure`, permission: "structure.view", icon: "map" },
   { key: "crops", label: "Crops", href: (id) => `/farms/${id}/crops`, permission: "crops.plans.view", icon: "crops" },
   { key: "livestock", label: "Livestock", href: (id) => `/farms/${id}/livestock`, permission: "livestock.animals.view", icon: "livestock" },
+  { key: "inventory", label: "Inventory", href: (id) => `/farms/${id}/inventory`, permission: "inventory.view", icon: "inventory" },
+  { key: "procurement", label: "Purchasing", href: (id) => `/farms/${id}/procurement`, permission: "procurement.requests.create|procurement.requests.approve|procurement.orders.manage|procurement.orders.approve|procurement.deliveries.receive", icon: "procurement" },
   { key: "workers", label: "Workers", href: (id) => `/farms/${id}/workers`, permission: "workers.view", scope: "all", icon: "workers" },
+  { key: "ledger", label: "Ledger", href: (id) => `/farms/${id}/ledger`, permission: "finance.view", icon: "ledger" },
   { key: "traceability", label: "Traceability", href: (id) => `/farms/${id}/traceability`, permission: "trace.batches.view", icon: "trace" },
   { key: "members", label: "Members", href: (id) => `/farms/${id}/members`, permission: "members.view", icon: "members" },
   { key: "roles", label: "Roles & permissions", href: (id) => `/farms/${id}/roles`, permission: "roles.view", icon: "roles" },
@@ -52,8 +55,10 @@ export function visibleAdminNav(capabilities: Permissions | undefined) {
   return ADMIN_NAV.filter((item) => can(capabilities, item.capability));
 }
 
+/** Whether the member holds the permission, or any of `a|b|c`. */
 export function can(permissions: Permissions | undefined, permission: string | null): boolean {
-  return permission === null || Boolean(permissions && permission in permissions);
+  if (permission === null) return true;
+  return Boolean(permissions) && permission.split("|").some((p) => p in permissions!);
 }
 
 export function visibleNav(workspace: Pick<Workspace, "type" | "permissions" | "dashboards"> | undefined): NavItem[] {

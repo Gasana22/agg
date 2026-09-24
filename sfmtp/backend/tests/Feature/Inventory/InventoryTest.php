@@ -3,6 +3,9 @@
 namespace Tests\Feature\Inventory;
 
 use App\Modules\Catalog\Database\seeders\CatalogSeeder;
+use App\Modules\Finance\Application\ChartOfAccounts;
+use App\Modules\Finance\Application\JournalLine;
+use App\Modules\Finance\Application\Ledger;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Inventory\Domain\Models\StockMovement;
 use App\Modules\Tenancy\Application\FarmSettings;
@@ -172,6 +175,28 @@ class InventoryTest extends TestCase
         $this->assertEquals(60, $this->as($this->store)->getJson($this->url("/inventory/items/{$seed['id']}"))->json('data.on_hand'));
     }
 
+    public function test_a_count_approved_later_keeps_the_movements_recorded_since(): void
+    {
+        $diesel = $this->item(['name' => 'Diesel', 'unit' => 'l', 'tracks_lots' => false, 'category_id' => DB::table('global_inventory_categories')->where('code', 'fuel')->value('id')]);
+        $this->stockIn($diesel, 120, 5000);
+        $count = fn (float $counted) => $this->as($this->store)->postJson($this->url('/inventory/adjustments'), [
+            'location_id' => $this->mainStore, 'reason' => 'Monthly count', 'lines' => [['item_id' => $diesel['id'], 'counted_quantity' => $counted]],
+        ])->assertCreated()->json('data');
+
+        // Counted 112 of 120; 200 l arrive before the manager approves: 8 l are lost, the delivery stays.
+        $short = $count(112);
+        $this->stockIn($diesel, 200, 5000);
+        $this->as($this->manager)->postJson($this->url("/inventory/adjustments/{$short['id']}/approve"))->assertOk();
+        $this->assertEquals(312, $this->as($this->store)->getJson($this->url("/inventory/items/{$diesel['id']}"))->json('data.on_hand'));
+        $this->assertEquals(40000, $this->trialBalance()['5100']);
+
+        // Counted 300 of 312, then 305 l go out: the count no longer fits and must be taken again.
+        $stale = $count(300);
+        $this->as($this->store)->postJson($this->url('/inventory/issues'), ['item_id' => $diesel['id'], 'location_id' => $this->mainStore, 'quantity' => 305])->assertCreated();
+        $this->as($this->manager)->postJson($this->url("/inventory/adjustments/{$stale['id']}/approve"))->assertStatus(409)->assertJsonPath('code', 'count_outdated');
+        $this->assertSame([$stale['id']], array_column($this->as($this->manager)->getJson($this->url('/inventory/adjustments?filter[status]=proposed'))->json('data'), 'id'));
+    }
+
     public function test_requests_are_approved_then_issued_to_the_work(): void
     {
         $feed = $this->item(['name' => 'Dairy meal', 'category_id' => DB::table('global_inventory_categories')->where('code', 'animal_feed')->value('id'), 'tracks_lots' => false]);
@@ -215,11 +240,17 @@ class InventoryTest extends TestCase
         $this->assertSame('JE-00001', $entry['number']);
         $this->assertSame('opening_stock', $entry['source']['type']);
 
-        $reversal = $this->as($this->owner)->postJson($this->url("/ledger/entries/{$entry['id']}/reverse"), ['reason' => 'Entered twice'])->assertCreated()->json('data');
-        $this->assertSame($entry['id'], $reversal['reverses_entry_id']);
-        $this->as($this->owner)->postJson($this->url("/ledger/entries/{$entry['id']}/reverse"), ['reason' => 'Again'])->assertStatus(409);
-        $this->assertEquals(0, $this->trialBalance()['1300']);
-        $this->as($this->store)->postJson($this->url("/ledger/entries/{$entry['id']}/reverse"), ['reason' => 'x'])->assertForbidden();
+        // Stock entries are corrected through stock (a count), never reversed by hand.
+        $this->as($this->owner)->postJson($this->url("/ledger/entries/{$entry['id']}/reverse"), ['reason' => 'Entered twice'])->assertStatus(409)->assertJsonPath('code', 'posted_by_document');
+
+        // A manual entry is reversed once, by finance only.
+        $manual = $this->inFarm($this->farm, fn () => app(Ledger::class)->post(Ledger::MANUAL, null, 'Owner capital', [JournalLine::debit(ChartOfAccounts::CASH, '500000'), JournalLine::credit(ChartOfAccounts::EQUITY, '500000')]));
+        $reversal = $this->as($this->owner)->postJson($this->url("/ledger/entries/{$manual->id}/reverse"), ['reason' => 'Entered twice'])->assertCreated()->json('data');
+        $this->assertSame($manual->id, $reversal['reverses_entry_id']);
+        $this->as($this->owner)->postJson($this->url("/ledger/entries/{$manual->id}/reverse"), ['reason' => 'Again'])->assertStatus(409);
+        $this->as($this->owner)->postJson($this->url("/ledger/entries/{$reversal['id']}/reverse"), ['reason' => 'Undo'])->assertStatus(409);
+        $this->assertEquals([0, 0], [$this->trialBalance()['1000'], $this->trialBalance()['3000']]);
+        $this->as($this->store)->postJson($this->url("/ledger/entries/{$manual->id}/reverse"), ['reason' => 'x'])->assertForbidden();
 
         $movement = $this->inFarm($this->farm, fn () => StockMovement::firstOrFail());
         $this->assertThrows(fn () => $this->inFarm($this->farm, fn () => $movement->forceFill(['quantity' => 1])->save()), AppendOnlyViolation::class);

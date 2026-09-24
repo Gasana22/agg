@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\DB;
  */
 class Ledger
 {
+    /** Source of entries typed in by finance; the only ones that can be reversed by hand. */
+    public const MANUAL = 'manual';
+
     public function __construct(private readonly ChartOfAccounts $chart) {}
 
     /** @param  array<int, JournalLine>  $lines */
@@ -62,9 +65,16 @@ class Ledger
         });
     }
 
-    /** Post the mirror image of an entry. */
+    /**
+     * Post the mirror image of a manual entry. Entries posted by a document
+     * (a stock movement, a delivery, a supplier invoice) are corrected through
+     * that document, a count or a return, so the books and the stock agree.
+     */
     public function reverse(LedgerEntry $entry, string $reason): LedgerEntry
     {
+        if ($entry->source_type !== self::MANUAL) {
+            throw ApiException::conflict('posted_by_document', "{$entry->number} was posted by a ".str_replace('_', ' ', $entry->source_type).'; correct it there (a stock count or a return), so stock and books stay in step.');
+        }
         if ($entry->reverses_entry_id) {
             throw ApiException::conflict('invalid_state_transition', 'A reversal cannot itself be reversed; post a new entry.');
         }

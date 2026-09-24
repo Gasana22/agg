@@ -12,6 +12,9 @@ type Chart = components["schemas"]["ChartWidget"];
 /** First series in the brand colour, the second in a muted neutral (expected vs actual). */
 const SERIES_COLORS = ["var(--muted)", "var(--primary)", "var(--accent)"];
 
+/** Axis ticks stay short: 1,500 → "1.5K", 2,300,000 → "2.3M". */
+const compact = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
+
 /** Heavy widgets load separately from the dashboard summary (docs/05 §1). */
 export function ChartWidget({ href }: { href: string }) {
   const { data, error, isLoading } = useQuery({
@@ -33,7 +36,7 @@ export function ChartWidget({ href }: { href: string }) {
         <BarChart data={rows} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke="var(--border)" />
           <XAxis dataKey="x" tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 11 }} tickFormatter={isDate ? (v: string) => v.slice(5) : undefined} minTickGap={isDate ? 16 : 4} interval={isDate ? undefined : 0} />
-          <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 11 }} />
+          <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "var(--muted)", fontSize: 11 }} tickFormatter={(v: number) => compact.format(v)} />
           <Tooltip
             cursor={{ fill: "var(--surface-muted)" }}
             contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}

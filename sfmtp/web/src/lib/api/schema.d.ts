@@ -3528,7 +3528,7 @@ export interface paths {
         put?: never;
         /**
          * Approve a count
-         * @description Not by the member who proposed it (unless the owner). A change above the farm's `stock_adjustment_pct` threshold needs the owner. Stock is set to the counted quantity; the difference posts to Stock adjustments (5100).
+         * @description Not by the member who proposed it (unless the owner). A change above the farm's `stock_adjustment_pct` threshold needs the owner. The difference between the counted and the book quantity at the time of the count is applied, so movements recorded since are kept; if that would take stock below zero the count is 409 count_outdated and must be taken again. The value posts to Stock adjustments (5100).
          */
         post: operations["approveStockAdjustment"];
         delete?: never;
@@ -4120,7 +4120,7 @@ export interface paths {
         put?: never;
         /**
          * Reverse an entry
-         * @description Entries are never changed or deleted; a reversal posts the mirror image. An entry is reversed at most once (409).
+         * @description Manual entries only. Entries are never changed or deleted, and a reversal posts the mirror image, at most once (409). An entry posted by a stock movement, delivery or supplier invoice is 409 posted_by_document; correct it through that document (a count or a return).
          */
         post: operations["reverseLedgerEntry"];
         delete?: never;

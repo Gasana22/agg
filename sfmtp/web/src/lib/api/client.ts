@@ -4,10 +4,23 @@ import { toApiError } from "./errors";
 import type { paths } from "./schema";
 
 /**
+ * Query strings as Laravel validates them: booleans as 1 / 0 (its `boolean`
+ * rule refuses "true"), empty values left out, arrays repeated.
+ */
+export function serializeQuery(query: Record<string, unknown>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || value === "") continue;
+    for (const v of Array.isArray(value) ? value : [value]) params.append(key, typeof v === "boolean" ? (v ? "1" : "0") : String(v));
+  }
+  return params.toString();
+}
+
+/**
  * Typed client for the SFMTP API, generated from packages/api-contracts.
  * Calls go through the same-origin BFF (/api/proxy), which holds the tokens.
  */
-export const api = createClient<paths>({ baseUrl: "/api/proxy" });
+export const api = createClient<paths>({ baseUrl: "/api/proxy", querySerializer: serializeQuery });
 
 const errors: Middleware = {
   async onResponse({ response }) {

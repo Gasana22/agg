@@ -42,6 +42,15 @@ const TITLES: Record<string, string> = {
   worker_activity: "Tasks verified per day",
   today_tasks: "My tasks today",
   attendance_week: "My hours this week",
+  pending_requests: "Stock requests",
+  deliveries_to_receive: "Deliveries to receive",
+  expiring_lots: "Lots expiring or expired",
+  low_stock: "Low stock",
+  recent_movements: "Recent stock movements",
+  purchase_requests_to_approve: "Purchase requests to approve",
+  orders_to_approve: "Purchase orders to approve",
+  invoices_due: "Supplier invoices due",
+  inventory_value: "Stock value by category",
 };
 
 /**
