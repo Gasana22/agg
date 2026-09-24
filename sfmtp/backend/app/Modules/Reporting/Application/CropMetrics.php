@@ -2,7 +2,7 @@
 
 namespace App\Modules\Reporting\Application;
 
-use App\Modules\Crops\Application\Units;
+use App\Modules\Catalog\Application\Units;
 use App\Modules\Crops\Domain\Enums\CycleStage;
 use App\Modules\Crops\Domain\Enums\ObservationStatus;
 use App\Modules\Crops\Domain\Enums\OperationStatus;

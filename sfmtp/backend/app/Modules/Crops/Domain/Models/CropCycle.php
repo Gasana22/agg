@@ -8,6 +8,7 @@ use App\Modules\Crops\Domain\Enums\PlantingMethod;
 use App\Modules\FarmStructure\Domain\Models\Plot;
 use App\Modules\Tenancy\Domain\Concerns\BelongsToFarm;
 use App\Modules\Traceability\Domain\Models\TraceBatch;
+use App\Support\Database\Versioned;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

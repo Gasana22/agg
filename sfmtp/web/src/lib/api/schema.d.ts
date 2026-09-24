@@ -1206,6 +1206,492 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/farms/{farm}/animal-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Herds, flocks and pens */
+        get: operations["listAnimalGroups"];
+        put?: never;
+        /** Create a group */
+        post: operations["createAnimalGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-groups/{group}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                group: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit a group */
+        patch: operations["updateAnimalGroup"];
+        trace?: never;
+    };
+    "/farms/{farm}/animals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Animals (active by default) */
+        get: operations["listAnimals"];
+        put?: never;
+        /**
+         * Register an animal
+         * @description Creates the animal's trace batch; with a dam or sire on the farm, it is derived from theirs.
+         */
+        post: operations["registerAnimal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animals/{animal}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                animal: string;
+            };
+            cookie?: never;
+        };
+        /** Get an animal */
+        get: operations["getAnimal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit tag, name, group or notes */
+        patch: operations["updateAnimal"];
+        trace?: never;
+    };
+    "/farms/{farm}/animals/{animal}/exit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                animal: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a death, culling or transfer
+         * @description Closes the animal's trace batch. Sales go through sale requests.
+         */
+        post: operations["exitAnimal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animals/{animal}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                animal: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * The animal's history, newest first
+         * @description Its own records, records of its group, breedings as dam and sale requests. Voided records stay, marked `voided`.
+         */
+        get: operations["animalTimeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** List health records */
+        get: operations["listHealthRecords"];
+        put?: never;
+        /**
+         * Record health records
+         * @description Treatments set the meat and milk withdrawal dates of every animal they cover. Vaccinations and dewormings can carry the next due date. 403 not_assigned for members with an `assigned` scope.
+         */
+        post: operations["recordHealth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-health/{health_record}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                health_record: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void a record entered in error
+         * @description The record stays, marked voided; what it changed (withdrawal dates, last weight, lot quantity) is recomputed.
+         */
+        post: operations["voidHealthRecord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-feedings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** List feedings */
+        get: operations["listFeedingRecords"];
+        put?: never;
+        /**
+         * Record feedings
+         * @description Feed from a known input lot writes a `fed` trace event. 403 not_assigned for members with an `assigned` scope.
+         */
+        post: operations["recordFeeding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-feedings/{feeding}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                feeding: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void a record entered in error
+         * @description The record stays, marked voided; what it changed (withdrawal dates, last weight, lot quantity) is recomputed.
+         */
+        post: operations["voidFeedingRecord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-weights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** List weights */
+        get: operations["listWeightRecords"];
+        put?: never;
+        /**
+         * Record weights
+         * @description Individual animals only. 403 not_assigned for members with an `assigned` scope.
+         */
+        post: operations["recordWeight"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-weights/{weight}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                weight: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void a record entered in error
+         * @description The record stays, marked voided; what it changed (withdrawal dates, last weight, lot quantity) is recomputed.
+         */
+        post: operations["voidWeightRecord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-production": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** List milk, eggs and other production */
+        get: operations["listProductionRecords"];
+        put?: never;
+        /**
+         * Record milk, eggs and other production
+         * @description Kept production joins the day's product lot, derived from the animals that gave it. During a milk withdrawal it must be recorded as discarded (422 withdrawal_period). 403 not_assigned for members with an `assigned` scope.
+         */
+        post: operations["recordProduction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-production/{production}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                production: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void a record entered in error
+         * @description The record stays, marked voided; what it changed (withdrawal dates, last weight, lot quantity) is recomputed.
+         */
+        post: operations["voidProductionRecord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Movements */
+        get: operations["listAnimalMovements"];
+        put?: never;
+        /** Move animals, or a whole group, to a location */
+        post: operations["moveAnimals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-breedings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Services and pregnancies */
+        get: operations["listBreedings"];
+        put?: never;
+        /**
+         * Record a service (natural or AI)
+         * @description Expected due date from the species' gestation length. 409 breeding_open while the dam has an open service.
+         */
+        post: operations["recordService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-breedings/{breeding}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                breeding: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Record a pregnancy diagnosis or loss */
+        patch: operations["updateBreeding"];
+        trace?: never;
+    };
+    "/farms/{farm}/animal-breedings/{breeding}/birth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                breeding: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a birth and register the offspring */
+        post: operations["recordBirth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Sale requests */
+        get: operations["listAnimalSales"];
+        put?: never;
+        /**
+         * Request to sell an animal
+         * @description `expected_price` needs finance.values.view.
+         */
+        post: operations["requestAnimalSale"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-sales/{sale}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                sale: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a sale request
+         * @description Four-eyes: not your own request unless you are the owner.
+         */
+        post: operations["approveAnimalSale"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-sales/{sale}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                sale: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a sale request */
+        post: operations["rejectAnimalSale"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/animal-sales/{sale}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                sale: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the sale
+         * @description Marks the animal sold and closes its trace batch (no price in the trace history). Inside a meat withdrawal period: 422 withdrawal_period unless an override reason is given.
+         */
+        post: operations["completeAnimalSale"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/farms/{farm}/audit-logs": {
         parameters: {
             query?: never;
@@ -2339,6 +2825,7 @@ export interface components {
                 direction?: "up" | "down" | "flat";
                 vs?: string;
             };
+            /** @description Extra detail, e.g. by_species for livestock.head_count */
             meta?: Record<string, never>;
         };
         WidgetRef: {
@@ -3411,6 +3898,355 @@ export interface components {
             moisture_pct?: number | null;
             notes?: string | null;
             withholding_override_reason?: string | null;
+        };
+        AnimalRef: null | {
+            /** Format: uuid */
+            id?: string;
+            animal_code?: string;
+            name?: string | null;
+        };
+        AnimalGroup: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "animal_group";
+            code?: string;
+            name?: string;
+            species?: components["schemas"]["Ref"];
+            /** @enum {string} */
+            purpose?: "dairy" | "beef" | "meat" | "layers" | "broilers" | "breeding" | "mixed" | "other";
+            location?: components["schemas"]["Ref"] | null;
+            /** @description For flocks kept without individual records */
+            flock_size?: number | null;
+            /** @description Active animals registered in the group */
+            head_count?: number;
+            is_active?: boolean;
+            notes?: string | null;
+            version?: number;
+        };
+        AnimalGroupInput: {
+            code?: string | null;
+            name?: string;
+            /**
+             * Format: uuid
+             * @description Create only
+             */
+            species_id?: string;
+            /** @enum {string} */
+            purpose?: "dairy" | "beef" | "meat" | "layers" | "broilers" | "breeding" | "mixed" | "other";
+            /** Format: uuid */
+            location_id?: string | null;
+            flock_size?: number | null;
+            is_active?: boolean;
+            notes?: string | null;
+            version?: number;
+        };
+        Animal: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "animal";
+            animal_code?: string;
+            tag_number?: string | null;
+            rfid?: string | null;
+            name?: string | null;
+            label?: string;
+            species?: components["schemas"]["Ref"];
+            breed?: components["schemas"]["Ref"] | null;
+            breed_note?: string | null;
+            /** @enum {string} */
+            sex?: "female" | "male";
+            /** Format: date */
+            birth_date?: string | null;
+            birth_date_estimated?: boolean;
+            age_months?: number | null;
+            /** @enum {string} */
+            origin?: "born" | "purchased" | "gifted" | "other";
+            /** Format: date */
+            acquired_on?: string | null;
+            dam?: components["schemas"]["AnimalRef"];
+            sire?: components["schemas"]["AnimalRef"];
+            parentage_note?: string | null;
+            group?: components["schemas"]["Ref"] | null;
+            location?: components["schemas"]["Ref"] | null;
+            /** @enum {string} */
+            status?: "active" | "sold" | "dead" | "culled" | "transferred";
+            /** Format: date */
+            exited_on?: string | null;
+            exit_reason?: string | null;
+            last_weight_kg?: number | null;
+            /** Format: date */
+            last_weighed_on?: string | null;
+            /**
+             * Format: date
+             * @description Set while a withdrawal period is running
+             */
+            meat_withdrawal_until?: string | null;
+            /** Format: date */
+            milk_withdrawal_until?: string | null;
+            pregnancy?: null | {
+                /** Format: date */
+                expected_due_on?: string | null;
+            };
+            batch?: null | {
+                /** Format: uuid */
+                id?: string;
+                batch_code?: string;
+            };
+            notes?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        AnimalInput: {
+            /**
+             * Format: uuid
+             * @description Create only
+             */
+            species_id?: string;
+            /** Format: uuid */
+            breed_id?: string | null;
+            breed_note?: string | null;
+            /**
+             * @description Create only
+             * @enum {string}
+             */
+            sex?: "female" | "male";
+            name?: string | null;
+            /** @description Unique among active animals */
+            tag_number?: string | null;
+            rfid?: string | null;
+            /** Format: date */
+            birth_date?: string | null;
+            birth_date_estimated?: boolean;
+            /**
+             * @description Create only
+             * @enum {string}
+             */
+            origin?: "born" | "purchased" | "gifted" | "other";
+            /** Format: date */
+            acquired_on?: string | null;
+            /**
+             * Format: uuid
+             * @description Create only
+             */
+            dam_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Create only
+             */
+            sire_id?: string | null;
+            parentage_note?: string | null;
+            /** Format: uuid */
+            group_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Create only; defaults to the group location
+             */
+            location_id?: string | null;
+            notes?: string | null;
+            version?: number;
+        };
+        /** @description Common fields; the rest depend on `type` (health, feeding, weight, production, movement). */
+        AnimalRecord: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            type?: "animal_health" | "animal_feeding" | "animal_weight" | "animal_production" | "animal_movement";
+            animal?: components["schemas"]["AnimalRef"];
+            group?: components["schemas"]["Ref"] | null;
+            kind?: string;
+            /** Format: date */
+            given_on?: string;
+            diagnosis?: string | null;
+            product_name?: string | null;
+            dose?: number | null;
+            dose_unit?: string | null;
+            meat_withdrawal_days?: number | null;
+            milk_withdrawal_days?: number | null;
+            /** Format: date */
+            next_due_on?: string | null;
+            given_by?: string | null;
+            /** Format: date */
+            fed_on?: string;
+            feed_name?: string;
+            /** Format: date */
+            weighed_on?: string;
+            weight_kg?: number;
+            method?: string;
+            product?: string;
+            /** Format: date */
+            produced_on?: string;
+            session?: string | null;
+            quantity?: number;
+            unit?: string;
+            discarded?: boolean;
+            lot?: null | {
+                /** Format: uuid */
+                id?: string;
+                batch_code?: string | null;
+            };
+            /** Format: date-time */
+            moved_at?: string;
+            /** Format: uuid */
+            from_location_id?: string | null;
+            /** Format: uuid */
+            to_location_id?: string | null;
+            reason?: string | null;
+            /** Format: uuid */
+            input_batch_id?: string | null;
+            notes?: string | null;
+            recorded_by?: components["schemas"]["Ref"] | null;
+            voided?: null | {
+                reason?: string;
+                /** Format: date-time */
+                at?: string;
+            };
+            /** Format: date-time */
+            created_at?: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description An animal, or a whole group */
+        AnimalSubject: {
+            /** Format: uuid */
+            animal_id?: string | null;
+            /** Format: uuid */
+            group_id?: string | null;
+            notes?: string | null;
+        };
+        AnimalHealthInput: components["schemas"]["AnimalSubject"] & {
+            /** @enum {string} */
+            kind: "treatment" | "vaccination" | "deworming" | "checkup" | "injury" | "other";
+            /** Format: date */
+            given_on: string;
+            diagnosis?: string | null;
+            /** @description Required for vaccinations and dewormings */
+            product_name?: string | null;
+            dose?: number | null;
+            dose_unit?: string | null;
+            /** Format: uuid */
+            input_batch_id?: string | null;
+            meat_withdrawal_days?: number | null;
+            milk_withdrawal_days?: number | null;
+            /** Format: date */
+            next_due_on?: string | null;
+            given_by?: string | null;
+        };
+        AnimalFeedingInput: components["schemas"]["AnimalSubject"] & {
+            /** Format: date */
+            fed_on: string;
+            feed_name: string;
+            quantity: number;
+            unit: string;
+            /** Format: uuid */
+            input_batch_id?: string | null;
+        };
+        AnimalWeightInput: {
+            /** Format: uuid */
+            animal_id: string;
+            /** Format: date */
+            weighed_on: string;
+            weight_kg: number;
+            /** @enum {string} */
+            method?: "scale" | "tape" | "estimate";
+            notes?: string | null;
+        };
+        AnimalProductionInput: components["schemas"]["AnimalSubject"] & {
+            /** @enum {string} */
+            product: "milk" | "eggs" | "wool" | "other";
+            /** Format: date */
+            produced_on: string;
+            /** @enum {string|null} */
+            session?: "am" | "pm" | "day" | null;
+            quantity: number;
+            unit: string;
+            discarded?: boolean;
+        };
+        AnimalMoveInput: {
+            animal_ids?: string[];
+            /** Format: uuid */
+            group_id?: string | null;
+            /** Format: uuid */
+            to_location_id: string;
+            /** Format: date-time */
+            moved_at?: string;
+            reason?: string | null;
+            notes?: string | null;
+        };
+        Breeding: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "animal_breeding";
+            dam?: components["schemas"]["AnimalRef"];
+            sire?: components["schemas"]["AnimalRef"];
+            sire_note?: string | null;
+            /** @enum {string} */
+            method?: "natural" | "ai";
+            /** Format: date */
+            served_on?: string;
+            /** Format: date */
+            expected_due_on?: string | null;
+            /** @enum {string} */
+            status?: "served" | "pregnant" | "not_pregnant" | "delivered" | "aborted";
+            /** Format: date */
+            outcome_on?: string | null;
+            offspring_count?: number | null;
+            notes?: string | null;
+            version?: number;
+        };
+        BreedingInput: {
+            /** Format: uuid */
+            dam_id: string;
+            /** Format: uuid */
+            sire_id?: string | null;
+            /** @description AI straw or a bull from off the farm */
+            sire_note?: string | null;
+            /** @enum {string} */
+            method: "natural" | "ai";
+            /** Format: date */
+            served_on: string;
+            notes?: string | null;
+        };
+        AnimalSaleRequest: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "animal_sale_request";
+            code?: string;
+            animal?: {
+                /** Format: uuid */
+                id?: string;
+                animal_code?: string;
+                name?: string | null;
+                label?: string;
+            };
+            reason?: string | null;
+            buyer?: string | null;
+            /** @description Only with finance.values.view */
+            expected_price?: number | null;
+            /** @description Only with finance.values.view */
+            sale_price?: number | null;
+            /** @enum {string} */
+            status?: "requested" | "approved" | "rejected" | "completed" | "cancelled";
+            requested_by?: components["schemas"]["Ref"] | null;
+            /** Format: date-time */
+            decided_at?: string | null;
+            decision_note?: string | null;
+            /** Format: date */
+            sold_on?: string | null;
+            withdrawal_override_reason?: string | null;
+            version?: number;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        AnimalSaleInput: {
+            /** Format: uuid */
+            animal_id: string;
+            reason?: string | null;
+            buyer?: string | null;
+            expected_price?: number | null;
         };
     };
     responses: {
@@ -6081,6 +6917,1026 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    listAnimalGroups: {
+        parameters: {
+            query?: {
+                include_inactive?: boolean;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalGroup"][];
+                    };
+                };
+            };
+        };
+    };
+    createAnimalGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnimalGroupInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalGroup"];
+                    };
+                };
+            };
+            422: components["responses"]["Problem"];
+        };
+    };
+    updateAnimalGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                group: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnimalGroupInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalGroup"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listAnimals: {
+        parameters: {
+            query?: {
+                "filter[status]"?: "active" | "sold" | "dead" | "culled" | "transferred" | "all";
+                "filter[species_id]"?: string;
+                "filter[group_id]"?: string;
+                "filter[sex]"?: "female" | "male";
+                "filter[withdrawal]"?: boolean;
+                "filter[pregnant]"?: boolean;
+                /** @description Code, tag or name */
+                q?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["Animal"][];
+                    };
+                };
+            };
+        };
+    };
+    registerAnimal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnimalInput"];
+            };
+        };
+        responses: {
+            /** @description Registered */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Animal"];
+                    };
+                };
+            };
+            422: components["responses"]["Problem"];
+        };
+    };
+    getAnimal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                animal: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The animal */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Animal"];
+                    };
+                };
+            };
+        };
+    };
+    updateAnimal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                animal: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnimalInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Animal"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    exitAnimal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                animal: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    status: "dead" | "culled" | "transferred";
+                    /** Format: date */
+                    date: string;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Exited */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Animal"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    animalTimeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                animal: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Timeline */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            /** @enum {string} */
+                            kind?: "health" | "feeding" | "weight" | "production" | "movement" | "breeding" | "sale";
+                            at?: string;
+                            data?: Record<string, never>;
+                        }[];
+                    };
+                };
+            };
+        };
+    };
+    listHealthRecords: {
+        parameters: {
+            query?: {
+                "filter[animal_id]"?: string;
+                "filter[group_id]"?: string;
+                "filter[from]"?: string;
+                "filter[to]"?: string;
+                "filter[kind]"?: string;
+                "filter[due_before]"?: string;
+                include_voided?: boolean;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["AnimalRecord"][];
+                    };
+                };
+            };
+        };
+    };
+    recordHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnimalHealthInput"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalRecord"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    voidHealthRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                health_record: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Voided */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalRecord"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    listFeedingRecords: {
+        parameters: {
+            query?: {
+                "filter[animal_id]"?: string;
+                "filter[group_id]"?: string;
+                "filter[from]"?: string;
+                "filter[to]"?: string;
+                include_voided?: boolean;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["AnimalRecord"][];
+                    };
+                };
+            };
+        };
+    };
+    recordFeeding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnimalFeedingInput"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalRecord"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    voidFeedingRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                feeding: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Voided */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalRecord"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    listWeightRecords: {
+        parameters: {
+            query?: {
+                "filter[animal_id]"?: string;
+                "filter[group_id]"?: string;
+                "filter[from]"?: string;
+                "filter[to]"?: string;
+                include_voided?: boolean;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["AnimalRecord"][];
+                    };
+                };
+            };
+        };
+    };
+    recordWeight: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnimalWeightInput"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalRecord"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    voidWeightRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                weight: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Voided */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalRecord"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    listProductionRecords: {
+        parameters: {
+            query?: {
+                "filter[animal_id]"?: string;
+                "filter[group_id]"?: string;
+                "filter[from]"?: string;
+                "filter[to]"?: string;
+                "filter[product]"?: "milk" | "eggs" | "wool" | "other";
+                include_voided?: boolean;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["AnimalRecord"][];
+                    };
+                };
+            };
+        };
+    };
+    recordProduction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnimalProductionInput"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalRecord"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    voidProductionRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                production: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Voided */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalRecord"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    listAnimalMovements: {
+        parameters: {
+            query?: {
+                "filter[animal_id]"?: string;
+                "filter[group_id]"?: string;
+                "filter[location_id]"?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["AnimalRecord"][];
+                    };
+                };
+            };
+        };
+    };
+    moveAnimals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnimalMoveInput"];
+            };
+        };
+        responses: {
+            /** @description One movement record per animal, or one for the group */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalRecord"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listBreedings: {
+        parameters: {
+            query?: {
+                "filter[status]"?: "open" | "served" | "pregnant" | "not_pregnant" | "delivered" | "aborted";
+                "filter[dam_id]"?: string;
+                "filter[due_before]"?: string;
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["Breeding"][];
+                    };
+                };
+            };
+        };
+    };
+    recordService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BreedingInput"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Breeding"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    updateBreeding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                breeding: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    status: "pregnant" | "not_pregnant" | "aborted";
+                    /** Format: date */
+                    on?: string | null;
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Breeding"];
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    recordBirth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                breeding: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    born_on: string;
+                    offspring: {
+                        /** @enum {string} */
+                        sex: "female" | "male";
+                        name?: string | null;
+                        tag_number?: string | null;
+                    }[];
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Delivered */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Breeding"];
+                        meta?: {
+                            offspring?: components["schemas"]["Animal"][];
+                        };
+                    };
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    listAnimalSales: {
+        parameters: {
+            query?: {
+                "filter[status]"?: "requested" | "approved" | "rejected" | "completed" | "cancelled";
+                cursor?: components["parameters"]["Cursor"];
+                per_page?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage"] & {
+                        data?: components["schemas"]["AnimalSaleRequest"][];
+                    };
+                };
+            };
+        };
+    };
+    requestAnimalSale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnimalSaleInput"];
+            };
+        };
+        responses: {
+            /** @description Requested */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalSaleRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    approveAnimalSale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                sale: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalSaleRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    rejectAnimalSale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                sale: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalSaleRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    completeAnimalSale: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                sale: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    sold_on: string;
+                    sale_price?: number | null;
+                    buyer?: string | null;
+                    withdrawal_override_reason?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["AnimalSaleRequest"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     listAuditLogs: {

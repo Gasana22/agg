@@ -2,7 +2,7 @@
 
 namespace App\Modules\Crops\Http\Resources;
 
-use App\Modules\Crops\Application\Units;
+use App\Modules\Catalog\Application\Units;
 use App\Modules\Crops\Domain\Models\CropCycle;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;

@@ -27,6 +27,7 @@ return [
         'Catalog',
         'FarmStructure',
         'Crops',
+        'Livestock',
         'Support',
         'Traceability',
         'Reporting',

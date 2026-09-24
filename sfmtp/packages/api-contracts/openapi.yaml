@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SFMTP API
-  version: 1.3.0-phase4
+  version: 1.4.0-phase5
   description: |
     Smart Farm Management & Traceability Platform REST API.
 
@@ -26,6 +26,8 @@ tags:
     description: Farm (tenant) profile and lifecycle.
   - name: Access
     description: Members, invitations, roles and the permission registry.
+  - name: Livestock
+    description: Groups, animals, health and vaccination with withdrawal periods, feeding, weights, production into daily product lots, movements, breeding and sale requests. Records are append-only; mistakes are voided.
   - name: Crops
     description: Farm crop list, seasons, plans, cycles, field operations, observations and harvests. Cycles, operations, observations and harvests write the trace history.
   - name: Structure
@@ -2019,6 +2021,882 @@ paths:
                 properties:
                   data: { $ref: '#/components/schemas/CropHarvest' }
 
+  /farms/{farm}/animal-groups:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Livestock]
+      operationId: listAnimalGroups
+      summary: 'Herds, flocks and pens'
+      x-permission: livestock.animals.view
+      parameters:
+        - { name: include_inactive, in: query, schema: { type: boolean } }
+      responses:
+        '200':
+          description: All results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/AnimalGroup' }
+    post:
+      tags: [Livestock]
+      operationId: createAnimalGroup
+      summary: 'Create a group'
+      x-permission: livestock.animals.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnimalGroupInput' }
+      responses:
+        '201':
+          description: 'Created'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalGroup' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-groups/{group}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: group, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      tags: [Livestock]
+      operationId: updateAnimalGroup
+      summary: 'Edit a group'
+      x-permission: livestock.animals.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnimalGroupInput' }
+      responses:
+        '200':
+          description: 'Updated'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalGroup' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animals:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Livestock]
+      operationId: listAnimals
+      summary: 'Animals (active by default)'
+      x-permission: livestock.animals.view
+      parameters:
+        - { name: 'filter[status]', in: query, schema: { type: string, enum: [active, sold, dead, culled, transferred, all] } }
+        - { name: 'filter[species_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[group_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[sex]', in: query, schema: { type: string, enum: [female, male] } }
+        - { name: 'filter[withdrawal]', in: query, schema: { type: boolean } }
+        - { name: 'filter[pregnant]', in: query, schema: { type: boolean } }
+        - { name: q, in: query, schema: { type: string }, description: 'Code, tag or name' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Animal' }
+    post:
+      tags: [Livestock]
+      operationId: registerAnimal
+      summary: 'Register an animal'
+      description: 'Creates the animal''s trace batch; with a dam or sire on the farm, it is derived from theirs.'
+      x-permission: livestock.animals.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnimalInput' }
+      responses:
+        '201':
+          description: 'Registered'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Animal' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animals/{animal}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: animal, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Livestock]
+      operationId: getAnimal
+      summary: 'Get an animal'
+      x-permission: livestock.animals.view
+      responses:
+        '200':
+          description: 'The animal'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Animal' }
+    patch:
+      tags: [Livestock]
+      operationId: updateAnimal
+      summary: 'Edit tag, name, group or notes'
+      x-permission: livestock.animals.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnimalInput' }
+      responses:
+        '200':
+          description: 'Updated'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Animal' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animals/{animal}/exit:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: animal, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Livestock]
+      operationId: exitAnimal
+      summary: 'Record a death, culling or transfer'
+      description: 'Closes the animal''s trace batch. Sales go through sale requests.'
+      x-permission: livestock.animals.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, date, reason]
+              properties:
+                status: { type: string, enum: [dead, culled, transferred] }
+                date: { type: string, format: date }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: 'Exited'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Animal' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animals/{animal}/timeline:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: animal, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Livestock]
+      operationId: animalTimeline
+      summary: 'The animal''s history, newest first'
+      description: 'Its own records, records of its group, breedings as dam and sale requests. Voided records stay, marked `voided`.'
+      x-permission: livestock.animals.view
+      responses:
+        '200':
+          description: Timeline
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string, enum: [health, feeding, weight, production, movement, breeding, sale] }
+                        at: { type: string }
+                        data: { type: object }
+
+  /farms/{farm}/animal-health:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Livestock]
+      operationId: listHealthRecords
+      summary: 'List health records'
+      x-permission: livestock.animals.view
+      parameters:
+        - { name: 'filter[animal_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[group_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[from]', in: query, schema: { type: string, format: date } }
+        - { name: 'filter[to]', in: query, schema: { type: string, format: date } }
+        - { name: 'filter[kind]', in: query, schema: { type: string } }
+        - { name: 'filter[due_before]', in: query, schema: { type: string, format: date } }
+        - { name: include_voided, in: query, schema: { type: boolean } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/AnimalRecord' }
+    post:
+      tags: [Livestock]
+      operationId: recordHealth
+      summary: 'Record health records'
+      description: 'Treatments set the meat and milk withdrawal dates of every animal they cover. Vaccinations and dewormings can carry the next due date. 403 not_assigned for members with an `assigned` scope.'
+      x-permission: livestock.records.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnimalHealthInput' }
+      responses:
+        '201':
+          description: 'Recorded'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalRecord' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-health/{health_record}/void:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: health_record, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Livestock]
+      operationId: voidHealthRecord
+      summary: 'Void a record entered in error'
+      description: 'The record stays, marked voided; what it changed (withdrawal dates, last weight, lot quantity) is recomputed.'
+      x-permission: livestock.records.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: 'Voided'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalRecord' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-feedings:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Livestock]
+      operationId: listFeedingRecords
+      summary: 'List feedings'
+      x-permission: livestock.animals.view
+      parameters:
+        - { name: 'filter[animal_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[group_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[from]', in: query, schema: { type: string, format: date } }
+        - { name: 'filter[to]', in: query, schema: { type: string, format: date } }
+        - { name: include_voided, in: query, schema: { type: boolean } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/AnimalRecord' }
+    post:
+      tags: [Livestock]
+      operationId: recordFeeding
+      summary: 'Record feedings'
+      description: 'Feed from a known input lot writes a `fed` trace event. 403 not_assigned for members with an `assigned` scope.'
+      x-permission: livestock.records.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnimalFeedingInput' }
+      responses:
+        '201':
+          description: 'Recorded'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalRecord' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-feedings/{feeding}/void:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: feeding, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Livestock]
+      operationId: voidFeedingRecord
+      summary: 'Void a record entered in error'
+      description: 'The record stays, marked voided; what it changed (withdrawal dates, last weight, lot quantity) is recomputed.'
+      x-permission: livestock.records.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: 'Voided'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalRecord' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-weights:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Livestock]
+      operationId: listWeightRecords
+      summary: 'List weights'
+      x-permission: livestock.animals.view
+      parameters:
+        - { name: 'filter[animal_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[group_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[from]', in: query, schema: { type: string, format: date } }
+        - { name: 'filter[to]', in: query, schema: { type: string, format: date } }
+        - { name: include_voided, in: query, schema: { type: boolean } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/AnimalRecord' }
+    post:
+      tags: [Livestock]
+      operationId: recordWeight
+      summary: 'Record weights'
+      description: 'Individual animals only. 403 not_assigned for members with an `assigned` scope.'
+      x-permission: livestock.records.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnimalWeightInput' }
+      responses:
+        '201':
+          description: 'Recorded'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalRecord' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-weights/{weight}/void:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: weight, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Livestock]
+      operationId: voidWeightRecord
+      summary: 'Void a record entered in error'
+      description: 'The record stays, marked voided; what it changed (withdrawal dates, last weight, lot quantity) is recomputed.'
+      x-permission: livestock.records.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: 'Voided'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalRecord' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-production:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Livestock]
+      operationId: listProductionRecords
+      summary: 'List milk, eggs and other production'
+      x-permission: livestock.animals.view
+      parameters:
+        - { name: 'filter[animal_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[group_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[from]', in: query, schema: { type: string, format: date } }
+        - { name: 'filter[to]', in: query, schema: { type: string, format: date } }
+        - { name: 'filter[product]', in: query, schema: { type: string, enum: [milk, eggs, wool, other] } }
+        - { name: include_voided, in: query, schema: { type: boolean } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/AnimalRecord' }
+    post:
+      tags: [Livestock]
+      operationId: recordProduction
+      summary: 'Record milk, eggs and other production'
+      description: 'Kept production joins the day''s product lot, derived from the animals that gave it. During a milk withdrawal it must be recorded as discarded (422 withdrawal_period). 403 not_assigned for members with an `assigned` scope.'
+      x-permission: livestock.records.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnimalProductionInput' }
+      responses:
+        '201':
+          description: 'Recorded'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalRecord' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-production/{production}/void:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: production, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Livestock]
+      operationId: voidProductionRecord
+      summary: 'Void a record entered in error'
+      description: 'The record stays, marked voided; what it changed (withdrawal dates, last weight, lot quantity) is recomputed.'
+      x-permission: livestock.records.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: 'Voided'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalRecord' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-movements:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Livestock]
+      operationId: listAnimalMovements
+      summary: 'Movements'
+      x-permission: livestock.animals.view
+      parameters:
+        - { name: 'filter[animal_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[group_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[location_id]', in: query, schema: { type: string, format: uuid } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/AnimalRecord' }
+    post:
+      tags: [Livestock]
+      operationId: moveAnimals
+      summary: 'Move animals, or a whole group, to a location'
+      x-permission: livestock.records.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnimalMoveInput' }
+      responses:
+        '201':
+          description: One movement record per animal, or one for the group
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/AnimalRecord' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-breedings:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Livestock]
+      operationId: listBreedings
+      summary: 'Services and pregnancies'
+      x-permission: livestock.animals.view
+      parameters:
+        - { name: 'filter[status]', in: query, schema: { type: string, enum: [open, served, pregnant, not_pregnant, delivered, aborted] } }
+        - { name: 'filter[dam_id]', in: query, schema: { type: string, format: uuid } }
+        - { name: 'filter[due_before]', in: query, schema: { type: string, format: date } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Breeding' }
+    post:
+      tags: [Livestock]
+      operationId: recordService
+      summary: 'Record a service (natural or AI)'
+      description: 'Expected due date from the species'' gestation length. 409 breeding_open while the dam has an open service.'
+      x-permission: livestock.records.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BreedingInput' }
+      responses:
+        '201':
+          description: 'Recorded'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Breeding' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-breedings/{breeding}:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: breeding, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      tags: [Livestock]
+      operationId: updateBreeding
+      summary: 'Record a pregnancy diagnosis or loss'
+      x-permission: livestock.records.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [pregnant, not_pregnant, aborted] }
+                on: { type: [string, 'null'], format: date }
+                note: { type: [string, 'null'] }
+      responses:
+        '200':
+          description: 'Updated'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Breeding' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-breedings/{breeding}/birth:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: breeding, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Livestock]
+      operationId: recordBirth
+      summary: 'Record a birth and register the offspring'
+      x-permission: livestock.records.record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [born_on, offspring]
+              properties:
+                born_on: { type: string, format: date }
+                offspring:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items:
+                    type: object
+                    required: [sex]
+                    properties:
+                      sex: { type: string, enum: [female, male] }
+                      name: { type: [string, 'null'] }
+                      tag_number: { type: [string, 'null'] }
+                note: { type: [string, 'null'] }
+      responses:
+        '201':
+          description: Delivered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Breeding' }
+                  meta:
+                    type: object
+                    properties:
+                      offspring: { type: array, items: { $ref: '#/components/schemas/Animal' } }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-sales:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+    get:
+      tags: [Livestock]
+      operationId: listAnimalSales
+      summary: 'Sale requests'
+      x-permission: livestock.animals.view
+      parameters:
+        - { name: 'filter[status]', in: query, schema: { type: string, enum: [requested, approved, rejected, completed, cancelled] } }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Page of results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/AnimalSaleRequest' }
+    post:
+      tags: [Livestock]
+      operationId: requestAnimalSale
+      summary: 'Request to sell an animal'
+      description: '`expected_price` needs finance.values.view.'
+      x-permission: livestock.sales.request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnimalSaleInput' }
+      responses:
+        '201':
+          description: 'Requested'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalSaleRequest' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-sales/{sale}/approve:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: sale, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Livestock]
+      operationId: approveAnimalSale
+      summary: 'Approve a sale request'
+      description: 'Four-eyes: not your own request unless you are the owner.'
+      x-permission: livestock.sales.approve
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: { type: [string, 'null'] }
+      responses:
+        '200':
+          description: 'Updated'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalSaleRequest' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-sales/{sale}/reject:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: sale, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Livestock]
+      operationId: rejectAnimalSale
+      summary: 'Reject a sale request'
+      x-permission: livestock.sales.approve
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [note]
+              properties:
+                note: { type: string }
+      responses:
+        '200':
+          description: 'Updated'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalSaleRequest' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /farms/{farm}/animal-sales/{sale}/complete:
+    parameters:
+      - $ref: '#/components/parameters/Farm'
+      - { name: sale, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Livestock]
+      operationId: completeAnimalSale
+      summary: 'Record the sale'
+      description: 'Marks the animal sold and closes its trace batch (no price in the trace history). Inside a meat withdrawal period: 422 withdrawal_period unless an override reason is given.'
+      x-permission: livestock.sales.approve
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sold_on]
+              properties:
+                sold_on: { type: string, format: date }
+                sale_price: { type: [number, 'null'] }
+                buyer: { type: [string, 'null'] }
+                withdrawal_override_reason: { type: [string, 'null'], maxLength: 500 }
+      responses:
+        '200':
+          description: 'Updated'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/AnimalSaleRequest' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
   /farms/{farm}/audit-logs:
     get:
       tags: [Audit]
@@ -3623,7 +4501,7 @@ components:
                 value: { type: [number, 'null'] }
                 direction: { type: string, enum: [up, down, flat] }
                 vs: { type: string }
-        meta: { type: object }
+        meta: { type: object, description: 'Extra detail, e.g. by_species for livestock.head_count' }
 
     WidgetRef:
       type: object
@@ -4688,3 +5566,288 @@ components:
         moisture_pct: { type: [number, 'null'], minimum: 0, maximum: 100 }
         notes: { type: [string, 'null'] }
         withholding_override_reason: { type: [string, 'null'], maxLength: 500 }
+
+    AnimalRef:
+      oneOf:
+        - type: 'null'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            animal_code: { type: string }
+            name: { type: [string, 'null'] }
+    AnimalGroup:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: animal_group }
+        code: { type: string }
+        name: { type: string }
+        species: { $ref: '#/components/schemas/Ref' }
+        purpose: { type: string, enum: [dairy, beef, meat, layers, broilers, breeding, mixed, other] }
+        location: { oneOf: [{ $ref: '#/components/schemas/Ref' }, { type: 'null' }] }
+        flock_size: { type: [integer, 'null'], description: 'For flocks kept without individual records' }
+        head_count: { type: integer, description: 'Active animals registered in the group' }
+        is_active: { type: boolean }
+        notes: { type: [string, 'null'] }
+        version: { type: integer }
+    AnimalGroupInput:
+      type: object
+      properties:
+        code: { type: [string, 'null'], maxLength: 20 }
+        name: { type: string, maxLength: 120 }
+        species_id: { type: string, format: uuid, description: 'Create only' }
+        purpose: { type: string, enum: [dairy, beef, meat, layers, broilers, breeding, mixed, other] }
+        location_id: { type: [string, 'null'], format: uuid }
+        flock_size: { type: [integer, 'null'], minimum: 0 }
+        is_active: { type: boolean }
+        notes: { type: [string, 'null'] }
+        version: { type: integer }
+
+    Animal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: animal }
+        animal_code: { type: string }
+        tag_number: { type: [string, 'null'] }
+        rfid: { type: [string, 'null'] }
+        name: { type: [string, 'null'] }
+        label: { type: string }
+        species: { $ref: '#/components/schemas/Ref' }
+        breed: { oneOf: [{ $ref: '#/components/schemas/Ref' }, { type: 'null' }] }
+        breed_note: { type: [string, 'null'] }
+        sex: { type: string, enum: [female, male] }
+        birth_date: { type: [string, 'null'], format: date }
+        birth_date_estimated: { type: boolean }
+        age_months: { type: [integer, 'null'] }
+        origin: { type: string, enum: [born, purchased, gifted, other] }
+        acquired_on: { type: [string, 'null'], format: date }
+        dam: { $ref: '#/components/schemas/AnimalRef' }
+        sire: { $ref: '#/components/schemas/AnimalRef' }
+        parentage_note: { type: [string, 'null'] }
+        group: { oneOf: [{ $ref: '#/components/schemas/Ref' }, { type: 'null' }] }
+        location: { oneOf: [{ $ref: '#/components/schemas/Ref' }, { type: 'null' }] }
+        status: { type: string, enum: [active, sold, dead, culled, transferred] }
+        exited_on: { type: [string, 'null'], format: date }
+        exit_reason: { type: [string, 'null'] }
+        last_weight_kg: { type: [number, 'null'] }
+        last_weighed_on: { type: [string, 'null'], format: date }
+        meat_withdrawal_until: { type: [string, 'null'], format: date, description: 'Set while a withdrawal period is running' }
+        milk_withdrawal_until: { type: [string, 'null'], format: date }
+        pregnancy:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                expected_due_on: { type: [string, 'null'], format: date }
+        batch:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                id: { type: string, format: uuid }
+                batch_code: { type: string }
+        notes: { type: [string, 'null'] }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+    AnimalInput:
+      type: object
+      properties:
+        species_id: { type: string, format: uuid, description: 'Create only' }
+        breed_id: { type: [string, 'null'], format: uuid }
+        breed_note: { type: [string, 'null'] }
+        sex: { type: string, enum: [female, male], description: 'Create only' }
+        name: { type: [string, 'null'] }
+        tag_number: { type: [string, 'null'], description: 'Unique among active animals' }
+        rfid: { type: [string, 'null'] }
+        birth_date: { type: [string, 'null'], format: date }
+        birth_date_estimated: { type: boolean }
+        origin: { type: string, enum: [born, purchased, gifted, other], description: 'Create only' }
+        acquired_on: { type: [string, 'null'], format: date }
+        dam_id: { type: [string, 'null'], format: uuid, description: 'Create only' }
+        sire_id: { type: [string, 'null'], format: uuid, description: 'Create only' }
+        parentage_note: { type: [string, 'null'] }
+        group_id: { type: [string, 'null'], format: uuid }
+        location_id: { type: [string, 'null'], format: uuid, description: 'Create only; defaults to the group location' }
+        notes: { type: [string, 'null'] }
+        version: { type: integer }
+
+    AnimalRecord:
+      type: object
+      description: 'Common fields; the rest depend on `type` (health, feeding, weight, production, movement).'
+      additionalProperties: true
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, enum: [animal_health, animal_feeding, animal_weight, animal_production, animal_movement] }
+        animal: { $ref: '#/components/schemas/AnimalRef' }
+        group: { oneOf: [{ $ref: '#/components/schemas/Ref' }, { type: 'null' }] }
+        kind: { type: string }
+        given_on: { type: string, format: date }
+        diagnosis: { type: [string, 'null'] }
+        product_name: { type: [string, 'null'] }
+        dose: { type: [number, 'null'] }
+        dose_unit: { type: [string, 'null'] }
+        meat_withdrawal_days: { type: [integer, 'null'] }
+        milk_withdrawal_days: { type: [integer, 'null'] }
+        next_due_on: { type: [string, 'null'], format: date }
+        given_by: { type: [string, 'null'] }
+        fed_on: { type: string, format: date }
+        feed_name: { type: string }
+        weighed_on: { type: string, format: date }
+        weight_kg: { type: number }
+        method: { type: string }
+        product: { type: string }
+        produced_on: { type: string, format: date }
+        session: { type: [string, 'null'] }
+        quantity: { type: number }
+        unit: { type: string }
+        discarded: { type: boolean }
+        lot:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                id: { type: string, format: uuid }
+                batch_code: { type: [string, 'null'] }
+        moved_at: { type: string, format: date-time }
+        from_location_id: { type: [string, 'null'], format: uuid }
+        to_location_id: { type: [string, 'null'], format: uuid }
+        reason: { type: [string, 'null'] }
+        input_batch_id: { type: [string, 'null'], format: uuid }
+        notes: { type: [string, 'null'] }
+        recorded_by: { oneOf: [{ $ref: '#/components/schemas/Ref' }, { type: 'null' }] }
+        voided:
+          oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                reason: { type: string }
+                at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+    AnimalSubject:
+      type: object
+      description: 'An animal, or a whole group'
+      properties:
+        animal_id: { type: [string, 'null'], format: uuid }
+        group_id: { type: [string, 'null'], format: uuid }
+        notes: { type: [string, 'null'] }
+    AnimalHealthInput:
+      allOf:
+        - $ref: '#/components/schemas/AnimalSubject'
+        - type: object
+          required: [kind, given_on]
+          properties:
+            kind: { type: string, enum: [treatment, vaccination, deworming, checkup, injury, other] }
+            given_on: { type: string, format: date }
+            diagnosis: { type: [string, 'null'] }
+            product_name: { type: [string, 'null'], description: 'Required for vaccinations and dewormings' }
+            dose: { type: [number, 'null'] }
+            dose_unit: { type: [string, 'null'] }
+            input_batch_id: { type: [string, 'null'], format: uuid }
+            meat_withdrawal_days: { type: [integer, 'null'], minimum: 0 }
+            milk_withdrawal_days: { type: [integer, 'null'], minimum: 0 }
+            next_due_on: { type: [string, 'null'], format: date }
+            given_by: { type: [string, 'null'] }
+    AnimalFeedingInput:
+      allOf:
+        - $ref: '#/components/schemas/AnimalSubject'
+        - type: object
+          required: [fed_on, feed_name, quantity, unit]
+          properties:
+            fed_on: { type: string, format: date }
+            feed_name: { type: string }
+            quantity: { type: number, exclusiveMinimum: 0 }
+            unit: { type: string }
+            input_batch_id: { type: [string, 'null'], format: uuid }
+    AnimalWeightInput:
+      type: object
+      required: [animal_id, weighed_on, weight_kg]
+      properties:
+        animal_id: { type: string, format: uuid }
+        weighed_on: { type: string, format: date }
+        weight_kg: { type: number, exclusiveMinimum: 0 }
+        method: { type: string, enum: [scale, tape, estimate] }
+        notes: { type: [string, 'null'] }
+    AnimalProductionInput:
+      allOf:
+        - $ref: '#/components/schemas/AnimalSubject'
+        - type: object
+          required: [product, produced_on, quantity, unit]
+          properties:
+            product: { type: string, enum: [milk, eggs, wool, other] }
+            produced_on: { type: string, format: date }
+            session: { type: [string, 'null'], enum: [am, pm, day, null] }
+            quantity: { type: number, minimum: 0 }
+            unit: { type: string }
+            discarded: { type: boolean }
+    AnimalMoveInput:
+      type: object
+      required: [to_location_id]
+      properties:
+        animal_ids: { type: array, items: { type: string, format: uuid } }
+        group_id: { type: [string, 'null'], format: uuid }
+        to_location_id: { type: string, format: uuid }
+        moved_at: { type: string, format: date-time }
+        reason: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }
+
+    Breeding:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: animal_breeding }
+        dam: { $ref: '#/components/schemas/AnimalRef' }
+        sire: { $ref: '#/components/schemas/AnimalRef' }
+        sire_note: { type: [string, 'null'] }
+        method: { type: string, enum: [natural, ai] }
+        served_on: { type: string, format: date }
+        expected_due_on: { type: [string, 'null'], format: date }
+        status: { type: string, enum: [served, pregnant, not_pregnant, delivered, aborted] }
+        outcome_on: { type: [string, 'null'], format: date }
+        offspring_count: { type: [integer, 'null'] }
+        notes: { type: [string, 'null'] }
+        version: { type: integer }
+    BreedingInput:
+      type: object
+      required: [dam_id, method, served_on]
+      properties:
+        dam_id: { type: string, format: uuid }
+        sire_id: { type: [string, 'null'], format: uuid }
+        sire_note: { type: [string, 'null'], description: 'AI straw or a bull from off the farm' }
+        method: { type: string, enum: [natural, ai] }
+        served_on: { type: string, format: date }
+        notes: { type: [string, 'null'] }
+
+    AnimalSaleRequest:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, const: animal_sale_request }
+        code: { type: string }
+        animal:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            animal_code: { type: string }
+            name: { type: [string, 'null'] }
+            label: { type: string }
+        reason: { type: [string, 'null'] }
+        buyer: { type: [string, 'null'] }
+        expected_price: { type: [number, 'null'], description: 'Only with finance.values.view' }
+        sale_price: { type: [number, 'null'], description: 'Only with finance.values.view' }
+        status: { type: string, enum: [requested, approved, rejected, completed, cancelled] }
+        requested_by: { oneOf: [{ $ref: '#/components/schemas/Ref' }, { type: 'null' }] }
+        decided_at: { type: [string, 'null'], format: date-time }
+        decision_note: { type: [string, 'null'] }
+        sold_on: { type: [string, 'null'], format: date }
+        withdrawal_override_reason: { type: [string, 'null'] }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+    AnimalSaleInput:
+      type: object
+      required: [animal_id]
+      properties:
+        animal_id: { type: string, format: uuid }
+        reason: { type: [string, 'null'] }
+        buyer: { type: [string, 'null'] }
+        expected_price: { type: [number, 'null'], minimum: 0 }

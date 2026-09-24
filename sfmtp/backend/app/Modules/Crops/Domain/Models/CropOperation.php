@@ -6,6 +6,7 @@ use App\Modules\Crops\Domain\Enums\OperationStatus;
 use App\Modules\Crops\Domain\Enums\OperationType;
 use App\Modules\Identity\Domain\Models\User;
 use App\Modules\Tenancy\Domain\Concerns\BelongsToFarm;
+use App\Support\Database\Versioned;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

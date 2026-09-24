@@ -12,6 +12,10 @@ use App\Modules\Crops\Application\CropOperations;
 use App\Modules\Crops\Application\CropPlans;
 use App\Modules\Crops\Application\CropSetup;
 use App\Modules\FarmStructure\Application\StructureService;
+use App\Modules\Livestock\Application\AnimalRecords;
+use App\Modules\Livestock\Application\AnimalSales;
+use App\Modules\Livestock\Application\Breedings;
+use App\Modules\Livestock\Application\Herd;
 use App\Modules\Tenancy\Domain\Models\Farm;
 use App\Modules\Tenancy\Domain\Models\FarmUser;
 use App\Modules\Tenancy\TenantContext;
@@ -74,6 +78,34 @@ class CrossTenantIsolationTest extends TestCase
             ];
         });
         $this->victimRecords += $this->victimCropRecords($this->victimRecords['plot']);
+        $this->victimRecords += $this->victimLivestockRecords();
+    }
+
+    /** One of each livestock record, created as the victim's owner. */
+    private function victimLivestockRecords(): array
+    {
+        $owner = FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail();
+        $this->actingAs($owner->user, 'api');
+        $cattle = DB::table('global_animal_species')->where('code', 'cattle')->value('id');
+
+        return $this->app->make(TenantContext::class)->run($this->victim, function () use ($cattle) {
+            $herd = $this->app->make(Herd::class);
+            $records = $this->app->make(AnimalRecords::class);
+            $group = $herd->createGroup(['name' => 'Victim herd', 'species_id' => $cattle]);
+            $cow = $herd->register(['species_id' => $cattle, 'sex' => 'female', 'origin' => 'purchased', 'group_id' => $group->id]);
+            $bull = $herd->register(['species_id' => $cattle, 'sex' => 'male', 'origin' => 'purchased']);
+
+            return [
+                'group' => $group->id,
+                'animal' => $cow->id,
+                'health_record' => $records->health(['animal_id' => $cow->id, 'kind' => 'checkup', 'given_on' => now()->toDateString()])->id,
+                'feeding' => $records->feeding(['group_id' => $group->id, 'fed_on' => now()->toDateString(), 'feed_name' => 'Hay', 'quantity' => 20, 'unit' => 'kg'])->id,
+                'weight' => $records->weight(['animal_id' => $cow->id, 'weighed_on' => now()->toDateString(), 'weight_kg' => 420])->id,
+                'production' => $records->production(['animal_id' => $cow->id, 'product' => 'milk', 'produced_on' => now()->toDateString(), 'quantity' => 9, 'unit' => 'l'])->id,
+                'breeding' => $this->app->make(Breedings::class)->serve(['dam_id' => $cow->id, 'sire_id' => $bull->id, 'method' => 'natural', 'served_on' => now()->toDateString()])->id,
+                'sale' => $this->app->make(AnimalSales::class)->request(['animal_id' => $bull->id])->id,
+            ];
+        }, $owner);
     }
 
     /** One of each crop record, created as the victim's owner. */
@@ -137,6 +169,9 @@ class CrossTenantIsolationTest extends TestCase
             'grants' => DB::table('farm_role_permissions')->count(),
             'crop_rows' => collect(['crops', 'crop_seasons', 'crop_plans', 'crop_cycles', 'crop_operations', 'crop_observations', 'crop_harvests'])
                 ->mapWithKeys(fn ($t) => [$t => DB::table($t)->count()])->all(),
+            'livestock_rows' => collect(['animal_groups', 'animals', 'animal_health_records', 'animal_feedings', 'animal_weights', 'animal_production_records', 'animal_movements', 'animal_record_voids', 'animal_breedings', 'animal_sale_requests'])
+                ->mapWithKeys(fn ($t) => [$t => DB::table($t)->count()])->all(),
+            'livestock_versions' => DB::table('animals')->sum('version') + DB::table('animal_breedings')->sum('version') + DB::table('animal_sale_requests')->sum('version') + DB::table('animal_groups')->sum('version'),
             'crop_versions' => DB::table('crop_cycles')->sum('version') + DB::table('crop_plans')->sum('version') + DB::table('crop_observations')->sum('version') + DB::table('crop_operations')->sum('version'),
             'structure' => DB::table('farm_blocks')->whereNull('deleted_at')->count() + DB::table('farm_sections')->whereNull('deleted_at')->count()
                 + DB::table('farm_plots')->whereNull('deleted_at')->count() + DB::table('farm_locations')->whereNull('deleted_at')->count(),

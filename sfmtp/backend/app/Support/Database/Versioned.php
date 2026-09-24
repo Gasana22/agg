@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Crops\Domain\Models;
+namespace App\Support\Database;
 
 /** Optimistic version, bumped on every update (docs/06 §1 "Writes"). */
 trait Versioned

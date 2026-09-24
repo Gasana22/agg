@@ -20,6 +20,7 @@ class DashboardRegistry
     public function __construct(
         private readonly FarmMetrics $metrics,
         private readonly CropMetrics $crops,
+        private readonly LivestockMetrics $livestock,
         private readonly FarmPermissions $permissions,
         private readonly TenantContext $context,
     ) {}
@@ -30,14 +31,19 @@ class DashboardRegistry
         $trace = ['trace.open_batches', 'trace.events'];
 
         return match ($dashboard) {
-            'owner' => ['kpis' => ['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'pest_disease_alerts', 'upcoming_harvests', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'view_map', 'new_batch', 'view_audit_log']],
-            'manager' => ['kpis' => ['crop.active_cycles', 'crop.incidents_open', 'structure.plots', 'farm.members', ...$trace], 'widgets' => ['operations_to_verify', 'pest_disease_alerts', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'start_cycle', 'view_map', 'new_batch']],
+            'owner' => ['kpis' => ['farm.area', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'view_map', 'new_batch', 'view_audit_log']],
+            'manager' => ['kpis' => ['crop.active_cycles', 'crop.incidents_open', 'livestock.head_count', 'livestock.vaccinations_due', 'structure.plots', 'farm.members', ...$trace], 'widgets' => ['operations_to_verify', 'pest_disease_alerts', 'vaccinations_due', 'recent_trace_events', 'trace_activity'], 'quick_actions' => ['invite_member', 'start_cycle', 'register_animal', 'view_map', 'new_batch']],
             'agronomist' => [
                 'kpis' => ['crop.active_cycles', 'crop.planted_area', 'crop.near_harvest', 'crop.expected_yield', 'crop.actual_yield', 'crop.yield_per_ha', 'crop.incidents_open', 'crop.treatments_active'],
                 'widgets' => ['pest_disease_alerts', 'operations_to_verify', 'upcoming_harvests', 'expected_vs_actual_yield', 'recent_trace_events'],
                 'quick_actions' => ['start_cycle', 'record_operation', 'report_observation', 'record_harvest', 'new_crop_plan', 'view_map'],
             ],
-            'livestock', 'store' => ['kpis' => $trace, 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_map', 'new_batch']],
+            'livestock' => [
+                'kpis' => ['livestock.head_count', 'livestock.new_animals', 'livestock.pregnant', 'livestock.vaccinations_due', 'livestock.under_withdrawal', 'livestock.mortality_rate', 'livestock.milk', 'livestock.daily_gain', 'livestock.sold'],
+                'widgets' => ['vaccinations_due', 'withdrawal_alerts', 'expected_births', 'weight_loss_alerts', 'milk_production', 'recent_trace_events'],
+                'quick_actions' => ['register_animal', 'record_health', 'record_weight', 'record_production', 'request_sale', 'view_map'],
+            ],
+            'store' => ['kpis' => $trace, 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_map', 'new_batch']],
             'accountant' => ['kpis' => ['trace.open_batches'], 'widgets' => ['recent_trace_events'], 'quick_actions' => ['view_audit_log']],
             'worker' => ['kpis' => [], 'widgets' => [], 'quick_actions' => []],
         };
@@ -76,6 +82,26 @@ class DashboardRegistry
                 'value' => fn () => $this->crops->openIncidents()],
             'crop.treatments_active' => ['label' => 'Cycles under withholding', 'format' => 'number', 'permission' => 'crops.operations.view',
                 'value' => fn () => $this->crops->cyclesUnderWithholding()],
+            'livestock.head_count' => ['label' => 'Animals', 'format' => 'number', 'permission' => 'livestock.animals.view',
+                'value' => fn () => $this->livestock->headCount(), 'meta' => fn () => ['by_species' => $this->livestock->bySpecies()]],
+            'livestock.new_animals' => ['label' => 'New animals', 'format' => 'number', 'permission' => 'livestock.animals.view',
+                'value' => fn (Period $p) => $this->livestock->newAnimals($p),
+                'previous' => fn (Period $p) => $this->livestock->newAnimals($p->previous())],
+            'livestock.pregnant' => ['label' => 'Pregnant', 'format' => 'number', 'permission' => 'livestock.animals.view',
+                'value' => fn () => $this->livestock->pregnant()],
+            'livestock.vaccinations_due' => ['label' => 'Vaccinations due (14 days)', 'format' => 'number', 'permission' => 'livestock.animals.view',
+                'value' => fn () => count($this->livestock->vaccinationsDue())],
+            'livestock.under_withdrawal' => ['label' => 'Under withdrawal', 'format' => 'number', 'permission' => 'livestock.animals.view',
+                'value' => fn () => $this->livestock->underWithdrawal()],
+            'livestock.mortality_rate' => ['label' => 'Mortality', 'format' => 'percent', 'permission' => 'livestock.animals.view',
+                'value' => fn (Period $p) => $this->livestock->mortalityRate($p)],
+            'livestock.milk' => ['label' => 'Milk (period)', 'format' => 'quantity', 'permission' => 'livestock.animals.view',
+                'value' => fn (Period $p) => ['value' => number_format($this->livestock->milkLitres($p), 1, '.', ''), 'unit' => 'l'],
+                'previous' => fn (Period $p) => ['value' => number_format($this->livestock->milkLitres($p->previous()), 1, '.', ''), 'unit' => 'l']],
+            'livestock.daily_gain' => ['label' => 'Average daily gain', 'format' => 'quantity', 'permission' => 'livestock.animals.view',
+                'value' => fn () => ($g = $this->livestock->averageDailyGain()) === null ? null : ['value' => number_format($g, 2, '.', ''), 'unit' => 'kg/day']],
+            'livestock.sold' => ['label' => 'Animals sold', 'format' => 'number', 'permission' => 'livestock.animals.view',
+                'value' => fn (Period $p) => $this->livestock->sold($p)],
             'trace.open_batches' => ['label' => 'Open batches', 'format' => 'number', 'permission' => 'trace.batches.view',
                 'value' => fn () => $this->metrics->openBatches()],
             'trace.events' => ['label' => 'Traceability events', 'format' => 'number', 'permission' => 'trace.batches.view',
@@ -100,6 +126,26 @@ class DashboardRegistry
                     ['key' => 'members', 'label' => 'Invite your team', 'done' => $this->metrics->membersActive() > 1, 'href' => "/farms/{$farm->id}/members"],
                     ['key' => 'approval', 'label' => 'Farm approved by SFMTP', 'done' => $farm->status->value === 'active', 'href' => null],
                 ]]],
+            'vaccinations_due' => ['type' => 'action_list', 'permission' => 'livestock.animals.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->livestock->vaccinationsDue()]],
+            'withdrawal_alerts' => ['type' => 'action_list', 'permission' => 'livestock.animals.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->livestock->withdrawalAlerts()]],
+            'expected_births' => ['type' => 'action_list', 'permission' => 'livestock.animals.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->livestock->expectedBirths()]],
+            'weight_loss_alerts' => ['type' => 'action_list', 'permission' => 'livestock.animals.view', 'inline' => true,
+                'data' => fn () => ['items' => $this->livestock->weightLoss()]],
+            'livestock_sale_requests' => ['type' => 'action_list', 'permission' => 'livestock.sales.approve', 'inline' => true,
+                'data' => fn () => ['items' => $this->livestock->saleRequestsPending()]],
+            'milk_production' => ['type' => 'chart', 'permission' => 'livestock.animals.view', 'inline' => false,
+                'data' => function (Period $p) {
+                    $series = $this->livestock->milkPerDay($p);
+
+                    return [
+                        'chart' => 'bar',
+                        'x' => ['type' => 'date', 'values' => array_column($series, 'date')],
+                        'series' => [['key' => 'milk', 'label' => 'Milk kept', 'unit' => 'l', 'values' => array_column($series, 'litres')]],
+                    ];
+                }],
             'pest_disease_alerts' => ['type' => 'action_list', 'permission' => 'crops.operations.view', 'inline' => true,
                 'data' => fn () => ['items' => $this->crops->incidentAlerts()]],
             'operations_to_verify' => ['type' => 'action_list', 'permission' => 'crops.operations.approve', 'inline' => true,
@@ -142,6 +188,11 @@ class DashboardRegistry
         return [
             'invite_member' => ['label' => 'Invite member', 'permission' => 'members.invite_workers', 'target' => "/farms/{$id}/members?invite=1"],
             'view_map' => ['label' => 'Farm map', 'permission' => 'structure.view', 'target' => "/farms/{$id}/structure"],
+            'register_animal' => ['label' => 'Register animal', 'permission' => 'livestock.animals.manage', 'target' => "/farms/{$id}/livestock?new=animal"],
+            'record_health' => ['label' => 'Treatment / vaccination', 'permission' => 'livestock.records.record', 'target' => "/farms/{$id}/livestock?action=health"],
+            'record_weight' => ['label' => 'Record weight', 'permission' => 'livestock.records.record', 'target' => "/farms/{$id}/livestock?action=weight"],
+            'record_production' => ['label' => 'Record milk / eggs', 'permission' => 'livestock.records.record', 'target' => "/farms/{$id}/livestock?tab=production"],
+            'request_sale' => ['label' => 'Request a sale', 'permission' => 'livestock.sales.request', 'target' => "/farms/{$id}/livestock?action=sale"],
             'start_cycle' => ['label' => 'Start crop cycle', 'permission' => 'crops.plans.manage', 'target' => "/farms/{$id}/crops?new=cycle"],
             'record_operation' => ['label' => 'Record field work', 'permission' => 'crops.operations.record', 'target' => "/farms/{$id}/crops?action=operation"],
             'report_observation' => ['label' => 'Report pest / disease', 'permission' => 'crops.operations.record', 'target' => "/farms/{$id}/crops?action=observation"],
@@ -174,7 +225,7 @@ class DashboardRegistry
                 'value' => $value,
                 'format' => $def['format'],
                 'delta' => isset($def['previous']) ? $this->delta($value, ($def['previous'])($period)) : null,
-            ];
+            ] + (isset($def['meta']) ? ['meta' => ($def['meta'])($period)] : []);
         }
 
         $widgets = [];

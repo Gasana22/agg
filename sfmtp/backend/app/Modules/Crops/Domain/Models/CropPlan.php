@@ -4,6 +4,7 @@ namespace App\Modules\Crops\Domain\Models;
 
 use App\Modules\Crops\Domain\Enums\PlanStatus;
 use App\Modules\Tenancy\Domain\Concerns\BelongsToFarm;
+use App\Support\Database\Versioned;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

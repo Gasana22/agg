@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Crops\Application;
+namespace App\Modules\Catalog\Application;
 
 use Illuminate\Support\Facades\DB;
 

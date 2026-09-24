@@ -12,8 +12,16 @@ use App\Modules\Crops\Application\CropSetup;
 use App\Modules\Crops\Domain\Enums\CloseReason;
 use App\Modules\Crops\Domain\Enums\CycleStage;
 use App\Modules\FarmStructure\Application\StructureService;
+use App\Modules\FarmStructure\Domain\Models\Location;
 use App\Modules\Identity\Domain\Enums\UserType;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Livestock\Application\AnimalRecords;
+use App\Modules\Livestock\Application\AnimalSales;
+use App\Modules\Livestock\Application\Breedings;
+use App\Modules\Livestock\Application\Herd;
+use App\Modules\Livestock\Domain\Enums\AnimalStatus;
+use App\Modules\Livestock\Domain\Enums\BreedingStatus;
+use App\Modules\Livestock\Domain\Models\AnimalGroup;
 use App\Modules\Platform\Application\PlatformPermissions;
 use App\Modules\Tenancy\Application\FarmService;
 use App\Modules\Tenancy\Domain\Enums\FarmStatus;
@@ -137,6 +145,7 @@ class DemoSeeder extends Seeder
         });
 
         $this->seedCrops($crop, $plots, $context, $recorder);
+        $this->seedLivestock($mixed, $context);
     }
 
     /**
@@ -218,6 +227,93 @@ class DemoSeeder extends Seeder
 
             $cycles->start(['plot_id' => $plots['B-1']->id, 'crop_id' => $cabbage->id, 'planting_method' => 'transplant', 'sown_on' => $day(21)->toDateString(), 'seeds_sown' => 30000, 'expected_yield' => 25000, 'area_ha' => 1.5]);
         });
+
+        Auth::forgetGuards();
+    }
+
+    /**
+     * The mixed farm's animals, recorded through the livestock services: a
+     * Friesian dairy herd with daily milking, an Ankole beef herd, a goat
+     * flock and a layer flock, with treatments, vaccinations, breeding,
+     * a birth, a death and a pending sale request.
+     */
+    private function seedLivestock(Farm $farm, TenantContext $context): void
+    {
+        $keeper = FarmUser::where('farm_id', $farm->id)->whereHas('user', fn ($q) => $q->where('email', 'livestock@aggfarms.test'))->firstOrFail();
+        Auth::setUser($keeper->user);
+
+        $context->run($farm, function () {
+            $herd = app(Herd::class);
+            $records = app(AnimalRecords::class);
+            $breedings = app(Breedings::class);
+            $species = fn (string $code) => DB::table('global_animal_species')->where('code', $code)->value('id');
+            $breed = fn (string $code) => DB::table('global_animal_breeds')->where('code', $code)->value('id');
+            $location = fn (string $code) => Location::where('code', $code)->value('id');
+            $day = fn (int $daysAgo) => now()->subDays($daysAgo)->toDateString();
+
+            $dairy = $herd->createGroup(['code' => 'DAIRY', 'name' => 'Dairy herd', 'species_id' => $species('cattle'), 'purpose' => 'dairy', 'location_id' => $location('KRAAL')]);
+            $beef = $herd->createGroup(['code' => 'BEEF', 'name' => 'Ankole herd', 'species_id' => $species('cattle'), 'purpose' => 'beef', 'location_id' => $location('KRAAL')]);
+            $goats = $herd->createGroup(['code' => 'GOATS', 'name' => 'Boer goats', 'species_id' => $species('goat'), 'purpose' => 'meat', 'location_id' => $location('GOAT')]);
+            $herd->createGroup(['code' => 'LAYERS', 'name' => 'Layer flock', 'species_id' => $species('chicken'), 'purpose' => 'layers', 'flock_size' => 250]);
+
+            $cow = fn (string $name, string $tag, int $ageDays) => $herd->register([
+                'species_id' => $species('cattle'), 'breed_id' => $breed('friesian'), 'sex' => 'female', 'name' => $name, 'tag_number' => $tag,
+                'origin' => 'purchased', 'birth_date' => $day($ageDays), 'birth_date_estimated' => true, 'acquired_on' => $day(400), 'group_id' => $dairy->id,
+            ]);
+            $bella = $cow('Bella', 'UG-WAK-1001', 1900);
+            $neema = $cow('Neema', 'UG-WAK-1002', 1600);
+            $amani = $cow('Amani', 'UG-WAK-1003', 1300);
+            $bull = $herd->register(['species_id' => $species('cattle'), 'breed_id' => $breed('friesian'), 'sex' => 'male', 'name' => 'Kato', 'tag_number' => 'UG-WAK-2001', 'origin' => 'purchased', 'birth_date' => $day(1500), 'acquired_on' => $day(400), 'group_id' => $dairy->id]);
+            $steers = [];
+            foreach (['UG-WAK-3001', 'UG-WAK-3002', 'UG-WAK-3003'] as $i => $tag) {
+                $steers[] = $herd->register(['species_id' => $species('cattle'), 'breed_id' => $breed('ankole'), 'sex' => 'male', 'tag_number' => $tag, 'origin' => 'purchased', 'birth_date' => $day(800 + 30 * $i), 'acquired_on' => $day(300), 'group_id' => $beef->id]);
+            }
+            $does = [];
+            foreach (['Kiki', 'Lulu', 'Mimi', 'Nana'] as $i => $name) {
+                $does[] = $herd->register(['species_id' => $species('goat'), 'breed_id' => $breed('boer'), 'sex' => $i === 3 ? 'male' : 'female', 'name' => $name, 'origin' => 'purchased', 'birth_date' => $day(700 + 20 * $i), 'acquired_on' => $day(250), 'group_id' => $goats->id]);
+            }
+
+            // Bella calved 20 days ago; Amani is due in about a week.
+            $served = $breedings->serve(['dam_id' => $bella->id, 'sire_id' => $bull->id, 'method' => 'natural', 'served_on' => $day(303)]);
+            $breedings->update($served, BreedingStatus::Pregnant, $day(250), 'Confirmed by rectal palpation');
+            $breedings->birth($served, $day(20), [['sex' => 'female', 'name' => 'Bella II', 'tag_number' => 'UG-WAK-1004']], 'Easy calving');
+            $pregnant = $breedings->serve(['dam_id' => $amani->id, 'method' => 'ai', 'sire_note' => 'Friesian straw, NAGRC lot 4471', 'served_on' => $day(276)]);
+            $breedings->update($pregnant, BreedingStatus::Pregnant, $day(220), null);
+
+            // Health: a herd vaccination falling due, goat deworming, and mastitis on Neema.
+            $records->health(['group_id' => $dairy->id, 'kind' => 'vaccination', 'given_on' => $day(360), 'product_name' => 'Lumpy skin disease vaccine', 'given_by' => 'Dr. Okello (district vet)', 'next_due_on' => now()->addDays(5)->toDateString()]);
+            $records->health(['group_id' => $beef->id, 'kind' => 'vaccination', 'given_on' => $day(200), 'product_name' => 'FMD vaccine', 'next_due_on' => now()->addDays(165)->toDateString()]);
+            $records->health(['group_id' => $goats->id, 'kind' => 'deworming', 'given_on' => $day(95), 'product_name' => 'Albendazole 10%', 'dose' => 5, 'dose_unit' => 'ml', 'meat_withdrawal_days' => 14, 'next_due_on' => $day(5)]);
+            $records->health(['animal_id' => $neema->id, 'kind' => 'treatment', 'given_on' => $day(2), 'diagnosis' => 'Clinical mastitis, rear left quarter', 'product_name' => 'Cloxacillin intramammary', 'dose' => 1, 'dose_unit' => 'pcs', 'meat_withdrawal_days' => 7, 'milk_withdrawal_days' => 5, 'given_by' => 'Lule Livestock']);
+
+            // Milk: two sessions a day for two weeks; Neema's milk discarded under withdrawal.
+            foreach (range(13, 0) as $ago) {
+                foreach (['am' => 1.0, 'pm' => 0.8] as $session => $share) {
+                    foreach ([[$bella, 11.0], [$neema, 9.5], [$amani, 7.0]] as [$animal, $litres]) {
+                        if ($animal->is($amani) && $ago < 10) {
+                            continue;   // dried off before calving
+                        }
+                        $records->production(['animal_id' => $animal->id, 'product' => 'milk', 'produced_on' => $day($ago), 'session' => $session,
+                            'quantity' => round($litres * $share + (($ago * 7) % 5) * 0.2, 1), 'unit' => 'l', 'discarded' => $animal->is($neema) && $ago <= 2]);
+                    }
+                }
+                $records->production(['group_id' => AnimalGroup::where('code', 'LAYERS')->value('id'), 'product' => 'eggs', 'produced_on' => $day($ago), 'session' => 'day', 'quantity' => 205 + ($ago % 4) * 6, 'unit' => 'pcs']);
+            }
+
+            // Weights: steers gaining; one goat losing weight.
+            foreach ($steers as $i => $steer) {
+                foreach ([90 => 238, 45 => 262, 3 => 285] as $ago => $kg) {
+                    $records->weight(['animal_id' => $steer->id, 'weighed_on' => $day($ago), 'weight_kg' => $kg + 11 * $i]);
+                }
+            }
+            $records->weight(['animal_id' => $does[1]->id, 'weighed_on' => $day(40), 'weight_kg' => 42]);
+            $records->weight(['animal_id' => $does[1]->id, 'weighed_on' => $day(4), 'weight_kg' => 37.5, 'notes' => 'Thin, check for worms']);
+            $records->feeding(['group_id' => $dairy->id, 'fed_on' => $day(1), 'feed_name' => 'Dairy meal', 'quantity' => 24, 'unit' => 'kg']);
+            $records->move(['group_id' => $beef->id, 'to_location_id' => Location::where('code', 'KRAAL')->value('id'), 'reason' => 'Night housing', 'moved_at' => now()->subDays(1)->setTime(18, 30)]);
+
+            $herd->exit($does[2], AnimalStatus::Dead, $day(12), 'Pneumonia after heavy rains');
+            app(AnimalSales::class)->request(['animal_id' => $steers[2]->id, 'reason' => 'Finished weight reached', 'buyer' => 'Wakiso livestock market']);
+        }, $keeper);
 
         Auth::forgetGuards();
     }
