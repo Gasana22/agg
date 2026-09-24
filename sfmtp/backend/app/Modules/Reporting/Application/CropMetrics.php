@@ -141,7 +141,7 @@ class CropMetrics
             ->map(fn (CropCycle $c) => [
                 'id' => $c->id,
                 'title' => "{$c->crop->label()} · Plot {$c->plot->code}",
-                'subtitle' => "{$c->code} · {$c->area_ha} ha".($c->safe_harvest_on && $c->safe_harvest_on->isFuture() ? " · withholding until {$c->safe_harvest_on->toDateString()}" : ''),
+                'subtitle' => "{$c->code} · ".round((float) $c->area_ha, 2).' ha'.($c->safe_harvest_on && $c->safe_harvest_on->isFuture() ? " · withholding until {$c->safe_harvest_on->toDateString()}" : ''),
                 'at' => $c->expected_harvest_on->setTimezone($this->context->farm()->timezone)->setTime(12, 0)->utc()->toIso8601ZuluString(),
                 'href' => "/farms/{$c->farm_id}/crops/cycles/{$c->id}",
             ])

@@ -18,6 +18,7 @@ export type NavItem = {
 export const FARM_NAV: NavItem[] = [
   { key: "dashboard", label: "Dashboard", href: (id) => `/farms/${id}`, permission: null, icon: "dashboard" },
   { key: "structure", label: "Farm map", href: (id) => `/farms/${id}/structure`, permission: "structure.view", icon: "map" },
+  { key: "crops", label: "Crops", href: (id) => `/farms/${id}/crops`, permission: "crops.plans.view", icon: "crops" },
   { key: "traceability", label: "Traceability", href: (id) => `/farms/${id}/traceability`, permission: "trace.batches.view", icon: "trace" },
   { key: "members", label: "Members", href: (id) => `/farms/${id}/members`, permission: "members.view", icon: "members" },
   { key: "roles", label: "Roles & permissions", href: (id) => `/farms/${id}/roles`, permission: "roles.view", icon: "roles" },

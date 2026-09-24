@@ -25,6 +25,10 @@ const TITLES: Record<string, string> = {
   farm_approvals: "Farms awaiting approval",
   expiring_subscriptions: "Subscriptions ending within 14 days",
   support_queue: "Open support tickets",
+  pest_disease_alerts: "Pest & disease alerts",
+  operations_to_verify: "Field work to verify",
+  upcoming_harvests: "Upcoming harvests",
+  expected_vs_actual_yield: "Expected vs harvested (kg)",
 };
 
 /**

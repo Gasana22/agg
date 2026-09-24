@@ -20,6 +20,22 @@ describe("Widget", () => {
     expect(screen.getByText("SFM-7KQ2-9XA4")).toBeInTheDocument();
   });
 
+  it("shows a badge on action list items that carry one", () => {
+    render(
+      <Widget
+        widget={{
+          key: "pest_disease_alerts",
+          type: "action_list",
+          inline: true,
+          data: { items: [{ id: "1", title: "Fall armyworm", subtitle: "Maize · Plot A-1", badge: { label: "High", tone: "danger" }, href: "/farms/f/crops/cycles/c" }] },
+        }}
+      />,
+    );
+    expect(screen.getByText("Pest & disease alerts")).toBeInTheDocument();
+    expect(screen.getByText("High")).toBeInTheDocument();
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/farms/f/crops/cycles/c");
+  });
+
   it("renders checklist progress", () => {
     render(
       <Widget

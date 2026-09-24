@@ -11,6 +11,7 @@ import {
   Plug,
   Route,
   ScrollText,
+  Sprout,
   Settings,
   ShieldCheck,
   Tractor,
@@ -20,6 +21,7 @@ import {
 export const NAV_ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
   map: Map,
+  crops: Sprout,
   trace: Route,
   members: Users,
   roles: ShieldCheck,

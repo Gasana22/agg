@@ -114,6 +114,7 @@ function FarmPolicies({ farmId, currency }: { farmId: string; currency: string }
         body: {
           require_mfa_for_all: f.get("require_mfa_for_all") === "on",
           allow_negative_stock: f.get("allow_negative_stock") === "on",
+          allow_intercropping: f.get("allow_intercropping") === "on",
           units: String(f.get("units")) as "metric" | "imperial",
           approval_thresholds: {
             expense: amount("expense"),
@@ -165,6 +166,7 @@ function FarmPolicies({ farmId, currency }: { farmId: string; currency: string }
               <p className="mt-1 text-xs text-muted">Below a threshold the Farm Manager&apos;s approval is enough. These apply as the finance and inventory modules arrive.</p>
             </div>
             <Checkbox name="allow_negative_stock" defaultChecked={s.allow_negative_stock} label="Allow stock to go below zero" />
+            <Checkbox name="allow_intercropping" defaultChecked={s.allow_intercropping} label="Allow more than one crop cycle on a plot at once (intercropping)" />
             <div className="max-w-48">
               <Label htmlFor="units">Units</Label>
               <Select id="units" name="units" defaultValue={s.units ?? "metric"}>
