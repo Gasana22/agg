@@ -176,7 +176,9 @@ class DemoSeeder extends Seeder
         };
         $type = fn (string $code) => DB::table('global_activity_types')->where('code', $code)->value('id');
         $tz = $mixed->timezone;
-        $at = fn (int $daysAgo, string $time) => CarbonImmutable::parse(now($tz)->subDays($daysAgo)->toDateString().' '.$time, $tz)->utc();
+        // A time of day, never later than `$before` minutes ago (the seeder may run early in the morning).
+        $at = fn (int $daysAgo, string $time, int $before = 0) => CarbonImmutable::parse(now($tz)->subDays($daysAgo)->toDateString().' '.$time, $tz)->utc()
+            ->min(CarbonImmutable::now()->subMinutes($before));
 
         $manager = $membership($mixed, 'manager@aggfarms.test');
         $wilsonMember = $membership($mixed, 'worker@aggfarms.test');
@@ -192,6 +194,9 @@ class DemoSeeder extends Seeder
                 foreach ([$wilson, $okello, $nakato] as $i => $w) {
                     if ($d === 3 && $i === 2) {
                         continue;   // Nakato was off
+                    }
+                    if ($d === 1 && $i === 0 && now(app(TenantContext::class)->farm()->timezone)->hour < 1) {
+                        continue;   // just after midnight, today's check-in below falls on yesterday
                     }
                     Attendance::create(['worker_id' => $w->id, 'work_date' => $at($d, '07:00')->setTimezone(app(TenantContext::class)->farm()->timezone)->toDateString(),
                         'check_in_at' => $at($d, sprintf('06:%02d', 50 + $i * 4)), 'check_out_at' => $at($d, sprintf('16:%02d', 10 + $i * 7)),
@@ -233,8 +238,8 @@ class DemoSeeder extends Seeder
             $task = $mine($vaccinate);
             $flow->workerStep($task, TaskEvent::Start, $point + ['occurred_at' => $at(1, '09:10')]);
             $flow->workerStep($task, TaskEvent::Submit, $point + ['occurred_at' => $at(1, '10:25'), 'quantity' => 11, 'unit' => 'head', 'note' => 'All 11 goats dewormed; Mimi was not in the house.']);
-            app(AttendanceBook::class)->checkIn(['occurred_at' => $at(0, '06:52'), 'lat' => 0.4046, 'lng' => 32.3864, 'accuracy_m' => 9]);
-            $flow->workerStep($mine($milking), TaskEvent::Start, ['occurred_at' => $at(0, '07:05'), 'lat' => 0.4049, 'lng' => 32.3890, 'accuracy_m' => 5]);
+            app(AttendanceBook::class)->checkIn(['occurred_at' => $at(0, '06:52', 30), 'lat' => 0.4046, 'lng' => 32.3864, 'accuracy_m' => 9]);
+            $flow->workerStep($mine($milking), TaskEvent::Start, ['occurred_at' => $at(0, '07:05', 20), 'lat' => 0.4049, 'lng' => 32.3890, 'accuracy_m' => 5]);
         });
 
         // Okello's herding yesterday was verified (on paper, entered by the manager's team).

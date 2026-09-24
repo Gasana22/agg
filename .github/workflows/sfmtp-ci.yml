@@ -140,6 +140,83 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: "1"
 
+  mobile:
+    name: Mobile (Flutter)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_DATABASE: sfmtp
+      DB_USERNAME: sfmtp
+      DB_PASSWORD: secret
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+      JWT_SECRET: ci-secret-ci-secret-ci-secret-ci-secret-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.5"
+          channel: stable
+          cache: true
+      - name: Dependencies
+        working-directory: sfmtp/mobile
+        run: flutter pub get
+      - name: Analyze
+        working-directory: sfmtp/mobile
+        run: flutter analyze
+      - name: Generated database code is up to date
+        working-directory: sfmtp/mobile
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- lib
+      - name: Unit and widget tests
+        working-directory: sfmtp/mobile
+        run: flutter test
+      # The offline scenario (docs/08 §6) against the real API with the demo farm.
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_pgsql, intl
+          coverage: none
+      - name: Database role
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -c "CREATE ROLE sfmtp LOGIN PASSWORD 'secret' NOSUPERUSER"
+          psql -h 127.0.0.1 -U postgres -c "CREATE DATABASE sfmtp OWNER sfmtp"
+          psql -h 127.0.0.1 -U postgres -d sfmtp -c "ALTER SCHEMA public OWNER TO sfmtp"
+      - uses: actions/cache@v4
+        with:
+          path: sfmtp/backend/vendor
+          key: composer-${{ hashFiles('sfmtp/backend/composer.lock') }}
+      - name: Start the API with the demo data
+        working-directory: sfmtp/backend
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          cp .env.example .env && php artisan key:generate
+          php artisan migrate --seed --force
+          php artisan serve --host=127.0.0.1 --port=8000 > /tmp/api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/up && break; sleep 1; done
+      - name: Offline scenario against the live API
+        working-directory: sfmtp/mobile
+        env:
+          SFMTP_LIVE_API: http://127.0.0.1:8000/api/v1
+        run: flutter test test/live_api_test.dart
+      - name: API log
+        if: failure()
+        run: tail -100 /tmp/api.log; tail -100 sfmtp/backend/storage/logs/laravel.log || true
+
   images:
     name: Docker images
     runs-on: ubuntu-latest
