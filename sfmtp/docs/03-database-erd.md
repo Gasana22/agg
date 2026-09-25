@@ -1245,6 +1245,34 @@ As built in Phase 10 (ADR-0014):
 - **`trace_qr_scans`** (new): one row per code, day and country with a
   count. No IP or device is kept.
 
+As built in Phase 12 (ADR-0016):
+
+- **`parties`, `party_users`, `party_links`** (new, global): the company,
+  its people, and one row per farm record opened to it (`kind` supplier or
+  customer, `record_id`, `status`). Links carry `farm_id` but no tenant RLS
+  (like `farm_users`); portal reads of farm data run in the linked farm's
+  context. **`portal_invitations`** (farm, RLS) hold the hashed one-time
+  token. `suppliers.party_id` / `customers.party_id` mirror the active link.
+- **`purchase_orders`** add the supplier's answer (`supplier_response`
+  accepted / rejected, promised date, note, who and when);
+  **`purchase_order_lines.confirmed_quantity`**.
+- **`supplier_dispatches`** + append-only **`supplier_dispatch_lines`**
+  (new): dispatch notices; a GRN received against one marks it received.
+  The diagram's `deliveries.status` stays out: deliveries are receipts.
+- **`supplier_invoice_submissions`** (new): invoices sent through the
+  portal (`submitted` → `recorded` with the supplier invoice, or
+  `rejected`), lines as JSON until recorded.
+- **`products`** as in the diagram, plus code, category, currency, minimum
+  order, availability note, income account and photo.
+- **`sales_orders`** add `source` (portal / internal), requested delivery
+  date and address, customer and internal notes, approval, reasons and
+  delivery time; the invoice link is `customer_invoice_id`.
+  **`sales_order_lines`** keep the price at ordering and a
+  `dispatched_quantity`; the batch sent is on the shipment line
+  (`shipment_lines.sales_order_line_id`, `shipments.sales_order_id`), not
+  on the order line.
+- The farm setting `approval_thresholds.sales_order` joins the others.
+
 ## 11. Sync support tables
 
 | Table | Purpose |

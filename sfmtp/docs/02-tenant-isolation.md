@@ -65,7 +65,7 @@ explain what replaces it there.
 | Scheduled tasks | Iterate farms explicitly: `Farm::active()->each(fn ($f) => TenantContext::run($f, …))`. They never query across farms in one scope |
 | Platform reporting (admin) | Uses a dedicated **read-only DB role** limited to platform tables and aggregate views (`v_farm_usage_stats`) that expose counts and storage, never records |
 | Console / tinker | Must call `TenantContext::run()`. Without it the global scope throws |
-| Portals | `PartyContext` (supplier or customer party ID) instead of farm context. Portal queries filter by `party_id` and by the farm's permission for that portal feature |
+| Portals | `PartyContext` (the party of the request) finds its active links, then runs each read inside the linked farm's `TenantContext` (so RLS and the farm scope apply) and filters to the linked supplier or customer record. No bypass (ADR-0016) |
 
 ## 4. Tenant-scoped resources beyond the database
 

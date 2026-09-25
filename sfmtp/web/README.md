@@ -36,9 +36,16 @@ build time (`--build-arg` in the Docker image).
 
 ## Public pages
 
-`/login`, the password reset pages and `/invite/{token}` work signed out. The
-BFF forwards `invitations/*` API calls without a session, so the invitation
-page can read the invitation and accept it by creating an account.
+`/login`, the password reset pages, `/invite/{token}` and `/portal-invite/{token}`
+work signed out. The BFF forwards `invitations/*` and `portal-invitations/*`
+API calls without a session, so the invitation pages can read an invitation
+and accept it by creating an account.
+
+## Portals
+
+Suppliers and customers sign in to `/supplier/{party}` and `/customer/{party}`
+(ADR-0016). A person with several workspaces (farms and portals) switches
+between them in the header.
 
 ## Develop
 

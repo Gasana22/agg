@@ -312,6 +312,70 @@ Everything in the Phase 8 row below, with these notes
   new route and request body. The accountant's, manager's and owner's
   journeys were checked in a browser.
 
+### Phase 12 — delivered
+
+Everything in the Phase 12 row below, with these notes
+([ADR-0016](adr/0016-supplier-and-customer-portals.md)):
+
+- **Party accounts.**
+  - A farm invites an email for one of its suppliers or customers.
+  - Accepting links that record to a party: the person's company, which
+    can span several farms, with one sign-in.
+  - A farm member keeps their account and sees the portal as another
+    workspace.
+  - Farms see who has access and can withdraw invitations or stop access.
+- **Isolation.** Portal reads run once per linked farm, inside that farm's
+  tenant context (no bypass), and only for the linked record. Farm routes
+  stay closed to parties.
+- **Supplier portal.**
+  - Orders from every farm, once sent.
+  - Accept with confirmed quantities and a date, or decline with a reason.
+  - Announce dispatches with the delivery note; the store receives against
+    them.
+  - Send invoices with the document; the farm records them through the
+    three-way match or sends them back.
+  - See what is recorded, paid and outstanding.
+  - A dashboard, and an email when an order is sent.
+- **Products and sales orders.**
+  - List prices set by the owner, published to the portal.
+  - Orders from the portal or recorded by staff.
+  - Approval with a sales order threshold and four eyes.
+  - Draft invoice from the order.
+  - Dispatch from trace batches in the order's unit.
+  - Delivered once everything arrived; failed deliveries give the quantity
+    back.
+- **Customer portal.**
+  - A shop with a cart (one order per farm).
+  - Orders with a timeline; cancel while waiting.
+  - Deliveries to confirm; invoices with what is due.
+  - The batches bought, with only the fields the farm approved for the
+    public and their QR page.
+  - A dashboard.
+- **Web**:
+  - both portals and the public invitation page;
+  - Sales and Portal access on the farm side;
+  - the supplier's answer, dispatches and invoices on purchase orders.
+- **Demo**: `supplier@aggfarms.test` (Kakiri Agro-Vet) and
+  `customer@aggfarms.test` (Kampala Millers).
+- **Deferred:**
+  - online payment by customers (Phase 14);
+  - a public marketplace for buyers the farm has not linked;
+  - self-service team management for parties;
+  - unit conversion between order and batch units.
+- **Test gate met.**
+  - 238 API tests on PostgreSQL (233 on MySQL, plus 5 that need PostgreSQL
+    features) and 62 web unit tests. They include:
+    - invitations and one party across farms;
+    - the supplier's answer → dispatch → receipt → invoice → recording;
+    - order → approval above the threshold → invoice → dispatch → delivered
+      confirmed by the customer;
+    - supplier and customer isolation (docs/04 §6 tests 9 and 10): other
+      parties' orders, unlinked farms, internal routes and suspended farms
+      all 404;
+    - the cross-tenant sweep over every new farm route.
+  - Both portals and the farm side were checked in a browser, including
+    phone width.
+
 ### Phase 11 — delivered
 
 Everything in the Phase 11 row below, with these notes

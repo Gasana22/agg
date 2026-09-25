@@ -12,9 +12,9 @@ import { ACCESS_COOKIE, clearSession, REFRESH_COOKIE, setSession, type TokenPair
  */
 const RESPONSE_HEADERS = ["content-type", "content-disposition", "x-request-id", "idempotent-replayed", "retry-after"];
 
-/** API paths that also work signed out: the emailed invitation link. */
+/** API paths that also work signed out: the emailed invitation links (farm members and portals). */
 function isPublicApiPath(path: string[]): boolean {
-  return path[0] === "invitations";
+  return path[0] === "invitations" || path[0] === "portal-invitations";
 }
 
 async function handle(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {

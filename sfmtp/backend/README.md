@@ -53,6 +53,8 @@ is `Password123!`:
 | `billing@sfmtp.test` | Platform billing staff (MFA enrolment required) |
 | `owner@aggfarms.test` | Owner of AGG Mixed Farm and AGG Crop Farm (MFA enrolment required) |
 | `manager@`, `agronomist@`, `livestock@`, `store@`, `accountant@`, `worker@aggfarms.test` | One role each on AGG Mixed Farm |
+| `supplier@aggfarms.test` | Supplier portal of Kakiri Agro-Vet Supplies (mixed farm): has accepted the lick and diesel order |
+| `customer@aggfarms.test` | Customer portal of Kampala Millers (crop farm): an order waiting for approval, and the maize bags it received with their public traceability |
 
 The crop farm also has a full maize season on B-3 (seed lot → crop lot →
 harvest → dried → packed, with a fall armyworm spray and its withholding
