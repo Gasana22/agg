@@ -10838,9 +10838,17 @@ export interface components {
             /** @description Money permissions only */
             total_amount?: number;
             /** @description Detail only */
-            placed_by?: unknown;
+            placed_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
             /** @description Detail only */
-            approved_by?: unknown;
+            approved_by?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
             /** @description Detail only */
             shipments?: components["schemas"]["Shipment"][];
         };

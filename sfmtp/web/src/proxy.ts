@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/reset-password", "/forgot-password", "/invite", "/q"];
+const PUBLIC_PATHS = ["/login", "/reset-password", "/forgot-password", "/invite", "/portal-invite", "/q"];
 
 /**
  * Route guard: pages need a session cookie. This only decides where to send

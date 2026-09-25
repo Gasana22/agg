@@ -21344,8 +21344,26 @@ components:
           description: Money permissions only
         placed_by:
           description: Detail only
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
         approved_by:
           description: Detail only
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
         shipments:
           type: array
           items:

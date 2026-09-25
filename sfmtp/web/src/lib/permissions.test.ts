@@ -13,6 +13,11 @@ const farm = (permissions: Record<string, "all" | "assigned" | "own">, dashboard
 });
 
 describe("visibleNav", () => {
+  it("shows sales to fulfilment staff and portal access to those who manage suppliers or customers", () => {
+    expect(visibleNav(farm({ "sales.fulfil": "all" }, ["store"])).map((i) => i.key)).toEqual(["dashboard", "sales", "shipments", "support"]);
+    expect(visibleNav(farm({ "suppliers.manage": "all" }, [])).map((i) => i.key)).toEqual(["portal-access", "support"]);
+  });
+
   it("shows only items the member holds a permission for", () => {
     const keys = visibleNav(farm({ "trace.batches.view": "all" }, ["agronomist"])).map((i) => i.key);
     expect(keys).toEqual(["dashboard", "traceability", "support"]);
@@ -23,8 +28,8 @@ describe("visibleNav", () => {
   });
 
   it("gives owners everything, including their subscription", () => {
-    const all = { "structure.view": "all", "crops.plans.view": "all", "livestock.animals.view": "all", "tasks.execute": "assigned", "tasks.view": "all", "workers.view": "all", "inventory.view": "all", "procurement.orders.approve": "all", "finance.view": "all", "trace.batches.view": "all", "sales.view": "all", "members.view": "all", "roles.view": "all", "audit.view": "all", "farm.profile.manage": "all", "billing.manage": "all" } as const;
-    expect(visibleNav(farm(all)).map((i) => i.key)).toEqual(["dashboard", "my-day", "tasks", "structure", "crops", "livestock", "inventory", "procurement", "workers", "finance", "reports", "ledger", "traceability", "shipments", "members", "roles", "audit", "settings", "billing", "support"]);
+    const all = { "structure.view": "all", "crops.plans.view": "all", "livestock.animals.view": "all", "tasks.execute": "assigned", "tasks.view": "all", "workers.view": "all", "inventory.view": "all", "procurement.orders.approve": "all", "finance.view": "all", "trace.batches.view": "all", "sales.view": "all", "customers.manage": "all", "members.view": "all", "roles.view": "all", "audit.view": "all", "farm.profile.manage": "all", "billing.manage": "all" } as const;
+    expect(visibleNav(farm(all)).map((i) => i.key)).toEqual(["dashboard", "my-day", "tasks", "structure", "crops", "livestock", "inventory", "procurement", "workers", "finance", "reports", "ledger", "traceability", "sales", "shipments", "portal-access", "members", "roles", "audit", "settings", "billing", "support"]);
   });
 
   it("shows purchasing to anyone with one of its permissions", () => {
@@ -70,6 +75,11 @@ describe("homePath", () => {
   it("sends platform admins to /admin and new users to onboarding", () => {
     expect(homePath([{ type: "platform", id: "platform", name: "Admin", dashboards: ["admin"] }], meta)).toBe("/admin");
     expect(homePath([], meta)).toBe("/onboarding");
+  });
+
+  it("sends a portal-only account to its portal", () => {
+    expect(homePath([{ type: "supplier", id: "p1", name: "Kakiri Agro", dashboards: ["supplier"], farms: [{ id: "f1", name: "Farm" }] }], meta)).toBe("/supplier/p1");
+    expect(homePath([{ type: "customer", id: "p2", name: "Millers", dashboards: ["customer"] }], meta)).toBe("/customer/p2");
   });
 });
 

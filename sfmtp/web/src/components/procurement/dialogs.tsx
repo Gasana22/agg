@@ -217,15 +217,19 @@ export function OrderDialog({ farmId, order, currency, onClose, onDone }: Base &
 }
 
 /** A goods received note: what arrived of each outstanding line, with its lot. */
-export function ReceiveDialog({ farmId, order, onClose, onDone }: Base & { order: PurchaseOrder }) {
+/** A dispatch notice from the supplier portal to receive against. */
+export type DispatchNotice = { id: string; code: string; reference?: string | null; lines: { order_line_id: string; quantity: number }[] };
+
+export function ReceiveDialog({ farmId, order, dispatch, onClose, onDone }: Base & { order: PurchaseOrder; dispatch?: DispatchNotice }) {
   const items = useItems(farmId);
   const due = (order.lines ?? []).filter((l) => outstanding(l) > 0);
-  const [qty, setQty] = useState<Record<string, string>>(Object.fromEntries(due.map((l) => [l.id!, String(outstanding(l))])));
+  const announced = (id: string) => dispatch?.lines.find((l) => l.order_line_id === id)?.quantity;
+  const [qty, setQty] = useState<Record<string, string>>(Object.fromEntries(due.map((l) => [l.id!, String(dispatch ? (announced(l.id!) ?? 0) : outstanding(l))])));
   const tracking = (itemId?: string) => items.data?.find((i) => i.id === itemId);
   return (
     <FormDialog
-      title={`Receive ${order.code}`}
-      description={`From ${order.supplier?.name}. Each line becomes a stock lot you can trace.`}
+      title={dispatch ? `Receive ${dispatch.code}` : `Receive ${order.code}`}
+      description={`From ${order.supplier?.name}${dispatch ? `, as announced in the portal (${order.code})` : ""}. Each line becomes a stock lot you can trace.`}
       submitLabel="Receive"
       onClose={onClose}
       onSubmit={async (f) => {
@@ -233,6 +237,7 @@ export function ReceiveDialog({ farmId, order, onClose, onDone }: Base & { order
           params: { path: { farm: farmId, order: order.id! } },
           body: {
             location_id: String(f.get("location_id")),
+            dispatch_id: dispatch?.id ?? null,
             received_on: text(f, "received_on") ?? undefined,
             supplier_reference: text(f, "supplier_reference"),
             note: text(f, "note"),
@@ -255,7 +260,7 @@ export function ReceiveDialog({ farmId, order, onClose, onDone }: Base & { order
           </div>
           <div>
             <Label htmlFor="supplier_reference">Delivery note number</Label>
-            <Input id="supplier_reference" name="supplier_reference" />
+            <Input id="supplier_reference" name="supplier_reference" defaultValue={dispatch?.reference ?? ""} />
           </div>
           <div className="space-y-3">
             {due.map((l, i) => {

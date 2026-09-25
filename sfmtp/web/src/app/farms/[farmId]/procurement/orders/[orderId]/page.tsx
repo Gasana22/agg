@@ -8,7 +8,8 @@ import { Suspense, useState } from "react";
 
 import { useActions } from "@/components/inventory/common";
 import { ReasonDialog } from "@/components/inventory/dialogs";
-import { InvoiceDialog, OrderDialog, ReceiveDialog } from "@/components/procurement/dialogs";
+import { InvoiceDialog, OrderDialog, ReceiveDialog, type DispatchNotice } from "@/components/procurement/dialogs";
+import { SupplierPortalSection } from "@/components/procurement/portal-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ErrorNotice, PageHeader, Skeleton, Table, Td, Th } from "@/components/ui/misc";
@@ -39,6 +40,7 @@ function Order() {
   const seesPrices = can(perms, "procurement.orders.manage|finance.values.view");
   const seesTrace = can(perms, "trace.batches.view");
   const [dialog, setDialog] = useState<string | null>(search.get("action"));
+  const [dispatch, setDispatch] = useState<DispatchNotice | null>(null);
 
   const order = useQuery({
     queryKey: ["purchase-orders", farmId, orderId],
@@ -108,6 +110,14 @@ function Order() {
       />
       {error ? <div className="mb-4"><ErrorNotice error={error} /></div> : null}
       {o.cancel_reason ? <p className="mb-4 text-sm text-muted">Cancelled: {o.cancel_reason}</p> : null}
+      {o.supplier_response ? (
+        <p className={`mb-4 text-sm ${o.supplier_response === "rejected" ? "text-danger" : ""}`}>
+          {o.supplier?.name} {o.supplier_response === "accepted" ? `accepted in the portal${o.supplier_promised_on ? `, delivering by ${o.supplier_promised_on}` : ""}` : "cannot supply this order"} ({formatDateTime(o.supplier_responded_at)})
+          {o.supplier_note ? `: “${o.supplier_note}”` : "."}
+        </p>
+      ) : o.status === "sent" && o.supplier?.on_portal ? (
+        <p className="mb-4 text-sm text-muted">Waiting for {o.supplier.name} to answer in the supplier portal.</p>
+      ) : null}
 
       <Table className="mb-6">
         <thead>
@@ -212,6 +222,14 @@ function Order() {
           </section>
         ) : null}
       </div>
+      <SupplierPortalSection
+        farmId={farmId}
+        order={o}
+        canReceive={canReceive && receivable}
+        canReview={writable && can(perms, "procurement.orders.manage|finance.manage")}
+        onReceive={(d) => setDispatch(d)}
+        onChanged={refresh}
+      />
       <p className="mt-6 text-xs text-muted">
         Created {formatDateTime(o.created_at)}
         {o.created_by ? ` by ${o.created_by.name}` : ""}
@@ -221,6 +239,18 @@ function Order() {
 
       {dialog === "edit" && canBuy && o.status === "draft" ? <OrderDialog farmId={farmId} order={o} currency={o.currency ?? ""} onClose={() => setDialog(null)} onDone={done} /> : null}
       {dialog === "receive" && canReceive && receivable ? <ReceiveDialog farmId={farmId} order={o} onClose={() => setDialog(null)} onDone={done} /> : null}
+      {dispatch && canReceive ? (
+        <ReceiveDialog
+          farmId={farmId}
+          order={o}
+          dispatch={dispatch}
+          onClose={() => setDispatch(null)}
+          onDone={async () => {
+            setDispatch(null);
+            await done();
+          }}
+        />
+      ) : null}
       {dialog === "invoice" && canBuy && invoiceable ? <InvoiceDialog farmId={farmId} order={o} currency={o.currency ?? ""} onClose={() => setDialog(null)} onDone={done} /> : null}
       {dialog === "cancel" && canBuy ? (
         <ReasonDialog

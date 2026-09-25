@@ -31,7 +31,9 @@ export const FARM_NAV: NavItem[] = [
   { key: "reports", label: "Reports", href: (id) => `/farms/${id}/reports`, permission: "reports.finance.view|finance.view", icon: "reports" },
   { key: "ledger", label: "Ledger", href: (id) => `/farms/${id}/ledger`, permission: "finance.view", icon: "ledger" },
   { key: "traceability", label: "Traceability", href: (id) => `/farms/${id}/traceability`, permission: "trace.batches.view", icon: "trace" },
+  { key: "sales", label: "Sales", href: (id) => `/farms/${id}/sales`, permission: "sales.view|sales.orders.create|sales.orders.approve|sales.pricing.manage|sales.fulfil|sales.invoice", icon: "sales" },
   { key: "shipments", label: "Shipments", href: (id) => `/farms/${id}/shipments`, permission: "sales.view|sales.fulfil|sales.invoice", icon: "shipments" },
+  { key: "portal-access", label: "Portal access", href: (id) => `/farms/${id}/portal-access`, permission: "suppliers.manage|customers.manage|suppliers.view|customers.view", icon: "portal" },
   { key: "members", label: "Members", href: (id) => `/farms/${id}/members`, permission: "members.view", icon: "members" },
   { key: "roles", label: "Roles & permissions", href: (id) => `/farms/${id}/roles`, permission: "roles.view", icon: "roles" },
   { key: "audit", label: "Audit log", href: (id) => `/farms/${id}/audit-log`, permission: "audit.view", icon: "audit" },
@@ -84,6 +86,8 @@ export const DASHBOARD_LABELS: Record<string, string> = {
   store: "Store",
   accountant: "Accountant",
   worker: "My work",
+  supplier: "Supplier portal",
+  customer: "Customer portal",
 };
 
 /** Where to send a user after sign-in (docs/05 §1: highest-precedence dashboard). */
@@ -92,6 +96,7 @@ export function homePath(workspaces: Workspace[], meta: { mfaRequired: boolean; 
   const first = workspaces[0];
   if (!first) return "/onboarding";
   if (first.type === "platform") return "/admin";
+  if (first.type === "supplier" || first.type === "customer") return `/${first.type}/${first.id}`;
   if (first.type === "farm" || first.type === "support") {
     const dashboard = first.dashboards[0];
     return dashboard ? `/farms/${first.id}/dashboard/${dashboard}` : `/farms/${first.id}/traceability`;
