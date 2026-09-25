@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Flame, Plus } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
@@ -13,9 +13,10 @@ import { SoilDialog } from "@/components/structure/soil-dialog";
 import { StructureTree } from "@/components/structure/structure-tree";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/input";
+import { Select, Textarea } from "@/components/ui/input";
 import { ErrorNotice, PageHeader, Skeleton } from "@/components/ui/misc";
 import { api } from "@/lib/api/client";
+import { HEAT_LAYERS } from "@/lib/analytics";
 import { ApiError } from "@/lib/api/errors";
 import { useFarmWorkspace } from "@/lib/api/hooks";
 import { can } from "@/lib/permissions";
@@ -46,6 +47,23 @@ export default function StructurePage() {
   const [paste, setPaste] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [error, setError] = useState<ApiError | null>(null);
+  const canHeat = can(workspace?.permissions, "maps.view");
+  const [heatOn, setHeatOn] = useState(false);
+  const [heatPeriod, setHeatPeriod] = useState<"7d" | "30d" | "90d">("30d");
+  const [heatLayers, setHeatLayers] = useState<string[] | null>(null);
+  const activity = useQuery({
+    queryKey: ["activity-heatmap", farmId, heatPeriod, heatLayers],
+    enabled: heatOn && canHeat,
+    queryFn: async () =>
+      (await api.GET("/farms/{farm}/maps/activity", { params: { path: { farm: farmId }, query: { period: heatPeriod, ...(heatLayers ? { layers: heatLayers.join(",") } : {}) } } })).data!.data!,
+  });
+  const visibleLayers = HEAT_LAYERS.filter((l) => !(activity.data?.hidden_layers ?? []).includes(l.key));
+  function toggleLayer(key: string) {
+    const all = visibleLayers.map((l) => l.key);
+    const current = heatLayers ?? all;
+    const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+    if (next.length > 0) setHeatLayers(next.length === all.length ? null : next);
+  }
 
   const data = structure.data;
   const tree = useMemo(() => buildTree(data ?? {}), [data]);
@@ -189,6 +207,43 @@ export default function StructurePage() {
         </div>
 
         <div className="flex min-h-[540px] flex-col gap-2">
+          {canHeat && !draw ? (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <Button size="sm" variant={heatOn ? "primary" : "secondary"} aria-pressed={heatOn} onClick={() => setHeatOn(!heatOn)}>
+                <Flame /> Activity
+              </Button>
+              {heatOn ? (
+                <>
+                  <Select aria-label="Activity period" className="h-8 w-36" value={heatPeriod} onChange={(e) => setHeatPeriod(e.target.value as typeof heatPeriod)}>
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                    <option value="90d">Last 90 days</option>
+                  </Select>
+                  <span className="flex flex-wrap gap-1" role="group" aria-label="Activity layers">
+                    {visibleLayers.map((l) => {
+                      const on = heatLayers === null || heatLayers.includes(l.key);
+                      const points = activity.data?.layers?.find((x) => x.key === l.key)?.points;
+                      return (
+                        <button
+                          key={l.key}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => toggleLayer(l.key)}
+                          className={`rounded-full border px-2 py-0.5 text-xs ${on ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted"}`}
+                        >
+                          {l.label}
+                          {points !== undefined ? ` · ${points}` : ""}
+                        </button>
+                      );
+                    })}
+                  </span>
+                  {activity.isFetching ? <span className="text-xs text-muted">Loading…</span> : null}
+                  {activity.data && activity.data.cells?.length === 0 ? <span className="text-xs text-muted">No located activity in this period.</span> : null}
+                </>
+              ) : null}
+            </div>
+          ) : null}
+          {heatOn && activity.error ? <ErrorNotice error={activity.error} /> : null}
           {draw ? (
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-accent/40 bg-surface px-3 py-2 text-sm" role="status">
               <span className="flex-1">
@@ -234,6 +289,7 @@ export default function StructurePage() {
               onSelect={onSelect}
               draw={draw}
               onDrawChange={setDraw}
+              heat={heatOn && activity.data ? { cells: activity.data.cells ?? [], max: activity.data.max ?? 0 } : null}
             />
           </div>
         </div>

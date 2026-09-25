@@ -15,7 +15,8 @@ export function formatKpiValue(kpi: Pick<Kpi, "value" | "format">): string {
     }
     case "quantity": {
       const q = v as { value: string; unit: string };
-      return `${numberFormat.format(Number(q.value))} ${q.unit}`;
+      // Scores read "82.5/100"; other units take a space.
+      return `${numberFormat.format(Number(q.value))}${q.unit.startsWith("/") ? "" : " "}${q.unit}`;
     }
     case "percent":
       return `${(Number(v) * 100).toFixed(1)}%`;

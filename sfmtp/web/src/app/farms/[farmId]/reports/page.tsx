@@ -6,22 +6,32 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 import { TabBar } from "@/components/inventory/common";
+import { MetricCatalogue } from "@/components/reports/metrics";
+import { ExportsList, StandardReports } from "@/components/reports/standard";
 import { useFarmCurrency } from "@/components/inventory/queries";
 import { Input, Label } from "@/components/ui/input";
 import { EmptyState, ErrorNotice, PageHeader, Skeleton, Table, Td, Th } from "@/components/ui/misc";
 import { api } from "@/lib/api/client";
+import { useFarmWorkspace } from "@/lib/api/hooks";
 import { SOURCE_LABEL } from "@/lib/finance";
 import { humanize } from "@/lib/format";
 import { formatMoney, formatQty } from "@/lib/inventory";
+import { can } from "@/lib/permissions";
 
 // Recharts only where a chart is shown.
 const Bars = dynamic(() => import("@/components/finance/charts").then((m) => m.Bars), { ssr: false, loading: () => <Skeleton className="h-60 w-full" /> });
 
-const TABS = [
+const FINANCE_TABS = [
   { key: "pnl", label: "Profit & loss" },
   { key: "cash-flow", label: "Cash flow" },
   { key: "crops", label: "Cost per crop" },
   { key: "animals", label: "Animal groups" },
+] as const;
+
+const ANALYTICS_TABS = [
+  { key: "standard", label: "Standard reports" },
+  { key: "exports", label: "Exports" },
+  { key: "metrics", label: "Metrics" },
 ] as const;
 
 export default function ReportsPage() {
@@ -35,7 +45,12 @@ export default function ReportsPage() {
 function Reports() {
   const { farmId } = useParams<{ farmId: string }>();
   const search = useSearchParams();
-  const tab = TABS.find((t) => t.key === search.get("tab"))?.key ?? "pnl";
+  const { workspace } = useFarmWorkspace(farmId);
+  const finance = can(workspace?.permissions, "reports.finance.view|finance.view");
+  // The statements first for those who read the books; the standard reports otherwise.
+  const tabs = finance ? [...FINANCE_TABS, ...ANALYTICS_TABS] : ANALYTICS_TABS;
+  const tab = tabs.find((t) => t.key === search.get("tab"))?.key ?? tabs[0].key;
+  const financeTab = FINANCE_TABS.some((t) => t.key === tab);
   const currency = useFarmCurrency(farmId);
   const year = new Date().getFullYear();
   const [from, setFrom] = useState(`${year}-01-01`);
@@ -44,9 +59,12 @@ function Reports() {
 
   return (
     <>
-      <PageHeader title="Reports" description="Read from the books: every figure traces back to its entries." />
-      <TabBar base={`/farms/${farmId}/reports`} tabs={TABS} active={tab} label="Report" />
-      <div className="mb-4 flex flex-wrap items-end gap-3">
+      <PageHeader title="Reports" description="Statements from the books, standard reports across the farm, and what every dashboard number means." />
+      <TabBar base={`/farms/${farmId}/reports`} tabs={tabs} active={tab} label="Report" />
+      {tab === "standard" ? <StandardReports farmId={farmId} canExport={can(workspace?.permissions, "reports.export")} /> : null}
+      {tab === "exports" ? <ExportsList farmId={farmId} /> : null}
+      {tab === "metrics" ? <MetricCatalogue farmId={farmId} /> : null}
+      <div className={financeTab ? "mb-4 flex flex-wrap items-end gap-3" : "hidden"}>
         <div>
           <Label htmlFor="from">From</Label>
           <Input id="from" type="date" className="h-9 w-40" value={from} onChange={(e) => setFrom(e.target.value)} />

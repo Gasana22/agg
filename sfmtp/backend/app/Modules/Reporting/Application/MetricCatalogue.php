@@ -16,6 +16,16 @@ class MetricCatalogue
     /** Metrics that take the period without a previous-period comparison. */
     private const PERIOD_ONLY = ['crop.yield_per_ha', 'livestock.mortality_rate', 'livestock.sold'];
 
+    /** The module a metric belongs to, by the prefix of its key. */
+    private const MODULES = [
+        'farm' => 'farm', 'structure' => 'farm',
+        'tasks' => 'workforce', 'activities' => 'workforce', 'workers' => 'workforce', 'attendance' => 'workforce',
+        'crop' => 'crop', 'livestock' => 'livestock',
+        'inventory' => 'inventory', 'deliveries' => 'inventory',
+        'finance' => 'finance', 'payroll' => 'finance', 'budget' => 'finance', 'approvals' => 'finance',
+        'trace' => 'traceability',
+    ];
+
     /** @var array<string,string> */
     private const DESCRIPTIONS = [
         'farm.area' => 'Farm size from the farm profile.',
@@ -126,7 +136,7 @@ class MetricCatalogue
         return [
             'key' => $key,
             'label' => $def['label'],
-            'module' => explode('.', $key)[0],
+            'module' => self::MODULES[explode('.', $key)[0]] ?? explode('.', $key)[0],
             'format' => $def['format'],
             'description' => self::DESCRIPTIONS[$key] ?? null,
             'period_based' => $this->periodBased($key, $def),

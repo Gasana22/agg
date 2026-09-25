@@ -9,6 +9,7 @@ import { humanize } from "@/lib/format";
 
 import { ActionListWidget } from "./widgets/action-list";
 import { ChecklistWidget } from "./widgets/checklist";
+import { type Bands, HealthBands, HealthMapWidget, type HealthPoint } from "./widgets/health";
 
 // Charts pull in Recharts: load them only when a dashboard has one.
 const ChartWidget = dynamic(() => import("./widgets/chart").then((m) => m.ChartWidget), {
@@ -59,6 +60,8 @@ const TITLES: Record<string, string> = {
   income_vs_expenses: "Income and expenses by month",
   budget_vs_actual: "Budgets: planned and spent",
   cash_flow_forecast: "Cash expected, next 13 weeks",
+  crop_health: "Crop health by cycle",
+  animal_health: "Animals needing attention",
 };
 
 /**
@@ -72,7 +75,15 @@ export function Widget({ widget }: { widget: WidgetRef }) {
   let body: React.ReactNode;
   switch (widget.type) {
     case "action_list":
-      body = <ActionListWidget data={data} />;
+      body = (
+        <>
+          <HealthBands bands={data.bands as Bands | undefined} />
+          <ActionListWidget data={data} />
+        </>
+      );
+      break;
+    case "health_map":
+      body = <HealthMapWidget data={data as { points?: HealthPoint[]; bands?: Bands }} />;
       break;
     case "checklist":
       body = <ChecklistWidget data={data} />;

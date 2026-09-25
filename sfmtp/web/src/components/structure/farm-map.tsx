@@ -5,7 +5,10 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useEffect, useRef } from "react";
 
+import { heatStyle } from "@/lib/analytics";
 import { type Block, LAND_USE_COLOR, type Location, type NodeType, type Plot, type Section } from "@/lib/structure";
+
+export type HeatCell = { south?: number; west?: number; north?: number; east?: number; count?: number; layers?: Record<string, number> };
 
 export type MapSelection = { type: NodeType; id: string } | null;
 
@@ -20,6 +23,8 @@ type Props = {
   onSelect: (selection: MapSelection) => void;
   draw: DrawMode;
   onDrawChange: (draw: DrawMode) => void;
+  /** Activity heat map cells, drawn over the structure (null hides the layer). */
+  heat?: { cells: HeatCell[]; max: number } | null;
 };
 
 const TILE_URL = process.env.NEXT_PUBLIC_MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -31,11 +36,12 @@ const UGANDA: L.LatLngExpression = [1.37, 32.29];
  * a click-to-draw mode for new boundaries and points. Plain Leaflet, loaded
  * only in the browser.
  */
-export default function FarmMap({ blocks, sections, plots, locations, selected, onSelect, draw, onDrawChange }: Props) {
+export default function FarmMap({ blocks, sections, plots, locations, selected, onSelect, draw, onDrawChange, heat = null }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const shapes = useRef<L.LayerGroup | null>(null);
   const sketch = useRef<L.LayerGroup | null>(null);
+  const heatLayer = useRef<L.LayerGroup | null>(null);
   const fitted = useRef(false);
   const drawRef = useRef(draw);
   const onDrawChangeRef = useRef(onDrawChange);
@@ -51,6 +57,7 @@ export default function FarmMap({ blocks, sections, plots, locations, selected, 
     const m = L.map(container.current, { zoomControl: true, doubleClickZoom: false }).setView(UGANDA, 7);
     L.tileLayer(TILE_URL, { maxZoom: 20, attribution: TILE_ATTRIBUTION }).addTo(m);
     shapes.current = L.layerGroup().addTo(m);
+    heatLayer.current = L.layerGroup().addTo(m);
     sketch.current = L.layerGroup().addTo(m);
 
     m.on("click", (e: L.LeafletMouseEvent) => {
@@ -120,6 +127,36 @@ export default function FarmMap({ blocks, sections, plots, locations, selected, 
       fitted.current = true;
     }
   }, [blocks, sections, plots, locations, selected, onSelect]);
+
+  // Draw the activity heat map: one shaded square per grid cell.
+  useEffect(() => {
+    const m = map.current;
+    const group = heatLayer.current;
+    if (!m || !group) return;
+    group.clearLayers();
+    if (!heat) return;
+    const bounds = L.latLngBounds([]);
+    for (const c of heat.cells) {
+      const { color, fillOpacity } = heatStyle(c.count ?? 0, heat.max);
+      const rect = L.rectangle(
+        [
+          [c.south!, c.west!],
+          [c.north!, c.east!],
+        ],
+        { stroke: false, fillColor: color, fillOpacity, interactive: true },
+      );
+      const detail = Object.entries(c.layers ?? {})
+        .map(([k, n]) => `${k} ${n}`)
+        .join(", ");
+      rect.bindTooltip(`${c.count} records${detail ? ` (${detail})` : ""}`, { sticky: true });
+      rect.addTo(group);
+      bounds.extend(rect.getBounds());
+    }
+    if (!fitted.current && bounds.isValid()) {
+      m.fitBounds(bounds.pad(0.1));
+      fitted.current = true;
+    }
+  }, [heat]);
 
   // Draw the sketch in progress.
   useEffect(() => {

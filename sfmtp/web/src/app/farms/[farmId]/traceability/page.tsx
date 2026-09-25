@@ -1,17 +1,19 @@
 "use client";
 
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Plus, Search, ShieldAlert, ShieldCheck, Truck } from "lucide-react";
+import { CheckCircle2, Plus, Printer, Search, ShieldAlert, ShieldCheck, Truck } from "lucide-react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useDeferredValue, useState } from "react";
 
+import { FormDialog } from "@/components/forms/form-dialog";
 import { KIND_LABELS, STATUS_TONE } from "@/components/trace/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input, Select } from "@/components/ui/input";
+import { FieldError, Input, Label, Select } from "@/components/ui/input";
 import { EmptyState, ErrorNotice, PageHeader, Skeleton, Table, Td, Th } from "@/components/ui/misc";
+import { LABEL_TEMPLATES } from "@/lib/analytics";
 import { api, type components } from "@/lib/api/client";
 import { useFarmWorkspace } from "@/lib/api/hooks";
 import { formatDateTime } from "@/lib/format";
@@ -302,6 +304,9 @@ function QrCodes({ farmId }: { farmId: string }) {
     queryKey: ["qr-codes", farmId],
     queryFn: async () => (await api.GET("/farms/{farm}/traceability/qr-codes", { params: { path: { farm: farmId }, query: { per_page: 100 } } })).data!.data ?? [],
   });
+  const router = useRouter();
+  const [picked, setPicked] = useState<string[]>([]);
+  const [printing, setPrinting] = useState(false);
   if (stats.isLoading || codes.isLoading) return <Skeleton className="h-48 w-full" />;
   if (stats.error || codes.error) return <ErrorNotice error={stats.error ?? codes.error} />;
   const days = stats.data?.days ?? [];
@@ -328,41 +333,99 @@ function QrCodes({ farmId }: { farmId: string }) {
       {(codes.data ?? []).length === 0 ? (
         <EmptyState title="No QR codes yet">Open a batch, approve its public fields on the “Public page &amp; QR” tab, then issue a code.</EmptyState>
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Code</Th>
-              <Th>Batch</Th>
-              <Th>Status</Th>
-              <Th className="text-right">Scans</Th>
-              <Th>Issued</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {(codes.data ?? []).map((c) => (
-              <tr key={c.id}>
-                <Td>
-                  <a href={`/q/${c.code}`} target="_blank" rel="noreferrer" className="font-mono text-primary hover:underline">
-                    {c.code}
-                  </a>
-                  {c.label ? <p className="text-xs text-muted">{c.label}</p> : null}
-                </Td>
-                <Td>
-                  <Link href={`/farms/${farmId}/traceability/batches/${c.batch?.id}?tab=publish`} className="font-mono text-sm hover:underline">
-                    {c.batch?.batch_code}
-                  </Link>
-                  <p className="text-xs text-muted">{c.batch?.name}</p>
-                </Td>
-                <Td>
-                  <Badge tone={c.status === "active" ? "success" : "danger"}>{c.status}</Badge>
-                </Td>
-                <Td className="text-right tabular-nums">{c.scan_count}</Td>
-                <Td className="text-muted">{formatDateTime(c.issued_at)}</Td>
+        <>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted">{picked.length === 0 ? "Tick codes to print their labels in one run." : `${picked.length} selected`}</span>
+            <Button size="sm" variant="secondary" disabled={picked.length === 0} onClick={() => setPrinting(true)}>
+              <Printer /> Print labels
+            </Button>
+          </div>
+          <Table>
+            <thead>
+              <tr>
+                <Th className="w-8">
+                  <span className="sr-only">Select</span>
+                </Th>
+                <Th>Code</Th>
+                <Th>Batch</Th>
+                <Th>Status</Th>
+                <Th className="text-right">Scans</Th>
+                <Th>Issued</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {(codes.data ?? []).map((c) => (
+                <tr key={c.id}>
+                  <Td>
+                    {c.status === "active" ? (
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${c.code}`}
+                        checked={picked.includes(c.id!)}
+                        onChange={(e) => setPicked(e.target.checked ? [...picked, c.id!] : picked.filter((id) => id !== c.id))}
+                      />
+                    ) : null}
+                  </Td>
+                  <Td>
+                    <a href={`/q/${c.code}`} target="_blank" rel="noreferrer" className="font-mono text-primary hover:underline">
+                      {c.code}
+                    </a>
+                    {c.label ? <p className="text-xs text-muted">{c.label}</p> : null}
+                  </Td>
+                  <Td>
+                    <Link href={`/farms/${farmId}/traceability/batches/${c.batch?.id}?tab=publish`} className="font-mono text-sm hover:underline">
+                      {c.batch?.batch_code}
+                    </Link>
+                    <p className="text-xs text-muted">{c.batch?.name}</p>
+                  </Td>
+                  <Td>
+                    <Badge tone={c.status === "active" ? "success" : "danger"}>{c.status}</Badge>
+                  </Td>
+                  <Td className="text-right tabular-nums">{c.scan_count}</Td>
+                  <Td className="text-muted">{formatDateTime(c.issued_at)}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </>
       )}
+      {printing ? (
+        <FormDialog
+          title="Print QR labels"
+          description="One PDF for the selected codes, built in the background. Each label shows only the batch's approved public text."
+          submitLabel="Build labels"
+          onClose={() => setPrinting(false)}
+          onSubmit={async (f) => {
+            const copies = Number(f.get("copies") ?? 24);
+            await api.POST("/farms/{farm}/exports", {
+              params: { path: { farm: farmId } },
+              body: { kind: "labels", format: "pdf", template: String(f.get("template")) as "a4_3x8", labels: picked.map((id) => ({ qr_code_id: id, copies })) },
+            });
+            setPrinting(false);
+            router.push(`/farms/${farmId}/reports?tab=exports`);
+          }}
+        >
+          {(error) => (
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="template">Label sheet</Label>
+                <Select id="template" name="template" defaultValue="a4_3x8">
+                  {LABEL_TEMPLATES.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="copies">Labels per code</Label>
+                <Input id="copies" name="copies" type="number" min={1} max={240} defaultValue={24} />
+                <FieldError>{error?.fieldError("labels")}</FieldError>
+              </div>
+            </div>
+          )}
+        </FormDialog>
+      ) : null}
     </div>
   );
 }

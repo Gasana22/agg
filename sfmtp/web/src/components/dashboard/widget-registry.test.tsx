@@ -55,4 +55,25 @@ describe("Widget", () => {
     render(<Widget widget={{ key: "future_map", type: "map", inline: true, data: {} }} />);
     expect(screen.getByText(/isn't supported/)).toBeInTheDocument();
   });
+
+  it("lists crop health, worst first, with the health bands", () => {
+    render(
+      <Widget
+        widget={{
+          key: "crop_health",
+          type: "health_map",
+          inline: true,
+          data: {
+            bands: { good: 3, watch: 1, poor: 0 },
+            points: [{ id: "c1", title: "Maize · Plot A-1", subtitle: "CYC-0002 · High: Fall armyworm", lat: null, lng: null, score: 70, band: "watch", href: "/farms/f/crops/cycles/c1" }],
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("Crop health by cycle")).toBeInTheDocument();
+    expect(screen.getByText("Good: 3")).toBeInTheDocument();
+    expect(screen.getByText("Watch: 1")).toBeInTheDocument();
+    expect(screen.getByText("70/100")).toBeInTheDocument();
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/farms/f/crops/cycles/c1");
+  });
 });
