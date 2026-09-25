@@ -5587,6 +5587,811 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/farms/{farm}/portal-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Who can use the supplier and customer portals
+         * @description Active and stopped links, and open, revoked or expired invitations, for the kinds you may see.
+         */
+        get: operations["listPortalAccess"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/portal-invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invite a supplier or customer to its portal
+         * @description Emails a one-time link (valid 14 days). A new invitation for the same record replaces an open one. 409 already_linked when the record already has portal access.
+         */
+        post: operations["invitePortalParty"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/portal-invitations/{portalInvitation}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                portalInvitation: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Withdraw an open invitation */
+        delete: operations["revokePortalInvitation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/portal-links/{partyLink}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                partyLink: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Stop a party's portal access to this record
+         * @description Takes effect on the party's next request. History stays.
+         */
+        delete: operations["unlinkPortalParty"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/portal-invitations/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a portal invitation from its emailed link (public) */
+        get: operations["previewPortalInvitation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/portal-invitations/{token}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a portal invitation
+         * @description Signed in with the invited email (a farm member keeps their account), or with `name` and `password` to create a portal account. Joins the person's party when they have one (choose with `party_id` when they have several: 422 party_choice_required), or creates one named after the record. 409 sign_in_required / already_linked; 410 invitation_used / invitation_revoked / invitation_expired; 403 for platform staff.
+         */
+        post: operations["acceptPortalInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/parties/{party}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        /** Your company's details and people */
+        get: operations["getPartyProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update your company's details
+         * @description Farms keep their own copy on their supplier / customer record. 409 version_conflict.
+         */
+        patch: operations["updatePartyProfile"];
+        trace?: never;
+    };
+    "/supplier/{party}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        /** Your KPIs across the farms you supply */
+        get: operations["supplierDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/supplier/{party}/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Orders sent to you by every farm
+         * @description Only sent orders (and cancelled ones that had been sent). Drafts never reach the portal.
+         */
+        get: operations["listSupplierOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/supplier/{party}/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        /** Your invoices: recorded (with payment status) and submitted or sent back */
+        get: operations["listSupplierPortalInvoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/supplier/{party}/farms/{farm}/orders/{po}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                po: string;
+            };
+            cookie?: never;
+        };
+        /** An order with deliveries, dispatches and invoices */
+        get: operations["getSupplierOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/supplier/{party}/farms/{farm}/orders/{po}/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                po: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept (with quantities and a date) or reject a sent order
+         * @description Allowed while the order is sent and nothing has been received. Accepting without lines confirms the full quantities. The farm's buyers are notified.
+         */
+        post: operations["respondToOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/supplier/{party}/farms/{farm}/orders/{po}/dispatches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                po: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Announce goods on the way
+         * @description Up to what is still expected (ordered − received − already on the way). The store receives against it.
+         */
+        post: operations["announceDispatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/supplier/{party}/farms/{farm}/orders/{po}/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                po: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send an invoice for goods received
+         * @description Up to what was received and not yet invoiced or submitted. The farm records it (posting to its ledger) or sends it back. 409 duplicate / nothing_received.
+         */
+        post: operations["submitSupplierInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/supplier/{party}/farms/{farm}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a delivery note or invoice document */
+        post: operations["uploadSupplierDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/{party}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        /** Your KPIs across the farms you buy from */
+        get: operations["customerDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/{party}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        /** Published products of the farms you buy from */
+        get: operations["listPortalProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/{party}/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        /** Your orders from every farm */
+        get: operations["listCustomerOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/{party}/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        /** Your invoices once issued, with what is paid and due */
+        get: operations["listCustomerPortalInvoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/{party}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        /** Shipments to you */
+        get: operations["listCustomerDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/{party}/purchases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Batches you bought, with their approved public traceability
+         * @description `public` holds only the fields the farm approved for the public (the same as a QR scan), or null when nothing is approved. A recalled batch keeps only product, batch code and farm.
+         */
+        get: operations["listCustomerPurchases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/{party}/farms/{farm}/products/{product}/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                product: string;
+            };
+            cookie?: never;
+        };
+        /** A published product's photo */
+        get: operations["getPortalProductPhoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/{party}/farms/{farm}/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Order at list price
+         * @description Published, active products only; the minimum order applies. The order waits for the farm to approve it.
+         */
+        post: operations["placeCustomerOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/{party}/farms/{farm}/orders/{salesOrder}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        /** An order with its shipments and timeline */
+        get: operations["getCustomerOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/{party}/farms/{farm}/orders/{salesOrder}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw an order the farm has not approved yet */
+        post: operations["cancelCustomerOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/{party}/farms/{farm}/deliveries/{shipmentId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm a delivery arrived
+         * @description Records `delivered` on the shipment batch; the order is delivered once everything has arrived.
+         */
+        post: operations["confirmCustomerDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Products and list prices */
+        get: operations["listProducts"];
+        put?: never;
+        /** Add a product */
+        post: operations["createProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/products/{product}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                product: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change a product, its price or publication */
+        patch: operations["updateProduct"];
+        trace?: never;
+    };
+    "/farms/{farm}/sales-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Sales orders
+         * @description Without a money permission (e.g. the store) prices and totals are left out.
+         */
+        get: operations["listSalesOrders"];
+        put?: never;
+        /**
+         * Record an order for a customer
+         * @description Approved as recorded when the total is within the farm's sales order threshold; otherwise it waits for someone holding sales.orders.approve.
+         */
+        post: operations["createSalesOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/sales-orders/{salesOrder}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        /** A sales order with its shipments */
+        get: operations["getSalesOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Adjust a requested order */
+        patch: operations["updateSalesOrder"];
+        trace?: never;
+    };
+    "/farms/{farm}/sales-orders/{salesOrder}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve
+         * @description Above the threshold: sales.orders.approve (403 approval_required), and not whoever recorded it unless the owner (403 four_eyes).
+         */
+        post: operations["approveSalesOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/sales-orders/{salesOrder}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a requested order */
+        post: operations["rejectSalesOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/sales-orders/{salesOrder}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel before anything is invoiced or dispatched */
+        post: operations["cancelSalesOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/sales-orders/{salesOrder}/invoice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft the customer invoice from the order
+         * @description At the ordered prices, to each product's income account (default 4000 Sales). Issue it as any invoice. 409 already_invoiced unless the earlier invoice was voided.
+         */
+        post: operations["invoiceSalesOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/sales-orders/{salesOrder}/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ship all or part of the order from trace batches
+         * @description Creates a shipment (and its trace batch) linked to the order. The batch must be counted in the order line's unit. A failed delivery gives the quantity back to the order.
+         */
+        post: operations["dispatchSalesOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/supplier-invoice-submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Invoices suppliers sent through the portal */
+        get: operations["listInvoiceSubmissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/supplier-invoice-submissions/{submission}/record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                submission: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record it as a supplier invoice
+         * @description Runs the three-way match and posts to the ledger, like an invoice keyed in.
+         */
+        post: operations["recordInvoiceSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/supplier-invoice-submissions/{submission}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                submission: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send it back with a reason */
+        post: operations["rejectInvoiceSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5672,6 +6477,12 @@ export interface components {
         Workspace: {
             /** @enum {string} */
             type: "platform" | "farm" | "support" | "supplier" | "customer";
+            /** @description Supplier and customer workspaces (one per party and kind); the id is the party's */
+            farms?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            }[];
             id: string;
             name: string;
             code?: string;
@@ -5684,7 +6495,7 @@ export interface components {
             permissions?: {
                 [key: string]: components["schemas"]["Scope"];
             };
-            dashboards: ("admin" | "owner" | "manager" | "agronomist" | "livestock" | "store" | "accountant" | "worker")[];
+            dashboards: ("admin" | "owner" | "manager" | "agronomist" | "livestock" | "store" | "accountant" | "worker" | "supplier" | "customer")[];
             /** @description Farm workspaces only */
             subscription?: null | {
                 status?: components["schemas"]["SubscriptionStatus"];
@@ -6467,6 +7278,8 @@ export interface components {
                 /** @description Farm currency */
                 expense?: number | null;
                 purchase_order?: number | null;
+                /** @description Sales orders above it need sales.orders.approve */
+                sales_order?: number | null;
                 stock_adjustment_pct?: number | null;
             };
             allow_negative_stock?: boolean;
@@ -6480,6 +7293,7 @@ export interface components {
             approval_thresholds?: {
                 expense?: number | null;
                 purchase_order?: number | null;
+                sales_order?: number | null;
                 stock_adjustment_pct?: number | null;
             };
             allow_negative_stock?: boolean;
@@ -8173,6 +8987,7 @@ export interface components {
                 id?: string;
                 code?: string;
                 name?: string;
+                on_portal?: boolean;
             };
             purchase_request?: {
                 /** Format: uuid */
@@ -8204,8 +9019,28 @@ export interface components {
                 quantity?: number;
                 received_quantity?: number;
                 invoiced_quantity?: number;
+                /** @description What the supplier confirmed in the portal */
+                confirmed_quantity?: number | null;
                 /** @description Only with price access */
                 unit_price?: number;
+            }[];
+            /**
+             * @description The supplier's answer in the portal
+             * @enum {string|null}
+             */
+            supplier_response?: "accepted" | "rejected" | null;
+            /** Format: date */
+            supplier_promised_on?: string | null;
+            supplier_note?: string | null;
+            /** Format: date-time */
+            supplier_responded_at?: string | null;
+            /** @description Detail only. Dispatch notices from the supplier portal */
+            dispatches?: {
+                [key: string]: unknown;
+            }[];
+            /** @description Detail only, with price access. Invoices the supplier sent through the portal */
+            invoice_submissions?: {
+                [key: string]: unknown;
             }[];
             deliveries?: {
                 /** Format: uuid */
@@ -9183,6 +10018,11 @@ export interface components {
                 code?: string;
                 name?: string;
             };
+            sales_order?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string | null;
+            } | null;
             invoice?: {
                 /** Format: uuid */
                 id?: string;
@@ -9415,6 +10255,643 @@ export interface components {
             /** Format: date-time */
             resolved_at?: string | null;
             version?: number;
+        };
+        PortalAccessRow: {
+            /** @constant */
+            type?: "portal_link";
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            kind?: "supplier" | "customer";
+            /** Format: uuid */
+            record_id?: string;
+            record_name?: string | null;
+            party?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            people?: number;
+            /** @enum {string} */
+            status?: "active" | "revoked";
+            /** Format: date-time */
+            linked_at?: string;
+            /** Format: date-time */
+            revoked_at?: string | null;
+        } | {
+            /** @constant */
+            type?: "portal_invitation";
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            kind?: "supplier" | "customer";
+            /** Format: uuid */
+            record_id?: string;
+            record_name?: string | null;
+            email?: string;
+            invited_by?: string | null;
+            /** @enum {string} */
+            status?: "pending" | "revoked" | "expired";
+            /** Format: date-time */
+            expires_at?: string;
+            /** Format: date-time */
+            created_at?: string | null;
+        };
+        PortalInvitation: {
+            /** @constant */
+            type?: "portal_invitation";
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            kind?: "supplier" | "customer";
+            /** Format: uuid */
+            record_id?: string;
+            email?: string;
+            status?: string;
+            /** Format: date-time */
+            expires_at?: string;
+        };
+        PortalInvitationPreview: {
+            /** @constant */
+            type?: "portal_invitation_preview";
+            /** @enum {string} */
+            status?: "pending" | "accepted" | "revoked" | "expired";
+            /** @enum {string} */
+            kind?: "supplier" | "customer";
+            email?: string;
+            farm?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            record_name?: string | null;
+            invited_by?: string | null;
+            message?: string | null;
+            /** Format: date-time */
+            expires_at?: string;
+            account_exists?: boolean;
+        };
+        PortalInvitationAcceptance: {
+            /** @constant */
+            type?: "portal_invitation_acceptance";
+            /** @enum {string} */
+            kind?: "supplier" | "customer";
+            party?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            farm?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            account_created?: boolean;
+        };
+        PartyProfile: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "party";
+            name?: string;
+            email?: string | null;
+            phone?: string | null;
+            address?: string | null;
+            tax_id?: string | null;
+            /** @enum {string} */
+            status?: "active" | "suspended";
+            version?: number;
+            people?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+                email?: string;
+            }[];
+            portals?: ("supplier" | "customer")[];
+        };
+        SupplierDashboard: {
+            /** @constant */
+            type?: "supplier_dashboard";
+            farms?: number;
+            new_orders?: number;
+            pending_orders?: number;
+            deliveries_in_transit?: number;
+            completed_orders?: number;
+            invoices_awaiting_farm?: number;
+            money?: {
+                currency?: string;
+                outstanding_invoices?: number;
+                payments_received?: number;
+            }[];
+        };
+        PortalPurchaseOrder: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "portal_purchase_order";
+            farm?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            code?: string;
+            /** @enum {string} */
+            status?: "sent" | "partially_received" | "received" | "closed" | "cancelled";
+            /** Format: date-time */
+            sent_at?: string | null;
+            /** Format: date */
+            expected_on?: string | null;
+            delivery_location?: string | null;
+            currency?: string;
+            total_amount?: number;
+            /** @enum {string|null} */
+            supplier_response?: "accepted" | "rejected" | null;
+            /** Format: date */
+            supplier_promised_on?: string | null;
+            supplier_note?: string | null;
+            /** Format: date-time */
+            supplier_responded_at?: string | null;
+            cancel_reason?: string | null;
+            lines?: {
+                /** Format: uuid */
+                id?: string;
+                item?: string | null;
+                unit?: string | null;
+                description?: string | null;
+                quantity?: number;
+                unit_price?: number;
+                confirmed_quantity?: number | null;
+                received_quantity?: number;
+                invoiced_quantity?: number;
+                /** @description Detail only */
+                on_the_way?: number;
+            }[];
+            /** @description Detail only */
+            deliveries?: {
+                code?: string;
+                /** Format: date */
+                received_on?: string;
+                supplier_reference?: string | null;
+                lines?: {
+                    /** Format: uuid */
+                    order_line_id?: string;
+                    quantity?: number;
+                }[];
+            }[];
+            /** @description Detail only */
+            dispatches?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                /** @enum {string} */
+                status?: "dispatched" | "received" | "cancelled";
+                /** Format: date */
+                dispatched_on?: string;
+                /** Format: date */
+                expected_on?: string | null;
+                reference?: string | null;
+                has_document?: boolean;
+                vehicle?: string | null;
+                driver?: string | null;
+                note?: string | null;
+                /** Format: date-time */
+                received_at?: string | null;
+                lines?: {
+                    /** Format: uuid */
+                    order_line_id?: string;
+                    quantity?: number;
+                }[];
+            }[];
+            /** @description Detail only */
+            invoices?: {
+                invoice_number?: string;
+                /** Format: date */
+                invoice_date?: string;
+                /** Format: date */
+                due_on?: string | null;
+                amount?: number;
+                paid_amount?: number;
+                outstanding?: number;
+                /** @enum {string} */
+                status?: "recorded" | "paid" | "cancelled";
+            }[];
+            /** @description Detail only */
+            submissions?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                /** @enum {string} */
+                status?: "submitted" | "recorded" | "rejected";
+                invoice_number?: string;
+                /** Format: date */
+                invoice_date?: string;
+                /** Format: date */
+                due_on?: string | null;
+                amount?: number;
+                reject_reason?: string | null;
+                /** Format: date-time */
+                submitted_at?: string | null;
+                /** Format: date-time */
+                reviewed_at?: string | null;
+                lines?: {
+                    /** Format: uuid */
+                    order_line_id?: string;
+                    quantity?: number;
+                    unit_price?: number;
+                }[];
+            }[];
+        };
+        PortalSupplierInvoice: {
+            /** @enum {string} */
+            type?: "supplier_invoice" | "supplier_invoice_submission";
+            farm?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            order?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+            };
+            currency?: string;
+        } & {
+            [key: string]: unknown;
+        };
+        CustomerDashboard: {
+            /** @constant */
+            type?: "customer_dashboard";
+            farms?: number;
+            available_products?: number;
+            active_orders?: number;
+            delivered_orders?: number;
+            deliveries_to_confirm?: number;
+            money?: {
+                currency?: string;
+                pending_payments?: number;
+                total_purchases?: number;
+            }[];
+        };
+        PortalProduct: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "portal_product";
+            farm?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            code?: string;
+            name?: string;
+            description?: string | null;
+            category?: string | null;
+            unit?: string;
+            price?: number;
+            currency?: string;
+            min_order_quantity?: number | null;
+            availability_note?: string | null;
+            has_photo?: boolean;
+        };
+        PortalSalesOrder: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "portal_sales_order";
+            farm?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            code?: string;
+            status?: components["schemas"]["SalesOrderStatus"];
+            currency?: string;
+            total_amount?: number;
+            /** Format: date */
+            requested_delivery_on?: string | null;
+            delivery_address?: string | null;
+            note?: string | null;
+            reject_reason?: string | null;
+            cancel_reason?: string | null;
+            /** Format: date-time */
+            placed_at?: string | null;
+            lines?: {
+                /** Format: uuid */
+                id?: string;
+                /** Format: uuid */
+                product_id?: string;
+                description?: string;
+                quantity?: number;
+                unit?: string;
+                unit_price?: number;
+                amount?: number;
+                dispatched_quantity?: number;
+            }[];
+            /** @description Once issued; drafts stay with the farm */
+            invoice?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                /** @enum {string} */
+                status?: "issued" | "paid" | "void";
+                /** Format: date */
+                invoice_date?: string | null;
+                /** Format: date */
+                due_on?: string | null;
+                amount?: number;
+                paid_amount?: number;
+                outstanding?: number;
+            } | null;
+            /** @description Detail only */
+            shipments?: {
+                /** Format: uuid */
+                id?: string;
+                /** @constant */
+                type?: "portal_shipment";
+                farm?: {
+                    /** Format: uuid */
+                    id?: string;
+                    name?: string;
+                };
+                code?: string;
+                /** @enum {string} */
+                status?: "dispatched" | "delivered" | "failed";
+                /** Format: uuid */
+                sales_order_id?: string | null;
+                destination?: string | null;
+                vehicle?: string | null;
+                /** Format: date-time */
+                dispatched_at?: string | null;
+                /** Format: date-time */
+                delivered_at?: string | null;
+                received_by?: string | null;
+                failure_reason?: string | null;
+                lines?: {
+                    description?: string | null;
+                    quantity?: number | null;
+                    unit?: string | null;
+                    batch_code?: string | null;
+                }[];
+            }[];
+            /** @description Detail only */
+            timeline?: {
+                /** @enum {string} */
+                event?: "placed" | "approved" | "rejected" | "cancelled" | "invoiced" | "dispatched" | "delivered" | "delivery_failed";
+                /** Format: date-time */
+                at?: string | null;
+                detail?: string | null;
+            }[];
+        };
+        PortalCustomerInvoice: {
+            /** @constant */
+            type?: "portal_customer_invoice";
+            farm?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            currency?: string;
+            lines?: {
+                description?: string;
+                quantity?: number;
+                unit?: string | null;
+                unit_price?: number;
+                amount?: number;
+            }[];
+        } & {
+            /** Format: uuid */
+            id?: string;
+            code?: string;
+            /** @enum {string} */
+            status?: "issued" | "paid" | "void";
+            /** Format: date */
+            invoice_date?: string | null;
+            /** Format: date */
+            due_on?: string | null;
+            amount?: number;
+            paid_amount?: number;
+            outstanding?: number;
+        };
+        PortalShipment: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "portal_shipment";
+            farm?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            code?: string;
+            /** @enum {string} */
+            status?: "dispatched" | "delivered" | "failed";
+            /** Format: uuid */
+            sales_order_id?: string | null;
+            destination?: string | null;
+            vehicle?: string | null;
+            /** Format: date-time */
+            dispatched_at?: string | null;
+            /** Format: date-time */
+            delivered_at?: string | null;
+            received_by?: string | null;
+            failure_reason?: string | null;
+            lines?: {
+                description?: string | null;
+                quantity?: number | null;
+                unit?: string | null;
+                batch_code?: string | null;
+            }[];
+        };
+        PortalPurchase: {
+            /** @constant */
+            type?: "portal_purchase";
+            farm?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            };
+            shipment?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                status?: string;
+                /** Format: date-time */
+                dispatched_at?: string | null;
+            };
+            description?: string | null;
+            quantity?: number | null;
+            unit?: string | null;
+            batch_code?: string;
+            recalled?: boolean;
+            /** @description Open /q/{code} for the public page */
+            qr_code?: string | null;
+            /** @description The approved public fields (see PublicTracePayload) */
+            public?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        ProductInput: {
+            name?: string;
+            description?: string | null;
+            category?: string | null;
+            unit?: string;
+            list_price?: number;
+            min_order_quantity?: number | null;
+            availability_note?: string | null;
+            /** Format: uuid */
+            inventory_item_id?: string | null;
+            /**
+             * Format: uuid
+             * @description An income account; default 4000 Sales
+             */
+            income_account_id?: string | null;
+            /** Format: uuid */
+            media_id?: string | null;
+            is_published?: boolean;
+            is_active?: boolean;
+        };
+        Product: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "product";
+            code?: string;
+            name?: string;
+            description?: string | null;
+            category?: string | null;
+            unit?: string;
+            list_price?: number;
+            currency?: string;
+            min_order_quantity?: number | null;
+            availability_note?: string | null;
+            inventory_item?: {
+                /** Format: uuid */
+                id?: string;
+                name?: string;
+            } | null;
+            income_account?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            } | null;
+            /** Format: uuid */
+            media_id?: string | null;
+            is_published?: boolean;
+            is_active?: boolean;
+            version?: number;
+        };
+        /** @enum {string} */
+        SalesOrderStatus: "requested" | "approved" | "rejected" | "invoiced" | "dispatched" | "delivered" | "cancelled";
+        SalesOrder: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "sales_order";
+            code?: string;
+            status?: components["schemas"]["SalesOrderStatus"];
+            /** @enum {string} */
+            source?: "portal" | "internal";
+            customer?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+                on_portal?: boolean;
+            };
+            /** Format: date */
+            requested_delivery_on?: string | null;
+            delivery_address?: string | null;
+            customer_note?: string | null;
+            internal_note?: string | null;
+            reject_reason?: string | null;
+            cancel_reason?: string | null;
+            invoice?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                status?: string;
+            } | null;
+            /** Format: date-time */
+            approved_at?: string | null;
+            /** Format: date-time */
+            delivered_at?: string | null;
+            /** Format: date-time */
+            created_at?: string | null;
+            version?: number;
+            lines?: {
+                /** Format: uuid */
+                id?: string;
+                /** Format: uuid */
+                product_id?: string;
+                description?: string;
+                quantity?: number;
+                unit?: string;
+                dispatched_quantity?: number;
+                /** @description Money permissions only */
+                unit_price?: number;
+                /** @description Money permissions only */
+                amount?: number;
+            }[];
+            /** @description Money permissions only */
+            currency?: string;
+            /** @description Money permissions only */
+            total_amount?: number;
+            /** @description Detail only */
+            placed_by?: unknown;
+            /** @description Detail only */
+            approved_by?: unknown;
+            /** @description Detail only */
+            shipments?: components["schemas"]["Shipment"][];
+        };
+        InvoiceSubmission: {
+            /** Format: uuid */
+            id?: string;
+            /** @constant */
+            type?: "supplier_invoice_submission";
+            code?: string;
+            /** @enum {string} */
+            status?: "submitted" | "recorded" | "rejected";
+            supplier?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            };
+            order?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                currency?: string;
+            };
+            invoice_number?: string;
+            /** Format: date */
+            invoice_date?: string;
+            /** Format: date */
+            due_on?: string | null;
+            amount?: number;
+            lines?: {
+                /** Format: uuid */
+                order_line_id?: string;
+                item?: unknown;
+                quantity?: number;
+                unit_price?: number;
+            }[];
+            /** Format: uuid */
+            media_id?: string | null;
+            notes?: string | null;
+            submitted_by?: unknown;
+            /** Format: date-time */
+            submitted_at?: string | null;
+            reviewed_by?: unknown;
+            /** Format: date-time */
+            reviewed_at?: string | null;
+            reject_reason?: string | null;
+            supplier_invoice?: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+            } | null;
         };
     };
     responses: {
@@ -20238,6 +21715,1409 @@ export interface operations {
                 content: {
                     "application/json": {
                         data?: components["schemas"]["SyncConflict"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listPortalAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalAccessRow"][];
+                    };
+                };
+            };
+        };
+    };
+    invitePortalParty: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    kind: "supplier" | "customer";
+                    /** Format: uuid */
+                    record_id: string;
+                    /** Format: email */
+                    email: string;
+                    message?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Invited */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalInvitation"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    revokePortalInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                portalInvitation: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Withdrawn */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    unlinkPortalParty: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                partyLink: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stopped */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    previewPortalInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalInvitationPreview"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    acceptPortalInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    password?: string;
+                    password_confirmation?: string;
+                    /** Format: uuid */
+                    party_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Linked with an existing account */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalInvitationAcceptance"];
+                    };
+                };
+            };
+            /** @description Linked with a new account */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalInvitationAcceptance"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            410: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getPartyProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PartyProfile"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    updatePartyProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    email?: string | null;
+                    phone?: string | null;
+                    address?: string | null;
+                    tax_id?: string | null;
+                    version: number;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PartyProfile"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    supplierDashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SupplierDashboard"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    listSupplierOrders: {
+        parameters: {
+            query?: {
+                "filter[status]"?: string;
+                "filter[farm_id]"?: string;
+            };
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalPurchaseOrder"][];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listSupplierPortalInvoices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalSupplierInvoice"][];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    getSupplierOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                po: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalPurchaseOrder"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    respondToOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                po: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    decision: "accepted" | "rejected";
+                    /** @description Required when rejecting */
+                    note?: string | null;
+                    /** Format: date */
+                    promised_on?: string | null;
+                    lines?: {
+                        /** Format: uuid */
+                        line_id: string;
+                        confirmed_quantity: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalPurchaseOrder"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    announceDispatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                po: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    dispatched_on?: string;
+                    /** Format: date */
+                    expected_on?: string | null;
+                    /** @description Your delivery note number */
+                    reference?: string | null;
+                    /**
+                     * Format: uuid
+                     * @description Upload first (…/media)
+                     */
+                    media_id?: string | null;
+                    vehicle?: string | null;
+                    driver?: string | null;
+                    note?: string | null;
+                    lines: {
+                        /** Format: uuid */
+                        order_line_id: string;
+                        quantity: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Announced */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalPurchaseOrder"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    submitSupplierInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                po: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    invoice_number: string;
+                    /** Format: date */
+                    invoice_date: string;
+                    /** Format: date */
+                    due_on?: string | null;
+                    /** Format: uuid */
+                    media_id?: string | null;
+                    notes?: string | null;
+                    lines: {
+                        /** Format: uuid */
+                        order_line_id: string;
+                        quantity: number;
+                        unit_price: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Submitted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalPurchaseOrder"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    uploadSupplierDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    sha256?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Already stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            /** Format: uuid */
+                            id?: string;
+                        };
+                    };
+                };
+            };
+            /** @description Stored */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            /** Format: uuid */
+                            id?: string;
+                            /** @constant */
+                            type?: "media";
+                            mime?: string;
+                            size_bytes?: number;
+                        };
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    customerDashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["CustomerDashboard"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    listPortalProducts: {
+        parameters: {
+            query?: {
+                "filter[farm_id]"?: string;
+            };
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalProduct"][];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listCustomerOrders: {
+        parameters: {
+            query?: {
+                "filter[status]"?: string;
+            };
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalSalesOrder"][];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listCustomerPortalInvoices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalCustomerInvoice"][];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    listCustomerDeliveries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalShipment"][];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    listCustomerPurchases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalPurchase"][];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    getPortalProductPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                product: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The image */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/*": string;
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    placeCustomerOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    requested_delivery_on?: string | null;
+                    delivery_address?: string | null;
+                    note?: string | null;
+                    lines: {
+                        /** Format: uuid */
+                        product_id: string;
+                        quantity: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Placed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalSalesOrder"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getCustomerOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalSalesOrder"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    cancelCustomerOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalSalesOrder"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    confirmCustomerDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                shipmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    received_by?: string | null;
+                    notes?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["PortalShipment"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listProducts: {
+        parameters: {
+            query?: {
+                "filter[published]"?: boolean;
+                "filter[active]"?: boolean;
+                q?: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Product"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    createProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Product"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    updateProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                product: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductInput"] & {
+                    version?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Product"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listSalesOrders: {
+        parameters: {
+            query?: {
+                "filter[status]"?: string;
+                "filter[customer_id]"?: string;
+                "filter[source]"?: "portal" | "internal";
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SalesOrder"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    createSalesOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    customer_id: string;
+                    /** Format: date */
+                    requested_delivery_on?: string | null;
+                    delivery_address?: string | null;
+                    customer_note?: string | null;
+                    internal_note?: string | null;
+                    lines: {
+                        /** Format: uuid */
+                        product_id: string;
+                        quantity: number;
+                        /** @description Staff only; defaults to the list price */
+                        unit_price?: number | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SalesOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getSalesOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SalesOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    updateSalesOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    requested_delivery_on?: string | null;
+                    delivery_address?: string | null;
+                    internal_note?: string | null;
+                    lines?: {
+                        /** Format: uuid */
+                        product_id: string;
+                        quantity: number;
+                        /** @description Staff only; defaults to the list price */
+                        unit_price?: number | null;
+                    }[];
+                    version?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SalesOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    approveSalesOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SalesOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    rejectSalesOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SalesOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    cancelSalesOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SalesOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    invoiceSalesOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Drafted */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SalesOrder"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    dispatchSalesOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                salesOrder: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    destination?: string | null;
+                    vehicle?: string | null;
+                    driver?: string | null;
+                    notes?: string | null;
+                    /** Format: date-time */
+                    dispatched_at?: string;
+                    lines: {
+                        /** Format: uuid */
+                        order_line_id: string;
+                        /** Format: uuid */
+                        batch_id: string;
+                        quantity: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Dispatched */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["SalesOrder"];
+                        meta?: {
+                            shipment?: {
+                                /** Format: uuid */
+                                id?: string;
+                                code?: string;
+                            };
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listInvoiceSubmissions: {
+        parameters: {
+            query?: {
+                "filter[status]"?: "submitted" | "recorded" | "rejected";
+                "filter[order_id]"?: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InvoiceSubmission"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    recordInvoiceSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                submission: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    invoice_date?: string;
+                    /** Format: date */
+                    due_on?: string | null;
+                    notes?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InvoiceSubmission"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    rejectInvoiceSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                submission: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["InvoiceSubmission"];
                     };
                 };
             };

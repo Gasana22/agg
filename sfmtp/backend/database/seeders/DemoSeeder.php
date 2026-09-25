@@ -34,13 +34,19 @@ use App\Modules\Livestock\Application\Herd;
 use App\Modules\Livestock\Domain\Enums\AnimalStatus;
 use App\Modules\Livestock\Domain\Enums\BreedingStatus;
 use App\Modules\Livestock\Domain\Models\AnimalGroup;
+use App\Modules\Parties\Domain\Models\Party;
+use App\Modules\Parties\Domain\Models\PartyLink;
 use App\Modules\Platform\Application\PlatformPermissions;
 use App\Modules\Procurement\Application\Purchasing;
 use App\Modules\Procurement\Application\Receiving;
+use App\Modules\Procurement\Domain\Models\PurchaseOrder;
 use App\Modules\Procurement\Domain\Models\Supplier;
 use App\Modules\Procurement\Domain\Models\SupplierInvoice;
+use App\Modules\Procurement\Portal\SupplierPortal;
 use App\Modules\Sales\Application\Invoicing;
+use App\Modules\Sales\Application\SalesOrders;
 use App\Modules\Sales\Application\Shipments;
+use App\Modules\Sales\Domain\Models\Customer;
 use App\Modules\Tenancy\Application\FarmService;
 use App\Modules\Tenancy\Application\FarmSettings;
 use App\Modules\Tenancy\Domain\Enums\FarmStatus;
@@ -66,9 +72,11 @@ use App\Modules\Workforce\Domain\Enums\TaskStatus;
 use App\Modules\Workforce\Domain\Models\Attendance;
 use App\Modules\Workforce\Domain\Models\Worker;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Demo organization "AGG Farms" (docs/10 "Seeded demo scenario").
@@ -187,6 +195,7 @@ class DemoSeeder extends Seeder
         $this->seedInventory($mixed, $context);
         $this->seedFinance($mixed, $context);
         $this->seedShipments($crop, $context);
+        $this->seedPortals($mixed, $crop, $user, $context);
 
         // Project every journey once, and check both chains so the integrity page starts green.
         app(JourneyProjector::class)->resume();
@@ -235,6 +244,53 @@ class DemoSeeder extends Seeder
             }
             $total = (int) DB::table('trace_qr_scans')->where('qr_code_id', $qr->id)->sum('scans');
             DB::table('trace_qr_codes')->where('id', $qr->id)->update(['scan_count' => $total, 'last_scanned_at' => now()->subHours(3)]);
+        }, $owner);
+        Auth::forgetGuards();
+    }
+
+    /**
+     * The portals (Phase 12): Ruth of Kakiri Agro-Vet answers the lick and
+     * diesel order in the supplier portal; Joseph of Kampala Millers buys
+     * from the crop farm's published products, has a 1,000 kg order waiting
+     * for approval, and sees the maize bags he received with their public
+     * traceability.
+     */
+    private function seedPortals(Farm $mixed, Farm $crop, callable $user, TenantContext $context): void
+    {
+        $link = function (Farm $farm, string $kind, Model $record, User $person, string $partyName) {
+            $party = Party::create(['name' => $partyName, 'email' => $person->email, 'phone' => $record->phone, 'address' => $record->address]);
+            $party->users()->attach($person->id, ['id' => (string) Str::uuid7(), 'created_at' => now()]);
+            PartyLink::create(['party_id' => $party->id, 'farm_id' => $farm->id, 'kind' => $kind, 'record_id' => $record->id, 'status' => 'active',
+                'linked_by' => FarmUser::where('farm_id', $farm->id)->where('is_owner', true)->value('user_id'), 'linked_at' => now()->subDays(20)]);
+            $record->forceFill(['party_id' => $party->id])->save();
+
+            return $party;
+        };
+
+        $ruth = $user('supplier@aggfarms.test', 'Ruth Namusoke', UserType::Party);
+        $context->run($mixed, function () use ($mixed, $link, $ruth) {
+            $supplier = Supplier::where('name', 'Kakiri Agro-Vet Supplies')->firstOrFail();
+            $link($mixed, 'supplier', $supplier, $ruth, 'Kakiri Agro-Vet Supplies Ltd');
+            Auth::setUser($ruth);
+            $order = PurchaseOrder::where('supplier_id', $supplier->id)->where('status', 'sent')->firstOrFail();
+            app(SupplierPortal::class)->respond($order, ['decision' => 'accepted', 'promised_on' => now()->addDays(2)->toDateString(),
+                'note' => 'Diesel from the Kakiri depot; the lick comes on the same truck.']);
+        });
+
+        $joseph = $user('customer@aggfarms.test', 'Joseph Okot', UserType::Party);
+        $owner = FarmUser::where('farm_id', $crop->id)->where('is_owner', true)->firstOrFail();
+        $context->run($crop, function () use ($crop, $link, $joseph, $owner) {
+            $miller = Customer::where('name', 'Kampala Millers Ltd')->firstOrFail();
+            $link($crop, 'customer', $miller, $joseph, 'Kampala Millers Ltd');
+            Auth::setUser($owner->user);
+            $orders = app(SalesOrders::class);
+            $maize = $orders->createProduct(['name' => 'Maize grain, 50 kg bags', 'category' => 'Grain', 'unit' => 'kg', 'list_price' => 1400, 'min_order_quantity' => 500,
+                'description' => 'Longe 5 maize, dried to 13% and packed in 50 kg bags. Traceable to the plot.', 'availability_note' => 'About 2 t in store', 'is_published' => true]);
+            $orders->createProduct(['name' => 'Maize bran', 'category' => 'Feed', 'unit' => 'kg', 'list_price' => 600, 'min_order_quantity' => 100, 'is_published' => true]);
+            $orders->createProduct(['name' => 'Eucalyptus poles', 'category' => 'Timber', 'unit' => 'pcs', 'list_price' => 18000, 'availability_note' => 'Next harvest in March']);
+            Auth::setUser($joseph);
+            $orders->place($miller->id, ['requested_delivery_on' => now()->addDays(7)->toDateString(), 'customer_note' => 'Deliver to the Industrial Area mill, gate 2.',
+                'lines' => [['product_id' => $maize->id, 'quantity' => 1000]]], 'portal');
         }, $owner);
         Auth::forgetGuards();
     }

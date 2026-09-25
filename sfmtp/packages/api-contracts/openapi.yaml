@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SFMTP API
-  version: 1.10.0-phase11
+  version: 1.11.0-phase12
   description: |
     Smart Farm Management & Traceability Platform REST API.
 
@@ -42,6 +42,12 @@ tags:
     description: The double-entry ledger (ADR-0011, ADR-0012), accounts, manual entries, expenses, other income, payments, payroll from attendance and tasks, and budgets.
   - name: Sales
     description: Customers and customer invoices, including invoices for completed livestock sales.
+  - name: Parties
+    description: Supplier and customer portal access. Farms invite a supplier or customer record by email; accepting links it to a party account that can span farms (ADR-0016).
+  - name: Supplier portal
+    description: A party's purchase orders from every farm it supplies, answers, dispatch notices, invoices and payment status. Only sent orders; nothing internal.
+  - name: Customer portal
+    description: Published products, orders at list price, invoices, deliveries and the approved traceability of what was bought.
   - name: Reports
     description: Profit and loss, cash flow with a forecast, and cost per crop cycle and animal group.
   - name: Livestock
@@ -11587,6 +11593,1901 @@ paths:
         '422':
           $ref: '#/components/responses/Problem'
 
+  /farms/{farm}/portal-access:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Parties
+      operationId: listPortalAccess
+      summary: Who can use the supplier and customer portals
+      description: Active and stopped links, and open, revoked or expired invitations, for the kinds you may see.
+      x-permission: suppliers.view | customers.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortalAccessRow'
+  /farms/{farm}/portal-invitations:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    post:
+      tags:
+      - Parties
+      operationId: invitePortalParty
+      summary: Invite a supplier or customer to its portal
+      description: Emails a one-time link (valid 14 days). A new invitation for the same record replaces an open one. 409 already_linked when the record already has portal access.
+      x-permission: suppliers.manage (supplier) | customers.manage (customer)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                  - supplier
+                  - customer
+                record_id:
+                  type: string
+                  format: uuid
+                email:
+                  type: string
+                  format: email
+                message:
+                  type:
+                  - string
+                  - 'null'
+              required:
+              - kind
+              - record_id
+              - email
+      responses:
+        '201':
+          description: Invited
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortalInvitation'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/portal-invitations/{portalInvitation}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: portalInvitation
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    delete:
+      tags:
+      - Parties
+      operationId: revokePortalInvitation
+      summary: Withdraw an open invitation
+      x-permission: the kind's manage permission
+      responses:
+        '204':
+          description: Withdrawn
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/portal-links/{partyLink}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: partyLink
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    delete:
+      tags:
+      - Parties
+      operationId: unlinkPortalParty
+      summary: Stop a party's portal access to this record
+      description: Takes effect on the party's next request. History stays.
+      x-permission: the kind's manage permission
+      responses:
+        '204':
+          description: Stopped
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /portal-invitations/{token}:
+    get:
+      tags:
+      - Parties
+      operationId: previewPortalInvitation
+      summary: Read a portal invitation from its emailed link (public)
+      security: []
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9]{48}$
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortalInvitationPreview'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /portal-invitations/{token}/accept:
+    post:
+      tags:
+      - Parties
+      operationId: acceptPortalInvitation
+      summary: Accept a portal invitation
+      description: 'Signed in with the invited email (a farm member keeps their account), or with `name` and `password` to create a portal account. Joins the person''s party when they have one (choose with `party_id` when they have several: 422 party_choice_required), or creates one named after the record. 409 sign_in_required / already_linked; 410 invitation_used / invitation_revoked / invitation_expired; 403 for platform staff.'
+      security:
+      - {}
+      - bearer: []
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9]{48}$
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 120
+                password:
+                  type: string
+                  minLength: 10
+                password_confirmation:
+                  type: string
+                party_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Linked with an existing account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortalInvitationAcceptance'
+        '201':
+          description: Linked with a new account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortalInvitationAcceptance'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '410':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /parties/{party}/profile:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Parties
+      operationId: getPartyProfile
+      summary: Your company's details and people
+      x-permission: party member
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PartyProfile'
+        '404':
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags:
+      - Parties
+      operationId: updatePartyProfile
+      summary: Update your company's details
+      description: Farms keep their own copy on their supplier / customer record. 409 version_conflict.
+      x-permission: party member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type:
+                  - string
+                  - 'null'
+                phone:
+                  type:
+                  - string
+                  - 'null'
+                address:
+                  type:
+                  - string
+                  - 'null'
+                tax_id:
+                  type:
+                  - string
+                  - 'null'
+                version:
+                  type: integer
+              required:
+              - version
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PartyProfile'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /supplier/{party}/dashboard:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Supplier portal
+      operationId: supplierDashboard
+      summary: Your KPIs across the farms you supply
+      x-permission: party member
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SupplierDashboard'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /supplier/{party}/orders:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Supplier portal
+      operationId: listSupplierOrders
+      summary: Orders sent to you by every farm
+      description: Only sent orders (and cancelled ones that had been sent). Drafts never reach the portal.
+      x-permission: party member
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+      - name: filter[farm_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortalPurchaseOrder'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /supplier/{party}/invoices:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Supplier portal
+      operationId: listSupplierPortalInvoices
+      summary: 'Your invoices: recorded (with payment status) and submitted or sent back'
+      x-permission: party member
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortalSupplierInvoice'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /supplier/{party}/farms/{farm}/orders/{po}:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: farm
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: po
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Supplier portal
+      operationId: getSupplierOrder
+      summary: An order with deliveries, dispatches and invoices
+      x-permission: party member
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortalPurchaseOrder'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /supplier/{party}/farms/{farm}/orders/{po}/respond:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: farm
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: po
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Supplier portal
+      operationId: respondToOrder
+      summary: Accept (with quantities and a date) or reject a sent order
+      description: Allowed while the order is sent and nothing has been received. Accepting without lines confirms the full quantities. The farm's buyers are notified.
+      x-permission: party member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                decision:
+                  type: string
+                  enum:
+                  - accepted
+                  - rejected
+                note:
+                  type:
+                  - string
+                  - 'null'
+                  description: Required when rejecting
+                promised_on:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      line_id:
+                        type: string
+                        format: uuid
+                      confirmed_quantity:
+                        type: number
+                    required:
+                    - line_id
+                    - confirmed_quantity
+              required:
+              - decision
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortalPurchaseOrder'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /supplier/{party}/farms/{farm}/orders/{po}/dispatches:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: farm
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: po
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Supplier portal
+      operationId: announceDispatch
+      summary: Announce goods on the way
+      description: Up to what is still expected (ordered − received − already on the way). The store receives against it.
+      x-permission: party member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dispatched_on:
+                  type: string
+                  format: date
+                expected_on:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                reference:
+                  type:
+                  - string
+                  - 'null'
+                  description: Your delivery note number
+                media_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                  description: Upload first (…/media)
+                vehicle:
+                  type:
+                  - string
+                  - 'null'
+                driver:
+                  type:
+                  - string
+                  - 'null'
+                note:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      order_line_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: number
+                    required:
+                    - order_line_id
+                    - quantity
+              required:
+              - lines
+      responses:
+        '201':
+          description: Announced
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortalPurchaseOrder'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /supplier/{party}/farms/{farm}/orders/{po}/invoices:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: farm
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: po
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Supplier portal
+      operationId: submitSupplierInvoice
+      summary: Send an invoice for goods received
+      description: Up to what was received and not yet invoiced or submitted. The farm records it (posting to its ledger) or sends it back. 409 duplicate / nothing_received.
+      x-permission: party member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoice_number:
+                  type: string
+                invoice_date:
+                  type: string
+                  format: date
+                due_on:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                media_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                notes:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      order_line_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: number
+                      unit_price:
+                        type: number
+                    required:
+                    - order_line_id
+                    - quantity
+                    - unit_price
+              required:
+              - invoice_number
+              - invoice_date
+              - lines
+      responses:
+        '201':
+          description: Submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortalPurchaseOrder'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /supplier/{party}/farms/{farm}/media:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: farm
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Supplier portal
+      operationId: uploadSupplierDocument
+      summary: Upload a delivery note or invoice document
+      x-permission: party member
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                sha256:
+                  type: string
+              required:
+              - file
+      responses:
+        '201':
+          description: Stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      type:
+                        type: string
+                        const: media
+                      mime:
+                        type: string
+                      size_bytes:
+                        type: integer
+        '200':
+          description: Already stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /customer/{party}/dashboard:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Customer portal
+      operationId: customerDashboard
+      summary: Your KPIs across the farms you buy from
+      x-permission: party member
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CustomerDashboard'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /customer/{party}/products:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Customer portal
+      operationId: listPortalProducts
+      summary: Published products of the farms you buy from
+      x-permission: party member
+      parameters:
+      - name: filter[farm_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortalProduct'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /customer/{party}/orders:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Customer portal
+      operationId: listCustomerOrders
+      summary: Your orders from every farm
+      x-permission: party member
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortalSalesOrder'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /customer/{party}/invoices:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Customer portal
+      operationId: listCustomerPortalInvoices
+      summary: Your invoices once issued, with what is paid and due
+      x-permission: party member
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortalCustomerInvoice'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /customer/{party}/deliveries:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Customer portal
+      operationId: listCustomerDeliveries
+      summary: Shipments to you
+      x-permission: party member
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortalShipment'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /customer/{party}/purchases:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Customer portal
+      operationId: listCustomerPurchases
+      summary: Batches you bought, with their approved public traceability
+      description: '`public` holds only the fields the farm approved for the public (the same as a QR scan), or null when nothing is approved. A recalled batch keeps only product, batch code and farm.'
+      x-permission: party member
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortalPurchase'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /customer/{party}/farms/{farm}/products/{product}/photo:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: farm
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: product
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Customer portal
+      operationId: getPortalProductPhoto
+      summary: A published product's photo
+      x-permission: party member
+      responses:
+        '200':
+          description: The image
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/Problem'
+  /customer/{party}/farms/{farm}/orders:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: farm
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Customer portal
+      operationId: placeCustomerOrder
+      summary: Order at list price
+      description: Published, active products only; the minimum order applies. The order waits for the farm to approve it.
+      x-permission: party member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                requested_delivery_on:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                delivery_address:
+                  type:
+                  - string
+                  - 'null'
+                note:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      product_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: number
+                    required:
+                    - product_id
+                    - quantity
+              required:
+              - lines
+      responses:
+        '201':
+          description: Placed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortalSalesOrder'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /customer/{party}/farms/{farm}/orders/{salesOrder}:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: farm
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: salesOrder
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Customer portal
+      operationId: getCustomerOrder
+      summary: An order with its shipments and timeline
+      x-permission: party member
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortalSalesOrder'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /customer/{party}/farms/{farm}/orders/{salesOrder}/cancel:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: farm
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: salesOrder
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Customer portal
+      operationId: cancelCustomerOrder
+      summary: Withdraw an order the farm has not approved yet
+      x-permission: party member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+              required:
+              - reason
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortalSalesOrder'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /customer/{party}/farms/{farm}/deliveries/{shipmentId}/confirm:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: farm
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: shipmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Customer portal
+      operationId: confirmCustomerDelivery
+      summary: Confirm a delivery arrived
+      description: Records `delivered` on the shipment batch; the order is delivered once everything has arrived.
+      x-permission: party member
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                received_by:
+                  type:
+                  - string
+                  - 'null'
+                notes:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PortalShipment'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/products:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Sales
+      operationId: listProducts
+      summary: Products and list prices
+      x-permission: sales.view | sales.orders.create | sales.pricing.manage
+      parameters:
+      - name: filter[published]
+        in: query
+        schema:
+          type: boolean
+      - name: filter[active]
+        in: query
+        schema:
+          type: boolean
+      - name: q
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Sales
+      operationId: createProduct
+      summary: Add a product
+      x-permission: sales.pricing.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/products/{product}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: product
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    patch:
+      tags:
+      - Sales
+      operationId: updateProduct
+      summary: Change a product, its price or publication
+      x-permission: sales.pricing.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+              - $ref: '#/components/schemas/ProductInput'
+              - type: object
+                properties:
+                  version:
+                    type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/sales-orders:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Sales
+      operationId: listSalesOrders
+      summary: Sales orders
+      description: Without a money permission (e.g. the store) prices and totals are left out.
+      x-permission: sales.view | sales.orders.* | sales.fulfil | sales.invoice
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+      - name: filter[customer_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: filter[source]
+        in: query
+        schema:
+          type: string
+          enum:
+          - portal
+          - internal
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SalesOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Sales
+      operationId: createSalesOrder
+      summary: Record an order for a customer
+      description: Approved as recorded when the total is within the farm's sales order threshold; otherwise it waits for someone holding sales.orders.approve.
+      x-permission: sales.orders.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  format: uuid
+                requested_delivery_on:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                delivery_address:
+                  type:
+                  - string
+                  - 'null'
+                customer_note:
+                  type:
+                  - string
+                  - 'null'
+                internal_note:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      product_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: number
+                      unit_price:
+                        type:
+                        - number
+                        - 'null'
+                        description: Staff only; defaults to the list price
+                    required:
+                    - product_id
+                    - quantity
+              required:
+              - customer_id
+              - lines
+      responses:
+        '201':
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SalesOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/sales-orders/{salesOrder}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: salesOrder
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Sales
+      operationId: getSalesOrder
+      summary: A sales order with its shipments
+      x-permission: sales.view | sales.orders.* | sales.fulfil | sales.invoice
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SalesOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    patch:
+      tags:
+      - Sales
+      operationId: updateSalesOrder
+      summary: Adjust a requested order
+      x-permission: sales.orders.create | sales.orders.approve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                requested_delivery_on:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                delivery_address:
+                  type:
+                  - string
+                  - 'null'
+                internal_note:
+                  type:
+                  - string
+                  - 'null'
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      product_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: number
+                      unit_price:
+                        type:
+                        - number
+                        - 'null'
+                        description: Staff only; defaults to the list price
+                    required:
+                    - product_id
+                    - quantity
+                version:
+                  type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SalesOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/sales-orders/{salesOrder}/approve:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: salesOrder
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Sales
+      operationId: approveSalesOrder
+      summary: Approve
+      description: 'Above the threshold: sales.orders.approve (403 approval_required), and not whoever recorded it unless the owner (403 four_eyes).'
+      x-permission: sales.orders.create | sales.orders.approve
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SalesOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/sales-orders/{salesOrder}/reject:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: salesOrder
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Sales
+      operationId: rejectSalesOrder
+      summary: Reject a requested order
+      x-permission: sales.orders.create | sales.orders.approve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+              required:
+              - reason
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SalesOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/sales-orders/{salesOrder}/cancel:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: salesOrder
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Sales
+      operationId: cancelSalesOrder
+      summary: Cancel before anything is invoiced or dispatched
+      x-permission: sales.orders.create | sales.orders.approve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+              required:
+              - reason
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SalesOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/sales-orders/{salesOrder}/invoice:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: salesOrder
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Sales
+      operationId: invoiceSalesOrder
+      summary: Draft the customer invoice from the order
+      description: At the ordered prices, to each product's income account (default 4000 Sales). Issue it as any invoice. 409 already_invoiced unless the earlier invoice was voided.
+      x-permission: sales.invoice
+      responses:
+        '201':
+          description: Drafted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SalesOrder'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/sales-orders/{salesOrder}/dispatch:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: salesOrder
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Sales
+      operationId: dispatchSalesOrder
+      summary: Ship all or part of the order from trace batches
+      description: Creates a shipment (and its trace batch) linked to the order. The batch must be counted in the order line's unit. A failed delivery gives the quantity back to the order.
+      x-permission: sales.fulfil
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                destination:
+                  type:
+                  - string
+                  - 'null'
+                vehicle:
+                  type:
+                  - string
+                  - 'null'
+                driver:
+                  type:
+                  - string
+                  - 'null'
+                notes:
+                  type:
+                  - string
+                  - 'null'
+                dispatched_at:
+                  type: string
+                  format: date-time
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      order_line_id:
+                        type: string
+                        format: uuid
+                      batch_id:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: number
+                    required:
+                    - order_line_id
+                    - batch_id
+                    - quantity
+              required:
+              - lines
+      responses:
+        '201':
+          description: Dispatched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SalesOrder'
+                  meta:
+                    type: object
+                    properties:
+                      shipment:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          code:
+                            type: string
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/supplier-invoice-submissions:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Procurement
+      operationId: listInvoiceSubmissions
+      summary: Invoices suppliers sent through the portal
+      x-permission: procurement.orders.manage | finance.view
+      parameters:
+      - name: filter[status]
+        in: query
+        schema:
+          type: string
+          enum:
+          - submitted
+          - recorded
+          - rejected
+      - name: filter[order_id]
+        in: query
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InvoiceSubmission'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/supplier-invoice-submissions/{submission}/record:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: submission
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Procurement
+      operationId: recordInvoiceSubmission
+      summary: Record it as a supplier invoice
+      description: Runs the three-way match and posts to the ledger, like an invoice keyed in.
+      x-permission: procurement.orders.manage | finance.manage
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoice_date:
+                  type: string
+                  format: date
+                due_on:
+                  type:
+                  - string
+                  - 'null'
+                  format: date
+                notes:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InvoiceSubmission'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/supplier-invoice-submissions/{submission}/reject:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: submission
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Procurement
+      operationId: rejectInvoiceSubmission
+      summary: Send it back with a reason
+      x-permission: procurement.orders.manage | finance.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+              required:
+              - reason
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InvoiceSubmission'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+
 components:
   securitySchemes:
     bearer:
@@ -11859,6 +13760,10 @@ components:
       required: [type, id, name, dashboards]
       properties:
         type: { type: string, enum: [platform, farm, support, supplier, customer] }
+        farms:
+          description: Supplier and customer workspaces (one per party and kind); the id is the party's
+          type: array
+          items: { type: object, properties: { id: { type: string, format: uuid }, name: { type: string } } }
         id: { type: string }
         name: { type: string }
         code: { type: string }
@@ -11876,7 +13781,7 @@ components:
           additionalProperties: { $ref: '#/components/schemas/Scope' }
         dashboards:
           type: array
-          items: { type: string, enum: [admin, owner, manager, agronomist, livestock, store, accountant, worker] }
+          items: { type: string, enum: [admin, owner, manager, agronomist, livestock, store, accountant, worker, supplier, customer] }
         subscription:
           description: Farm workspaces only
           oneOf:
@@ -12715,6 +14620,7 @@ components:
           properties:
             expense: { type: [number, 'null'], description: 'Farm currency' }
             purchase_order: { type: [number, 'null'] }
+            sales_order: { type: [number, 'null'], description: 'Sales orders above it need sales.orders.approve' }
             stock_adjustment_pct: { type: [number, 'null'] }
         allow_negative_stock: { type: boolean }
         allow_intercropping: { type: boolean, description: 'More than one open crop cycle per plot' }
@@ -12730,6 +14636,7 @@ components:
           properties:
             expense: { type: [number, 'null'], minimum: 0 }
             purchase_order: { type: [number, 'null'], minimum: 0 }
+            sales_order: { type: [number, 'null'], minimum: 0 }
             stock_adjustment_pct: { type: [number, 'null'], minimum: 0, maximum: 100 }
         allow_negative_stock: { type: boolean }
         allow_intercropping: { type: boolean, description: 'More than one open crop cycle per plot' }
@@ -15410,6 +17317,8 @@ components:
               type: string
             name:
               type: string
+            on_portal:
+              type: boolean
         purchase_request:
           oneOf:
           - type: object
@@ -15472,9 +17381,49 @@ components:
                 type: number
               invoiced_quantity:
                 type: number
+              confirmed_quantity:
+                type:
+                - number
+                - 'null'
+                description: What the supplier confirmed in the portal
               unit_price:
                 type: number
                 description: Only with price access
+        supplier_response:
+          type:
+          - string
+          - 'null'
+          enum:
+          - accepted
+          - rejected
+          - null
+          description: The supplier's answer in the portal
+        supplier_promised_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        supplier_note:
+          type:
+          - string
+          - 'null'
+        supplier_responded_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        dispatches:
+          type: array
+          description: Detail only. Dispatch notices from the supplier portal
+          items:
+            type: object
+            additionalProperties: true
+        invoice_submissions:
+          type: array
+          description: Detail only, with price access. Invoices the supplier sent through the portal
+          items:
+            type: object
+            additionalProperties: true
         deliveries:
           type: array
           items:
@@ -17597,6 +19546,18 @@ components:
               type: string
             name:
               type: string
+        sales_order:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type:
+                - string
+                - 'null'
+          - type: 'null'
         invoice:
           oneOf:
           - type: object
@@ -18094,3 +20055,1396 @@ components:
           format: date-time
         version:
           type: integer
+    PortalAccessRow:
+      oneOf:
+      - type: object
+        properties:
+          type:
+            type: string
+            const: portal_link
+          id:
+            type: string
+            format: uuid
+          kind:
+            type: string
+            enum:
+            - supplier
+            - customer
+          record_id:
+            type: string
+            format: uuid
+          record_name:
+            type:
+            - string
+            - 'null'
+          party:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          people:
+            type: integer
+          status:
+            type: string
+            enum:
+            - active
+            - revoked
+          linked_at:
+            type: string
+            format: date-time
+          revoked_at:
+            type:
+            - string
+            - 'null'
+            format: date-time
+      - type: object
+        properties:
+          type:
+            type: string
+            const: portal_invitation
+          id:
+            type: string
+            format: uuid
+          kind:
+            type: string
+            enum:
+            - supplier
+            - customer
+          record_id:
+            type: string
+            format: uuid
+          record_name:
+            type:
+            - string
+            - 'null'
+          email:
+            type: string
+          invited_by:
+            type:
+            - string
+            - 'null'
+          status:
+            type: string
+            enum:
+            - pending
+            - revoked
+            - expired
+          expires_at:
+            type: string
+            format: date-time
+          created_at:
+            type:
+            - string
+            - 'null'
+            format: date-time
+    PortalInvitation:
+      type: object
+      properties:
+        type:
+          type: string
+          const: portal_invitation
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+          - supplier
+          - customer
+        record_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        status:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+    PortalInvitationPreview:
+      type: object
+      properties:
+        type:
+          type: string
+          const: portal_invitation_preview
+        status:
+          type: string
+          enum:
+          - pending
+          - accepted
+          - revoked
+          - expired
+        kind:
+          type: string
+          enum:
+          - supplier
+          - customer
+        email:
+          type: string
+        farm:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        record_name:
+          type:
+          - string
+          - 'null'
+        invited_by:
+          type:
+          - string
+          - 'null'
+        message:
+          type:
+          - string
+          - 'null'
+        expires_at:
+          type: string
+          format: date-time
+        account_exists:
+          type: boolean
+    PortalInvitationAcceptance:
+      type: object
+      properties:
+        type:
+          type: string
+          const: portal_invitation_acceptance
+        kind:
+          type: string
+          enum:
+          - supplier
+          - customer
+        party:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        farm:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        account_created:
+          type: boolean
+    PartyProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: party
+        name:
+          type: string
+        email:
+          type:
+          - string
+          - 'null'
+        phone:
+          type:
+          - string
+          - 'null'
+        address:
+          type:
+          - string
+          - 'null'
+        tax_id:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          enum:
+          - active
+          - suspended
+        version:
+          type: integer
+        people:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              email:
+                type: string
+        portals:
+          type: array
+          items:
+            type: string
+            enum:
+            - supplier
+            - customer
+    SupplierDashboard:
+      type: object
+      properties:
+        type:
+          type: string
+          const: supplier_dashboard
+        farms:
+          type: integer
+        new_orders:
+          type: integer
+        pending_orders:
+          type: integer
+        deliveries_in_transit:
+          type: integer
+        completed_orders:
+          type: integer
+        invoices_awaiting_farm:
+          type: integer
+        money:
+          type: array
+          items:
+            type: object
+            properties:
+              currency:
+                type: string
+              outstanding_invoices:
+                type: number
+              payments_received:
+                type: number
+    PortalPurchaseOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: portal_purchase_order
+        farm:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - sent
+          - partially_received
+          - received
+          - closed
+          - cancelled
+        sent_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        expected_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        delivery_location:
+          type:
+          - string
+          - 'null'
+        currency:
+          type: string
+        total_amount:
+          type: number
+        supplier_response:
+          type:
+          - string
+          - 'null'
+          enum:
+          - accepted
+          - rejected
+          - null
+        supplier_promised_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        supplier_note:
+          type:
+          - string
+          - 'null'
+        supplier_responded_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        cancel_reason:
+          type:
+          - string
+          - 'null'
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              item:
+                type:
+                - string
+                - 'null'
+              unit:
+                type:
+                - string
+                - 'null'
+              description:
+                type:
+                - string
+                - 'null'
+              quantity:
+                type: number
+              unit_price:
+                type: number
+              confirmed_quantity:
+                type:
+                - number
+                - 'null'
+              received_quantity:
+                type: number
+              invoiced_quantity:
+                type: number
+              on_the_way:
+                type: number
+                description: Detail only
+        deliveries:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              received_on:
+                type: string
+                format: date
+              supplier_reference:
+                type:
+                - string
+                - 'null'
+              lines:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    order_line_id:
+                      type: string
+                      format: uuid
+                    quantity:
+                      type: number
+          description: Detail only
+        dispatches:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              status:
+                type: string
+                enum:
+                - dispatched
+                - received
+                - cancelled
+              dispatched_on:
+                type: string
+                format: date
+              expected_on:
+                type:
+                - string
+                - 'null'
+                format: date
+              reference:
+                type:
+                - string
+                - 'null'
+              has_document:
+                type: boolean
+              vehicle:
+                type:
+                - string
+                - 'null'
+              driver:
+                type:
+                - string
+                - 'null'
+              note:
+                type:
+                - string
+                - 'null'
+              received_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+              lines:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    order_line_id:
+                      type: string
+                      format: uuid
+                    quantity:
+                      type: number
+          description: Detail only
+        invoices:
+          type: array
+          items:
+            type: object
+            properties:
+              invoice_number:
+                type: string
+              invoice_date:
+                type: string
+                format: date
+              due_on:
+                type:
+                - string
+                - 'null'
+                format: date
+              amount:
+                type: number
+              paid_amount:
+                type: number
+              outstanding:
+                type: number
+              status:
+                type: string
+                enum:
+                - recorded
+                - paid
+                - cancelled
+          description: Detail only
+        submissions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              status:
+                type: string
+                enum:
+                - submitted
+                - recorded
+                - rejected
+              invoice_number:
+                type: string
+              invoice_date:
+                type: string
+                format: date
+              due_on:
+                type:
+                - string
+                - 'null'
+                format: date
+              amount:
+                type: number
+              reject_reason:
+                type:
+                - string
+                - 'null'
+              submitted_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+              reviewed_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+              lines:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    order_line_id:
+                      type: string
+                      format: uuid
+                    quantity:
+                      type: number
+                    unit_price:
+                      type: number
+          description: Detail only
+    PortalSupplierInvoice:
+      allOf:
+      - type: object
+        properties:
+          type:
+            type: string
+            enum:
+            - supplier_invoice
+            - supplier_invoice_submission
+          farm:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          order:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+          currency:
+            type: string
+      - description: The fields of a recorded invoice (with paid_amount and outstanding) or of a submission (with code, status submitted / rejected and reject_reason).
+        type: object
+        additionalProperties: true
+    CustomerDashboard:
+      type: object
+      properties:
+        type:
+          type: string
+          const: customer_dashboard
+        farms:
+          type: integer
+        available_products:
+          type: integer
+        active_orders:
+          type: integer
+        delivered_orders:
+          type: integer
+        deliveries_to_confirm:
+          type: integer
+        money:
+          type: array
+          items:
+            type: object
+            properties:
+              currency:
+                type: string
+              pending_payments:
+                type: number
+              total_purchases:
+                type: number
+    PortalProduct:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: portal_product
+        farm:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type:
+          - string
+          - 'null'
+        category:
+          type:
+          - string
+          - 'null'
+        unit:
+          type: string
+        price:
+          type: number
+        currency:
+          type: string
+        min_order_quantity:
+          type:
+          - number
+          - 'null'
+        availability_note:
+          type:
+          - string
+          - 'null'
+        has_photo:
+          type: boolean
+    PortalSalesOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: portal_sales_order
+        farm:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        code:
+          type: string
+        status:
+          $ref: '#/components/schemas/SalesOrderStatus'
+        currency:
+          type: string
+        total_amount:
+          type: number
+        requested_delivery_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        delivery_address:
+          type:
+          - string
+          - 'null'
+        note:
+          type:
+          - string
+          - 'null'
+        reject_reason:
+          type:
+          - string
+          - 'null'
+        cancel_reason:
+          type:
+          - string
+          - 'null'
+        placed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              product_id:
+                type: string
+                format: uuid
+              description:
+                type: string
+              quantity:
+                type: number
+              unit:
+                type: string
+              unit_price:
+                type: number
+              amount:
+                type: number
+              dispatched_quantity:
+                type: number
+        invoice:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              status:
+                type: string
+                enum:
+                - issued
+                - paid
+                - void
+              invoice_date:
+                type:
+                - string
+                - 'null'
+                format: date
+              due_on:
+                type:
+                - string
+                - 'null'
+                format: date
+              amount:
+                type: number
+              paid_amount:
+                type: number
+              outstanding:
+                type: number
+          - type: 'null'
+          description: Once issued; drafts stay with the farm
+        shipments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              type:
+                type: string
+                const: portal_shipment
+              farm:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+              code:
+                type: string
+              status:
+                type: string
+                enum:
+                - dispatched
+                - delivered
+                - failed
+              sales_order_id:
+                type:
+                - string
+                - 'null'
+                format: uuid
+              destination:
+                type:
+                - string
+                - 'null'
+              vehicle:
+                type:
+                - string
+                - 'null'
+              dispatched_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+              delivered_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+              received_by:
+                type:
+                - string
+                - 'null'
+              failure_reason:
+                type:
+                - string
+                - 'null'
+              lines:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    description:
+                      type:
+                      - string
+                      - 'null'
+                    quantity:
+                      type:
+                      - number
+                      - 'null'
+                    unit:
+                      type:
+                      - string
+                      - 'null'
+                    batch_code:
+                      type:
+                      - string
+                      - 'null'
+          description: Detail only
+        timeline:
+          type: array
+          items:
+            type: object
+            properties:
+              event:
+                type: string
+                enum:
+                - placed
+                - approved
+                - rejected
+                - cancelled
+                - invoiced
+                - dispatched
+                - delivered
+                - delivery_failed
+              at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+              detail:
+                type:
+                - string
+                - 'null'
+          description: Detail only
+    PortalCustomerInvoice:
+      allOf:
+      - type: object
+        properties:
+          type:
+            type: string
+            const: portal_customer_invoice
+          farm:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          currency:
+            type: string
+          lines:
+            type: array
+            items:
+              type: object
+              properties:
+                description:
+                  type: string
+                quantity:
+                  type: number
+                unit:
+                  type:
+                  - string
+                  - 'null'
+                unit_price:
+                  type: number
+                amount:
+                  type: number
+      - type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          code:
+            type: string
+          status:
+            type: string
+            enum:
+            - issued
+            - paid
+            - void
+          invoice_date:
+            type:
+            - string
+            - 'null'
+            format: date
+          due_on:
+            type:
+            - string
+            - 'null'
+            format: date
+          amount:
+            type: number
+          paid_amount:
+            type: number
+          outstanding:
+            type: number
+    PortalShipment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: portal_shipment
+        farm:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - dispatched
+          - delivered
+          - failed
+        sales_order_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        destination:
+          type:
+          - string
+          - 'null'
+        vehicle:
+          type:
+          - string
+          - 'null'
+        dispatched_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        delivered_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        received_by:
+          type:
+          - string
+          - 'null'
+        failure_reason:
+          type:
+          - string
+          - 'null'
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              description:
+                type:
+                - string
+                - 'null'
+              quantity:
+                type:
+                - number
+                - 'null'
+              unit:
+                type:
+                - string
+                - 'null'
+              batch_code:
+                type:
+                - string
+                - 'null'
+    PortalPurchase:
+      type: object
+      properties:
+        type:
+          type: string
+          const: portal_purchase
+        farm:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        shipment:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            status:
+              type: string
+            dispatched_at:
+              type:
+              - string
+              - 'null'
+              format: date-time
+        description:
+          type:
+          - string
+          - 'null'
+        quantity:
+          type:
+          - number
+          - 'null'
+        unit:
+          type:
+          - string
+          - 'null'
+        batch_code:
+          type: string
+        recalled:
+          type: boolean
+        qr_code:
+          type:
+          - string
+          - 'null'
+          description: Open /q/{code} for the public page
+        public:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+          description: The approved public fields (see PublicTracePayload)
+    ProductInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+        description:
+          type:
+          - string
+          - 'null'
+        category:
+          type:
+          - string
+          - 'null'
+        unit:
+          type: string
+        list_price:
+          type: number
+        min_order_quantity:
+          type:
+          - number
+          - 'null'
+        availability_note:
+          type:
+          - string
+          - 'null'
+        inventory_item_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        income_account_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: An income account; default 4000 Sales
+        media_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        is_published:
+          type: boolean
+        is_active:
+          type: boolean
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: product
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type:
+          - string
+          - 'null'
+        category:
+          type:
+          - string
+          - 'null'
+        unit:
+          type: string
+        list_price:
+          type: number
+        currency:
+          type: string
+        min_order_quantity:
+          type:
+          - number
+          - 'null'
+        availability_note:
+          type:
+          - string
+          - 'null'
+        inventory_item:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+          - type: 'null'
+        income_account:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              name:
+                type: string
+          - type: 'null'
+        media_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        is_published:
+          type: boolean
+        is_active:
+          type: boolean
+        version:
+          type: integer
+    SalesOrderStatus:
+      type: string
+      enum:
+      - requested
+      - approved
+      - rejected
+      - invoiced
+      - dispatched
+      - delivered
+      - cancelled
+    SalesOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: sales_order
+        code:
+          type: string
+        status:
+          $ref: '#/components/schemas/SalesOrderStatus'
+        source:
+          type: string
+          enum:
+          - portal
+          - internal
+        customer:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+            on_portal:
+              type: boolean
+        requested_delivery_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        delivery_address:
+          type:
+          - string
+          - 'null'
+        customer_note:
+          type:
+          - string
+          - 'null'
+        internal_note:
+          type:
+          - string
+          - 'null'
+        reject_reason:
+          type:
+          - string
+          - 'null'
+        cancel_reason:
+          type:
+          - string
+          - 'null'
+        invoice:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+              status:
+                type: string
+          - type: 'null'
+        approved_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        delivered_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        created_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        version:
+          type: integer
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              product_id:
+                type: string
+                format: uuid
+              description:
+                type: string
+              quantity:
+                type: number
+              unit:
+                type: string
+              dispatched_quantity:
+                type: number
+              unit_price:
+                type: number
+                description: Money permissions only
+              amount:
+                type: number
+                description: Money permissions only
+        currency:
+          type: string
+          description: Money permissions only
+        total_amount:
+          type: number
+          description: Money permissions only
+        placed_by:
+          description: Detail only
+        approved_by:
+          description: Detail only
+        shipments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Shipment'
+          description: Detail only
+    InvoiceSubmission:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          const: supplier_invoice_submission
+        code:
+          type: string
+        status:
+          type: string
+          enum:
+          - submitted
+          - recorded
+          - rejected
+        supplier:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            name:
+              type: string
+        order:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            currency:
+              type: string
+        invoice_number:
+          type: string
+        invoice_date:
+          type: string
+          format: date
+        due_on:
+          type:
+          - string
+          - 'null'
+          format: date
+        amount:
+          type: number
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              order_line_id:
+                type: string
+                format: uuid
+              item: {}
+              quantity:
+                type: number
+              unit_price:
+                type: number
+        media_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        notes:
+          type:
+          - string
+          - 'null'
+        submitted_by: {}
+        submitted_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        reviewed_by: {}
+        reviewed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        reject_reason:
+          type:
+          - string
+          - 'null'
+        supplier_invoice:
+          oneOf:
+          - type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              code:
+                type: string
+          - type: 'null'
