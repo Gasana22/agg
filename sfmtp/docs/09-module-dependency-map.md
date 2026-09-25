@@ -99,6 +99,7 @@ those arrows are drawn.
 | Traceability | `WorkerNames` contract for the journey's worker view | implemented by Workforce |
 | Media | `MediaService::attach`, signed URLs | All |
 | Parties | `PartyContext` (the party of a portal request; `eachFarm` / `linkTo` run code in a linked farm's context) and the `PortalSubject` contract, implemented by Procurement (suppliers) and Sales (customers) so Parties depends on neither (ADR-0016) | Procurement, Sales |
+| Reporting | `DashboardRegistry` (one definition per metric, reused by the metric catalogue), `StandardReports` (typed report definitions), `Exports` + `GenerateExport` job (queued files built as the requester, ADR-0017) | Web and mobile dashboards, exports |
 | Notifications | `Inbox::notify(userIds, kind, title, body, link, data)` and `notifyHolders(permission, …)`: an inbox row per member, synced to phones, then a queued push through `PushSender` (FCM, ADR-0015); more channels (SMS, email) in Phase 14 | Workforce, Sync (conflicts); all later |
 
 ## Build order that follows from the graph

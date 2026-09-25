@@ -24,7 +24,8 @@ REST API.
 | 10 — QR system | ✅ Done: approved public fields with preview, random QR codes with revoke and recall notices, the public scan page, signed payloads, rate limits, anonymous scan statistics, printable PDF labels |
 | 11 — Mobile app (complete) | ✅ Done: agronomist, livestock and supervisor flows on the phone, a sync feed filtered by permission, field-level merge with conflicts resolved in the app, a notification inbox with FCM push, an encrypted local database, background sync, remote wipe, and store builds for the internal testing tracks |
 | 12 — Supplier & customer portals | ✅ Done: party accounts linked to farm suppliers and customers by invitation, one sign-in across farms; the supplier portal (answer orders, announce dispatches, send invoices, payment status); products with list prices and sales orders with approval; the customer portal (shop, order tracking, delivery confirmation, invoices, bought batches with their public traceability); portal dashboards |
-| 13 — Analytics & reporting | Next |
+| 13 — Analytics & reporting | ✅ Done: metric catalogue with definitions and trends; crop and animal health scores with a crop health map; 19 standard reports; CSV, Excel and PDF exports built in the background (24 h, requester only); bulk QR label runs on three A4 templates; activity heat map on the farm map; dashboard performance bench within budget |
+| 14 — Integrations | Next |
 
 ## Repository layout
 

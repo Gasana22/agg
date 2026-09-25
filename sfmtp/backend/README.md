@@ -25,7 +25,7 @@ own routes, migrations, domain, application services and HTTP layer
 | `FarmStructure` | Blocks, sections, plots and locations with GeoJSON boundaries, soil profiles, geometry warnings (ADR-0009) |
 | `Support` | Tickets, internal notes, owner-granted read-only support access |
 | `Traceability` | Batch graph, hash-chained events, recorder, split / merge / process / package and recall (ADR-0013), journey views and the `product_journeys` projection, chain verification and alerts; public QR pages with approved fields, signed payloads, scan counts and PDF labels (ADR-0014) |
-| `Reporting` | Server-driven role dashboards, "My farms" overview, the admin dashboard, financial reports (P&L, cash flow and forecast, cost per crop and animal group) |
+| `Reporting` | Server-driven role dashboards, "My farms" overview, the admin dashboard, financial reports (P&L, cash flow and forecast, cost per crop and animal group); the metric catalogue and health scores, standard reports, queued exports and label runs, the activity heat map, `reporting:bench` and `exports:prune` (ADR-0017) |
 
 Shared plumbing is in `app/Support` (problem+json errors, request IDs,
 idempotency keys, engine-specific DDL for triggers and row-level security).

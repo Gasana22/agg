@@ -21,6 +21,7 @@ consequences.
 | [0014](0014-public-traceability-and-qr-codes.md) | Public traceability: allow-listed fields, approved snapshots, random codes, revocation and recall notices, signed payloads, anonymous scan counts, PDF labels | Accepted |
 | [0015](0015-mobile-roles-conflicts-and-notifications.md) | The complete mobile app: role feeds by permission, field-level merge of animal edits, server-side conflicts, the notification inbox with FCM push, the encrypted database, background sync, store builds | Accepted |
 | [0016](0016-supplier-and-customer-portals.md) | Supplier and customer portals: party links by invitation, portal reads per linked farm without bypassing isolation, supplier answers, dispatches and invoice submissions, products and sales orders | Accepted |
+| [0017](0017-analytics-reports-and-exports.md) | Analytics: one metric definition with a catalogue and series, explainable health scores, standard reports with typed columns, queued personal exports (CSV, XLSX, PDF) and label runs, activity heat maps of counts, the dashboard performance budget | Accepted |
 
 ## Product-owner decisions (2026-09-23)
 

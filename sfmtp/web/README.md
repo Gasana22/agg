@@ -1,7 +1,7 @@
 # SFMTP web (Next.js 16)
 
-Responsive web app for every SFMTP workspace (platform admin, farms; supplier
-and customer portals arrive in Phase 12).
+Responsive web app for every SFMTP workspace: platform admin, farms, and the
+supplier and customer portals.
 
 ## How it talks to the API
 
@@ -46,6 +46,15 @@ and accept it by creating an account.
 Suppliers and customers sign in to `/supplier/{party}` and `/customer/{party}`
 (ADR-0016). A person with several workspaces (farms and portals) switches
 between them in the header.
+
+## Reports and analytics
+
+`/farms/{id}/reports` holds the finance statements (for those who read the
+books), the standard reports with a preview and CSV / Excel / PDF export, the
+member's own exports (kept 24 hours), and the metric catalogue with each
+number's definition and trend (ADR-0017). The farm map has an *Activity*
+layer (a heat map of located work), and the QR codes list prints labels for
+several codes in one run.
 
 ## Develop
 

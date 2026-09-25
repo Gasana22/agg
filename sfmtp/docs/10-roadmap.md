@@ -110,7 +110,7 @@ Everything in the Phase 4 row below, with these notes:
   Picking inventory items and deducting stock comes with inventory in
   Phase 7.
 - **Deferred:** the crop health score KPI and the crop health map widget
-  (Phase 13), and the weather widget (Phase 14, weather provider).
+  (Phase 13, delivered), and the weather widget (Phase 14, weather provider).
 - **Test gate met:** 172 API tests on PostgreSQL (169 on MySQL, plus 3 that
   need PostgreSQL features) and 36 web unit tests. They include the crop
   lifecycle from plan to packed grain with a backward journey to the seed
@@ -142,7 +142,7 @@ Everything in the Phase 5 row below, with these notes:
 - **Boundaries:** the livestock manager sees livestock, the map and
   traceability, and gets 403 on crops and money fields.
 - **Deferred:** feed drawn from inventory (Phase 7), vet visits as worker
-  tasks (Phase 6), and animal health score widgets (Phase 13).
+  tasks (Phase 6), and animal health score widgets (Phase 13, delivered).
 - **Test gate met:** 181 API tests on PostgreSQL (178 on MySQL, plus 3 that
   need PostgreSQL features) and 39 web unit tests. They include lineage
   from dam and sire to offspring, the milk and meat withdrawal rules, day lots, group records,
@@ -246,7 +246,7 @@ Everything in the Phase 7 row below, with these notes
 - **Deferred:** payments, customer invoices and the rest of finance
   (Phase 8); returns to suppliers and supplier credit notes (Phase 8);
   supplier self-service for orders and deliveries (Phase 12); mobile stock
-  flows (Phase 11); inventory reports and exports (Phase 13).
+  flows (Phase 11); inventory reports and exports (Phase 13, delivered).
 - **Test gate met:** 204 API tests on PostgreSQL (200 on MySQL, plus 4 that
   need PostgreSQL features) and 50 web unit tests. They include
   the forked-process concurrency test (parallel issues never make stock
@@ -298,7 +298,7 @@ Everything in the Phase 8 row below, with these notes
 - **Deferred:** payment approval above a threshold, credit notes and
   returns, VAT, bank reconciliation, statutory payroll deductions (PAYE,
   NSSF) and payslips (entered as deductions for now), finance exports
-  (Phase 13), mobile money collection through Flutterwave (Phase 14), sales
+  (Phase 13, delivered), mobile money collection through Flutterwave (Phase 14), sales
   orders and products (Phase 12).
 - **Test gate met:** 214 API tests on PostgreSQL (210 on MySQL, plus 4 that
   need PostgreSQL features) and 53 web unit tests. They include the
@@ -311,6 +311,69 @@ Everything in the Phase 8 row below, with these notes
   finance, sales and report route, and the cross-tenant sweep over every
   new route and request body. The accountant's, manager's and owner's
   journeys were checked in a browser.
+
+### Phase 13 — delivered
+
+Everything in the Phase 13 row below, with these notes
+([ADR-0017](adr/0017-analytics-reports-and-exports.md)):
+
+- **Metric catalogue.**
+  - Every dashboard KPI with its definition, module and the dashboards
+    that show it.
+  - One metric with its previous period, change and a series per day,
+    week or month, computed by the same code as the dashboard.
+- **Final dashboards.**
+  - Crop health score and a crop health map widget (cycles at their
+    plots, coloured by band, with the reasons they lost points).
+  - Animal health score and a list of animals needing attention.
+  - Cost per hectare of the open cycles.
+- **Standard reports.** 19 reports:
+  - inventory: stock valuation, movements, expiring lots;
+  - purchasing and sales: purchases by supplier, sales by customer and by
+    product;
+  - crops and livestock: harvests, field work, milk, animal health;
+  - workforce: task completion, attendance;
+  - finance: profit and loss, cash flow, cost per crop cycle and animal
+    group, aged receivables and payables;
+  - traceability: batches.
+
+  Typed columns with totals; money columns only for those who may see
+  money.
+- **Exports.**
+  - CSV, Excel and PDF, built in the background as the member who asked.
+  - Kept 24 hours and visible to that member only.
+  - Three in progress per farm at most.
+  - An inbox notice when ready; an hourly prune.
+- **Labels.**
+  - A4 label templates: 24, 14 or 40 per sheet.
+  - Bulk print runs of many QR codes in one PDF.
+- **Activity heat map** on the farm map: GPS trails, task and attendance
+  check-ins, field work, pest reports and trace events, counted per grid
+  cell, each layer behind its permission.
+- **Web**:
+  - Reports gains standard reports, exports and metrics tabs, and shows
+    for everyone with `reports.view`;
+  - the farm map gains an activity layer;
+  - the QR codes list prints labels in bulk.
+- **Demo**: a week of worker GPS trails and located check-ins and field
+  reports on both farms.
+- **Deferred:**
+  - saved custom reports and scheduled email delivery;
+  - farm-specific health score weights.
+- **Test gate met.**
+  - The dashboard bench (`php artisan reporting:bench`) and its test hold
+    every dashboard under p95 800 ms cached and 3 s cold. On the demo
+    farm, cold p95 is under 110 ms and cached under 10 ms.
+  - Export correctness: CSV, Excel and PDF carry the same rows and totals
+    as the preview. A formula-like name is defused in CSV and kept as text
+    in Excel.
+  - Also covered: exports are private, limited and expire; permissions
+    and money columns on reports; health scores; the cross-tenant sweep
+    over the new routes.
+  - 246 API tests on PostgreSQL (241 on MySQL, plus 5 that need PostgreSQL
+    features) and 68 web unit tests.
+  - Reports, exports, metrics, widgets, the heat map and label printing
+    were checked in a browser, including phone width.
 
 ### Phase 12 — delivered
 
@@ -483,7 +546,7 @@ Everything in the Phase 10 row below, with these notes
   scans.
 - **Deferred:**
   - label templates for other stock and a bulk print run (Phase 13
-    exports);
+    exports, delivered);
   - signing-key history for rotation;
   - the customer portal view of bought batches (Phase 12).
 - **Test gate met:** 225 API tests on PostgreSQL (220 on MySQL, plus 5

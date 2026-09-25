@@ -156,7 +156,26 @@ flowchart LR
 ## 4. Metric catalogue (excerpt)
 
 Each metric is defined once and reused by every dashboard and report that
-needs it:
+needs it. As built (Phase 13, ADR-0017), the definitions live in the
+dashboard registry. `GET /farms/{farm}/metrics` lists the ones a member may
+see, with a description, module and the dashboards that use them.
+`GET /farms/{farm}/metrics/{key}?period=` returns the value, the previous
+period, the change and a series (per day up to 31 days, then per week, then
+per month). The Reports page shows the catalogue under *Metrics*.
+
+Health scores are part of the catalogue:
+- `crop.health_score`: open cycles start at 100 and lose 5, 15, 30 or 50
+  points per open low, medium, high or critical pest or disease incident.
+- `livestock.health_score`: active animals start at 100 and lose 20 for an
+  overdue vaccination or deworming, 25 for losing 5% or more of their
+  weight, and 15 for a treatment or injury in the last 30 days.
+
+The farm score is the average, banded good (80 and above), watch (50 to 79)
+or poor (below 50). The `crop_health` widget (type `health_map`) places each
+cycle at its plot. The `animal_health` list names the reasons each animal
+lost points.
+
+Excerpt of the definitions:
 
 | Key | Definition | Source |
 |---|---|---|
@@ -172,3 +191,33 @@ needs it:
 | `finance.cash_balance` | Σ cash and bank accounts | ledger |
 | `trace.unverified_activities` | Activities `submitted` > 48 h | live |
 | `platform.mrr` | Σ active subscription price normalised to a month | `subscriptions` |
+
+## 5. Standard reports and exports
+
+Reports are fixed queries with declared parameters and typed columns (see
+ADR-0017), not a query builder. There are 19, grouped as inventory,
+purchasing, sales, crops, livestock, workforce, finance and traceability.
+
+- **Listing and preview.** `GET /farms/{farm}/standard-reports` lists the
+  reports a member may run. `…/standard-reports/{key}` previews up to 500
+  rows with totals. Money columns are left out for members without that
+  money permission.
+- **Exports.** `POST /farms/{farm}/exports` queues a CSV, Excel or PDF file
+  (or a QR label run) that is built as the requester. It is kept 24 hours
+  and only the requester can list or download it. At most 3 exports run at
+  once per farm.
+
+## 6. Activity heat map
+
+`GET /farms/{farm}/maps/activity?period=&layers=&cell=` counts located
+records per grid cell. The layers are GPS trails, task check-ins and photos,
+attendance check-ins, crop operations, pest reports and trace events. Each
+layer needs its own permission, and the farm map draws the cells as a
+shaded layer.
+
+## 7. Performance budget
+
+Dashboards are cached per farm, period and permission fingerprint. The
+Phase 13 gate is p95 under 800 ms from cache and under 3 s cold.
+`php artisan reporting:bench [farm] --runs=20` measures every dashboard
+both ways; a feature test runs it on every CI build.
