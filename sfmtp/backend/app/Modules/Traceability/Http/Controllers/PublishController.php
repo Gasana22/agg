@@ -2,7 +2,6 @@
 
 namespace App\Modules\Traceability\Http\Controllers;
 
-use App\Modules\Tenancy\TenantContext;
 use App\Modules\Traceability\Application\PublicPayload;
 use App\Modules\Traceability\Application\Publishing;
 use App\Modules\Traceability\Application\QrLabels;
@@ -92,15 +91,14 @@ class PublishController
         return new Response($labels->svg($qrCode), 200, ['Content-Type' => 'image/svg+xml', 'Cache-Control' => 'private, max-age=3600']);
     }
 
-    public function labels(Request $request, string $farm, TraceQrCode $qrCode, QrLabels $labels, TenantContext $context): Response
+    public function labels(Request $request, string $farm, TraceQrCode $qrCode, QrLabels $labels): Response
     {
-        $data = $request->validate(['copies' => ['sometimes', 'integer', 'min:1', 'max:240']]);
-        $payload = $this->publishing->latestApproval($qrCode->batch)?->payload ?? [];
-        $pdf = $labels->pdf($qrCode, [
-            // Only what is public goes on the label.
-            'product' => $payload['product']['name'] ?? null,
-            'farm' => $payload['farm'] ?? null,
-        ], (int) ($data['copies'] ?? 24));
+        $data = $request->validate([
+            'copies' => ['sometimes', 'integer', 'min:1', 'max:240'],
+            'template' => ['sometimes', Rule::in(array_keys(QrLabels::TEMPLATES))],
+        ]);
+        // Only what is public goes on the label.
+        $pdf = $labels->forCodes([[$qrCode, (int) ($data['copies'] ?? 24)]], $data['template'] ?? 'a4_3x8');
 
         return new Response($pdf, 200, [
             'Content-Type' => 'application/pdf',

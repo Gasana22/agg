@@ -95,6 +95,14 @@ return [
         'cache_ttl' => (int) env('DASHBOARD_CACHE_TTL', 60),
     ],
 
+    // Queued report and label exports (ADR-0017).
+    'exports' => [
+        'disk' => env('EXPORTS_DISK', 'local'),
+        'ttl_hours' => (int) env('EXPORTS_TTL_HOURS', 24),
+        'max_open_per_farm' => (int) env('EXPORTS_MAX_OPEN_PER_FARM', 3),
+        'max_per_user_per_hour' => (int) env('EXPORTS_MAX_PER_USER_PER_HOUR', 30),
+    ],
+
     /*
     | Photos and documents (docs/08 §3). Files are stored under their SHA-256,
     | so a retried upload is deduplicated. Use an S3-compatible disk in

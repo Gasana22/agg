@@ -3,6 +3,7 @@
 namespace App\Modules\Traceability\Application;
 
 use App\Modules\Traceability\Domain\Models\TraceQrCode;
+use App\Support\Documents\SimplePdf;
 use BaconQrCode\Common\ErrorCorrectionLevel;
 use BaconQrCode\Encoder\Encoder;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
@@ -11,23 +12,22 @@ use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 
 /**
- * QR images and printable label sheets. Labels are a small hand-written PDF
- * (A4, 3 × 8 labels) with the QR drawn as vector squares, so they print
- * sharp at any size and need no PDF library.
+ * QR images and printable label sheets. Sheets are small hand-written PDFs
+ * on A4 label stock with each QR drawn once as vector squares and placed on
+ * its labels, so they print sharp at any size and need no PDF library.
  */
 class QrLabels
 {
-    private const PAGE_W = 595.28;
+    /** A4 label stock: columns, rows and page margins in points. */
+    public const TEMPLATES = [
+        'a4_3x8' => ['label' => 'A4, 24 labels (3 × 8, about 70 × 34 mm)', 'cols' => 3, 'rows' => 8, 'mx' => 20, 'my' => 30],
+        'a4_2x7' => ['label' => 'A4, 14 labels (2 × 7, about 99 × 39 mm)', 'cols' => 2, 'rows' => 7, 'mx' => 20, 'my' => 30],
+        'a4_4x10' => ['label' => 'A4, 40 labels (4 × 10, about 50 × 28 mm)', 'cols' => 4, 'rows' => 10, 'mx' => 15, 'my' => 25],
+    ];
 
-    private const PAGE_H = 841.89;
+    public const MAX_LABELS = 2000;
 
-    private const COLS = 3;
-
-    private const ROWS = 8;
-
-    private const MARGIN_X = 20;
-
-    private const MARGIN_Y = 30;
+    public function __construct(private readonly Publishing $publishing) {}
 
     public function svg(TraceQrCode $qr, int $size = 240): string
     {
@@ -35,114 +35,95 @@ class QrLabels
     }
 
     /**
+     * Labels for one QR code.
+     *
      * @param  array{product:?string, farm:?string}  $text
      */
-    public function pdf(TraceQrCode $qr, array $text, int $copies = 24): string
+    public function pdf(TraceQrCode $qr, array $text, int $copies = 24, string $template = 'a4_3x8'): string
     {
-        $matrix = Encoder::encode($qr->url(), ErrorCorrectionLevel::M(), Encoder::DEFAULT_BYTE_MODE_ENCODING)->getMatrix();
-        $n = $matrix->getWidth();
-        $perPage = self::COLS * self::ROWS;
-        $labelW = (self::PAGE_W - 2 * self::MARGIN_X) / self::COLS;
-        $labelH = (self::PAGE_H - 2 * self::MARGIN_Y) / self::ROWS;
-        $qrSize = $labelH - 24;   // leaves a quiet zone of about four modules
-        $module = $qrSize / $n;
+        return $this->sheet([['url' => $qr->url(), 'code' => $qr->code, 'product' => $text['product'] ?? null, 'farm' => $text['farm'] ?? null, 'copies' => $copies]], $template);
+    }
 
-        $pages = [];
-        for ($start = 0; $start < $copies; $start += $perPage) {
+    /**
+     * Labels for QR codes of this farm, each with only what its batch's
+     * latest approval made public.
+     *
+     * @param  array<int, array{0:TraceQrCode, 1:int}>  $codes  QR code and copies
+     */
+    public function forCodes(array $codes, string $template = 'a4_3x8'): string
+    {
+        return $this->sheet(array_map(function (array $pair) {
+            [$qr, $copies] = $pair;
+            $payload = $this->publishing->latestApproval($qr->loadMissing('batch')->batch)?->payload ?? [];
+
+            return ['url' => $qr->url(), 'code' => $qr->code, 'product' => $payload['product']['name'] ?? null, 'farm' => $payload['farm'] ?? null, 'copies' => $copies];
+        }, $codes), $template);
+    }
+
+    /**
+     * Labels for many QR codes in one print run, in order.
+     *
+     * @param  array<int, array{url:string, code:string, product:?string, farm:?string, copies:int}>  $labels
+     */
+    public function sheet(array $labels, string $template = 'a4_3x8'): string
+    {
+        $t = self::TEMPLATES[$template] ?? self::TEMPLATES['a4_3x8'];
+        $perPage = $t['cols'] * $t['rows'];
+        $labelW = (SimplePdf::A4_W - 2 * $t['mx']) / $t['cols'];
+        $labelH = (SimplePdf::A4_H - 2 * $t['my']) / $t['rows'];
+        $scale = min(1.0, $labelH / 97.7, $labelW / 185);   // 1 on the 3 × 8 stock
+        $pad = 12 * $scale;
+        $qrSize = $labelH - 2 * $pad;
+
+        $doc = new SimplePdf;
+        $slots = [];
+        foreach (array_values($labels) as $i => $label) {
+            $matrix = Encoder::encode($label['url'], ErrorCorrectionLevel::M(), Encoder::DEFAULT_BYTE_MODE_ENCODING)->getMatrix();
+            $n = $matrix->getWidth();
+            $rects = [];
+            for ($r = 0; $r < $n; $r++) {
+                for ($c = 0; $c < $n; $c++) {
+                    if ($matrix->get($c, $r) === 1) {
+                        $rects[] = sprintf('%d %d 1.02 1.02 re', $c, $n - 1 - $r);
+                    }
+                }
+            }
+            $doc->form("QR{$i}", '0 g '.implode(' ', $rects).' f', $n, $n);
+            for ($k = 0; $k < max(1, $label['copies']) && count($slots) < self::MAX_LABELS; $k++) {
+                $slots[] = [$i, $n, $label];
+            }
+        }
+
+        foreach (array_chunk($slots, $perPage) as $page) {
             $ops = [];
-            for ($i = 0; $i < min($perPage, $copies - $start); $i++) {
-                $x = self::MARGIN_X + ($i % self::COLS) * $labelW;
-                $y = self::PAGE_H - self::MARGIN_Y - (intdiv($i, self::COLS) + 1) * $labelH;
+            foreach ($page as $pos => [$i, $n, $label]) {
+                $x = $t['mx'] + ($pos % $t['cols']) * $labelW;
+                $y = SimplePdf::A4_H - $t['my'] - (intdiv($pos, $t['cols']) + 1) * $labelH;
                 // Cut guide
                 $ops[] = sprintf('0.85 G 0.3 w %.2F %.2F %.2F %.2F re S 0 G', $x, $y, $labelW, $labelH);
-                // The QR, drawn once as a form and placed on each label.
-                $qx = $x + 12;
-                $qy = $y + 12;
-                $ops[] = sprintf('q %.4F 0 0 %.4F %.2F %.2F cm /QR Do Q', $module, $module, $qx, $qy);
+                $module = $qrSize / $n;
+                $ops[] = sprintf('q %.4F 0 0 %.4F %.2F %.2F cm /QR%d Do Q', $module, $module, $x + $pad, $y + $pad, $i);
                 // Text beside the QR
-                $tx = $qx + $qrSize + 8;
-                $width = $labelW - $qrSize - 28;
+                $tx = $x + $pad + $qrSize + 8 * $scale;
+                $width = $labelW - $qrSize - 2 * $pad - 12 * $scale;
                 $lines = [
-                    ['F2', 8.5, self::fit($text['product'] ?? 'Traceable product', $width, 8.5)],
-                    ['F1', 7, self::fit($text['farm'] ?? '', $width, 7)],
-                    ['F1', 6.5, 'Scan to see where it'],
-                    ['F1', 6.5, 'came from'],
-                    ['F2', 8, $qr->code],
+                    ['F2', 8.5 * $scale, SimplePdf::fit($label['product'] ?? 'Traceable product', $width, 8.5 * $scale)],
+                    ['F1', 7 * $scale, SimplePdf::fit($label['farm'] ?? '', $width, 7 * $scale)],
+                    ['F1', 6.5 * $scale, 'Scan to see where it'],
+                    ['F1', 6.5 * $scale, 'came from'],
+                    ['F2', 8 * $scale, $label['code']],
                 ];
-                $ty = $y + $labelH - 18;
+                $ty = $y + $labelH - 18 * $scale;
                 foreach ($lines as [$font, $size, $line]) {
                     if ($line !== '') {
-                        $ops[] = sprintf('BT /%s %.1F Tf %.2F %.2F Td (%s) Tj ET', $font, $size, $tx, $ty, self::escape($line));
+                        $ops[] = SimplePdf::text($font, $size, $tx, $ty, $line);
                     }
-                    $ty -= $size + 3.5;
+                    $ty -= $size + 3.5 * $scale;
                 }
             }
-            $pages[] = implode("\n", $ops);
+            $doc->page(implode("\n", $ops));
         }
 
-        $rects = [];
-        for ($r = 0; $r < $n; $r++) {
-            for ($c = 0; $c < $n; $c++) {
-                if ($matrix->get($c, $r) === 1) {
-                    $rects[] = sprintf('%d %d 1.02 1.02 re', $c, $n - 1 - $r);
-                }
-            }
-        }
-
-        return self::document($pages, '0 g '.implode(' ', $rects).' f', $n);
-    }
-
-    /** @param  array<int, string>  $pages content streams */
-    private static function document(array $pages, string $qr, int $n): string
-    {
-        $objects = [];
-        $objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
-        $objects[5] = "<< /Type /XObject /Subtype /Form /BBox [0 0 {$n} {$n}] /Length ".strlen($qr)." >>\nstream\n{$qr}\nendstream";
-        $kids = [];
-        $next = 6;
-        $pageObjects = [];
-        foreach ($pages as $content) {
-            $pageId = $next++;
-            $contentId = $next++;
-            $kids[] = "{$pageId} 0 R";
-            $pageObjects[$pageId] = sprintf('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %.2F %.2F] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> /XObject << /QR 5 0 R >> >> /Contents %d 0 R >>', self::PAGE_W, self::PAGE_H, $contentId);
-            $pageObjects[$contentId] = '<< /Length '.strlen($content)." >>\nstream\n{$content}\nendstream";
-        }
-        $objects[2] = '<< /Type /Pages /Kids ['.implode(' ', $kids).'] /Count '.count($pages).' >>';
-        $objects[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
-        $objects[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
-        $objects += $pageObjects;
-        ksort($objects);
-
-        $pdf = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
-        $offsets = [];
-        foreach ($objects as $id => $body) {
-            $offsets[$id] = strlen($pdf);
-            $pdf .= "{$id} 0 obj\n{$body}\nendobj\n";
-        }
-        $xref = strlen($pdf);
-        $pdf .= 'xref'."\n0 ".(count($objects) + 1)."\n0000000000 65535 f \n";
-        foreach ($offsets as $offset) {
-            $pdf .= sprintf("%010d 00000 n \n", $offset);
-        }
-
-        return $pdf.'trailer << /Size '.(count($objects) + 1)." /Root 1 0 R >>\nstartxref\n{$xref}\n%%EOF\n";
-    }
-
-    /** Latin-1 text for the standard fonts, with PDF string escapes. */
-    private static function escape(string $s): string
-    {
-        $s = @iconv('UTF-8', 'Windows-1252//TRANSLIT', $s) ?: preg_replace('/[^\x20-\x7E]/', '?', $s);
-
-        return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $s);
-    }
-
-    /** Trim to roughly fit a width (Helvetica averages about half an em per character). */
-    private static function fit(?string $s, float $width, float $size): string
-    {
-        $s = trim((string) $s);
-        $max = max(4, (int) floor($width / ($size * 0.52)));
-
-        return mb_strlen($s) > $max ? rtrim(mb_substr($s, 0, $max - 1)).'…' : $s;
+        return $doc->render();
     }
 }

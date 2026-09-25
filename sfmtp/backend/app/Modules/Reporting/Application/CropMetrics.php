@@ -77,6 +77,15 @@ class CropMetrics
         return $area > 0 ? round($harvests->sum(fn ($h) => $this->units->toKg((float) $h->quantity, $h->unit) ?? 0) / $area, 1) : null;
     }
 
+    /** Cost to date of the open cycles per planted hectare, in the farm currency, or null without area. */
+    public function costPerHa(): ?float
+    {
+        $open = array_filter(app(FinanceReports::class)->cropCycles(), fn ($c) => $c['stage'] !== CycleStage::Closed->value);
+        $area = array_sum(array_column($open, 'area_ha'));
+
+        return $area > 0 ? round(array_sum(array_column($open, 'cost')) / $area, 2) : null;
+    }
+
     public function openIncidents(): int
     {
         return CropObservation::whereIn('kind', self::INCIDENT_KINDS)->where('status', '!=', ObservationStatus::Resolved->value)->count();

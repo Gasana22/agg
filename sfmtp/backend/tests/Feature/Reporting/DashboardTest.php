@@ -33,7 +33,7 @@ class DashboardTest extends TestCase
 
         $this->assertSame('owner', $data['dashboard']);
         $this->assertSame('7d', $data['period']['key']);
-        $this->assertSame(['farm.area', 'finance.revenue', 'finance.expenses', 'finance.net_profit', 'approvals.pending', 'finance.receivables', 'finance.payables', 'inventory.value', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'farm.members', 'trace.open_batches', 'trace.events', 'trace.qr_scans'], array_column($data['kpis'], 'key'));
+        $this->assertSame(['farm.area', 'finance.revenue', 'finance.expenses', 'finance.net_profit', 'approvals.pending', 'finance.receivables', 'finance.payables', 'inventory.value', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'crop.health_score', 'livestock.head_count', 'livestock.milk', 'livestock.health_score', 'workers.present', 'tasks.pending', 'farm.members', 'trace.open_batches', 'trace.events', 'trace.qr_scans'], array_column($data['kpis'], 'key'));
 
         $kpis = collect($data['kpis'])->keyBy('key');
         $this->assertSame(['value' => '120.0000', 'unit' => 'ha'], $kpis['farm.area']['value']);
@@ -68,7 +68,7 @@ class DashboardTest extends TestCase
     {
         $agronomist = $this->memberWithRole($this->farm, 'agronomist');
         $data = $this->dashboard('agronomist', $agronomist)->assertOk()->json('data');
-        $this->assertSame(['crop.active_cycles', 'crop.planted_area', 'crop.near_harvest', 'crop.expected_yield', 'crop.actual_yield', 'crop.yield_per_ha', 'crop.incidents_open', 'crop.treatments_active'], array_column($data['kpis'], 'key'));
+        $this->assertSame(['crop.active_cycles', 'crop.planted_area', 'crop.near_harvest', 'crop.expected_yield', 'crop.actual_yield', 'crop.yield_per_ha', 'crop.health_score', 'crop.incidents_open', 'crop.treatments_active'], array_column($data['kpis'], 'key'));
         $this->assertSame(['start_cycle', 'record_operation', 'report_observation', 'record_harvest', 'new_task', 'new_crop_plan', 'view_map'], array_column($data['quick_actions'], 'key'));
 
         $worker = $this->memberWithRole($this->farm, 'field_worker');
@@ -91,7 +91,7 @@ class DashboardTest extends TestCase
 
         $accountant = $this->memberWithRole($this->farm, 'accountant');
         $books = $this->dashboard('accountant', $accountant)->assertOk()->json('data');
-        $this->assertSame(['finance.revenue', 'finance.expenses', 'finance.net_profit', 'finance.cash_balance', 'finance.receivables', 'finance.payables', 'finance.not_invoiced', 'payroll.current', 'budget.total', 'budget.variance', 'inventory.value'], array_column($books['kpis'], 'key'));
+        $this->assertSame(['finance.revenue', 'finance.expenses', 'finance.net_profit', 'finance.cash_balance', 'finance.receivables', 'finance.payables', 'finance.not_invoiced', 'payroll.current', 'budget.total', 'budget.variance', 'inventory.value', 'crop.cost_per_ha'], array_column($books['kpis'], 'key'));
         $this->assertSame(['expenses_to_approve', 'invoices_due', 'customer_invoices_overdue', 'payroll_pending', 'recent_transactions', 'income_vs_expenses', 'budget_vs_actual', 'cash_flow_forecast', 'inventory_value'], array_column($books['widgets'], 'key'));
         $this->assertSame(['record_expense', 'record_income', 'new_invoice', 'pay_supplier', 'receive_payment', 'run_payroll', 'new_budget', 'view_pnl', 'view_cash_flow', 'view_ledger'], array_column($books['quick_actions'], 'key'));
         foreach (['income_vs_expenses', 'budget_vs_actual', 'cash_flow_forecast'] as $chart) {

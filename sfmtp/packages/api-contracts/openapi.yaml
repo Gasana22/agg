@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SFMTP API
-  version: 1.11.0-phase12
+  version: 1.12.0-phase13
   description: |
     Smart Farm Management & Traceability Platform REST API.
 
@@ -49,7 +49,7 @@ tags:
   - name: Customer portal
     description: Published products, orders at list price, invoices, deliveries and the approved traceability of what was bought.
   - name: Reports
-    description: Profit and loss, cash flow with a forecast, and cost per crop cycle and animal group.
+    description: Profit and loss, cash flow with a forecast, cost per crop cycle and animal group; standard reports across modules with CSV, Excel and PDF exports built in the background (ADR-0017).
   - name: Livestock
     description: Groups, animals, health and vaccination with withdrawal periods, feeding, weights, production into daily product lots, movements, breeding and sale requests. Records are append-only; mistakes are voided.
   - name: Crops
@@ -11226,10 +11226,14 @@ paths:
       tags:
       - Traceability
       operationId: getQrLabels
-      summary: Printable labels (A4, 24 per sheet)
-      description: Each label has the QR, the code and only approved text (product, farm).
+      summary: Printable labels (A4 label stock)
+      description: Each label has the QR, the code and only approved text (product, farm). For many codes in one run, queue a labels export.
       x-permission: trace.batches.view
       parameters:
+      - name: template
+        in: query
+        schema:
+          $ref: '#/components/schemas/LabelTemplate'
       - name: copies
         in: query
         schema:
@@ -13488,6 +13492,375 @@ paths:
         '422':
           $ref: '#/components/responses/Problem'
 
+  /farms/{farm}/metrics:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Dashboards
+      operationId: listMetrics
+      summary: Metric catalogue
+      description: Every KPI the dashboards show that you may see, with its definition, module and the dashboards that use it. Each metric keeps the permission it has on dashboards.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MetricDefinition'
+  /farms/{farm}/metrics/{metric}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: metric
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^[a-z_]+\.[a-z_]+$
+    get:
+      tags:
+      - Dashboards
+      operationId: getMetric
+      summary: One metric with its series
+      description: Value, previous period and change, and for period metrics a series per day (up to 31 days), per week or per month. Cached like dashboards.
+      x-permission: the metric's permission
+      parameters:
+      - name: period
+        in: query
+        schema:
+          type: string
+          enum:
+          - today
+          - 7d
+          - 30d
+          - 90d
+          - ytd
+          - custom
+          default: 30d
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MetricDetail'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/standard-reports:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Reports
+      operationId: listStandardReports
+      summary: Standard reports you may run
+      x-permission: 'reports.view (finance reports: reports.finance.view | finance.view) and the data permission of each report'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StandardReportDefinition'
+  /farms/{farm}/standard-reports/{report}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: report
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^[a-z_]+$
+    get:
+      tags:
+      - Reports
+      operationId: runStandardReport
+      summary: Run a standard report (preview)
+      description: Columns are typed; a money column you may not see is left out. The preview holds up to 500 rows (`truncated` says when more exist); exports hold up to 50,000. `from`/`to` default to the last 30 days; `days` applies to expiring lots. 422 period_too_long past three years. 403 report_not_available.
+      x-permission: as listed
+      parameters:
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: days
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 60
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StandardReport'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/exports:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Reports
+      operationId: listExports
+      summary: Your exports
+      description: Your own exports on this farm, newest first (50). Other members' exports are never listed.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReportExport'
+    post:
+      tags:
+      - Reports
+      operationId: createExport
+      summary: Queue an export
+      description: Built by a queued job as you, with your permissions, and kept for 24 hours; you get an inbox notice when it is ready. At most 3 exports in progress per farm and 30 per member per hour (429 export_limit). A label run prints up to 2,000 labels of the farm's active QR codes, each with only its approved text.
+      x-permission: reports.export and the report's permissions (reports); trace.batches.view (labels)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - type: object
+                properties:
+                  kind:
+                    type: string
+                    const: report
+                  report:
+                    type: string
+                  format:
+                    type: string
+                    enum:
+                    - csv
+                    - xlsx
+                    - pdf
+                  params:
+                    type: object
+                    additionalProperties: true
+                required:
+                - report
+                - format
+              - type: object
+                properties:
+                  kind:
+                    type: string
+                    const: labels
+                  format:
+                    type: string
+                    const: pdf
+                  template:
+                    $ref: '#/components/schemas/LabelTemplate'
+                  labels:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        qr_code_id:
+                          type: string
+                          format: uuid
+                        copies:
+                          type: integer
+                          minimum: 1
+                          maximum: 240
+                          default: 1
+                      required:
+                      - qr_code_id
+                    minItems: 1
+                    maxItems: 200
+                required:
+                - kind
+                - labels
+      responses:
+        '202':
+          description: Queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ReportExport'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/exports/{exportId}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: exportId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Reports
+      operationId: getExport
+      summary: One of your exports
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ReportExport'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/exports/{exportId}/download:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: exportId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Reports
+      operationId: downloadExport
+      summary: Download a ready export
+      description: Yours only (404 otherwise). 409 export_not_ready; 410 export_expired after 24 hours.
+      responses:
+        '200':
+          description: The file
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '410':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/maps/activity:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Structure
+      operationId: getActivityHeatmap
+      summary: Activity heat map
+      description: Counts of located records per grid cell in the period. Layers you may not see are listed in `hidden_layers`. Only counts leave the server.
+      x-permission: maps.view; each layer its own permission
+      parameters:
+      - name: period
+        in: query
+        schema:
+          type: string
+          enum:
+          - today
+          - 7d
+          - 30d
+          - 90d
+          - ytd
+          - custom
+          default: 30d
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: layers
+        in: query
+        schema:
+          type: string
+          description: 'Comma-separated: gps, tasks, attendance, operations, observations, trace (default: all you may see)'
+      - name: cell
+        in: query
+        schema:
+          type: integer
+          minimum: 10
+          maximum: 1000
+          default: 50
+          description: Cell size in metres
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ActivityHeatmap'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+
 components:
   securitySchemes:
     bearer:
@@ -13955,16 +14328,20 @@ components:
                 value: { type: [number, 'null'] }
                 direction: { type: string, enum: [up, down, flat] }
                 vs: { type: string }
-        meta: { type: object, description: 'Extra detail, e.g. by_species for livestock.head_count' }
+        meta: { type: object, description: 'Extra detail, e.g. by_species for livestock.head_count, bands (good / watch / poor) for the health scores' }
 
     WidgetRef:
       type: object
       required: [key, type, inline]
       properties:
         key: { type: string }
-        type: { type: string, enum: [action_list, checklist, chart, map, timeline] }
+        type: { type: string, enum: [action_list, checklist, chart, map, timeline, health_map] }
         inline: { type: boolean }
-        data: { type: object, additionalProperties: true, description: 'Present when inline' }
+        data:
+          description: 'Present when inline; a health_map widget carries HealthMapWidget fields'
+          anyOf:
+            - { type: object, additionalProperties: true }
+            - { $ref: '#/components/schemas/HealthMapWidget' }
         href: { type: string, description: 'Present when not inline' }
 
     ChartWidget:
@@ -21466,3 +21843,368 @@ components:
               code:
                 type: string
           - type: 'null'
+    MetricDefinition:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        module:
+          type: string
+        format:
+          type: string
+          enum:
+          - number
+          - money
+          - percent
+          - quantity
+          - duration
+          - status
+        description:
+          type:
+          - string
+          - 'null'
+        period_based:
+          type: boolean
+        dashboards:
+          type: array
+          items:
+            type: string
+      required:
+      - key
+      - label
+      - module
+      - format
+      - period_based
+      - dashboards
+    MetricDetail:
+      allOf:
+      - $ref: '#/components/schemas/MetricDefinition'
+      - type: object
+        properties:
+          period:
+            type: object
+            properties:
+              key:
+                type: string
+              from:
+                type: string
+                format: date
+              to:
+                type: string
+                format: date
+          value:
+            description: As in Kpi.value
+          previous:
+            description: Previous period value, or null
+          delta:
+            oneOf:
+            - type: 'null'
+            - type: object
+              properties:
+                value:
+                  type:
+                  - number
+                  - 'null'
+                direction:
+                  type: string
+                  enum:
+                  - up
+                  - down
+                  - flat
+                vs:
+                  type: string
+          series:
+            oneOf:
+            - type: 'null'
+            - type: array
+              items:
+                type: object
+                properties:
+                  label:
+                    type: string
+                    format: date
+                  value:
+                    type:
+                    - number
+                    - 'null'
+          meta:
+            type: object
+    StandardReportDefinition:
+      type: object
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        group:
+          type: string
+          enum:
+          - inventory
+          - purchasing
+          - sales
+          - crops
+          - livestock
+          - workforce
+          - finance
+          - traceability
+        description:
+          type: string
+        params:
+          type: array
+          items:
+            type: string
+            enum:
+            - from
+            - to
+            - days
+        formats:
+          type: array
+          items:
+            type: string
+            enum:
+            - csv
+            - xlsx
+            - pdf
+    StandardReport:
+      allOf:
+      - $ref: '#/components/schemas/StandardReportDefinition'
+      - type: object
+        properties:
+          params:
+            type: object
+            additionalProperties: true
+          columns:
+            type: array
+            items:
+              type: object
+              properties:
+                key:
+                  type: string
+                label:
+                  type: string
+                type:
+                  type: string
+                  enum:
+                  - text
+                  - number
+                  - integer
+                  - money
+                  - percent
+                  - date
+                  - datetime
+          rows:
+            type: array
+            items:
+              type: object
+              additionalProperties: true
+              description: Keyed by column; money and decimals as strings, counts as integers, percent as a fraction
+          totals:
+            type:
+            - object
+            - 'null'
+            additionalProperties: true
+          row_count:
+            type: integer
+          truncated:
+            type: boolean
+          currency:
+            type: string
+          generated_at:
+            type: string
+            format: date-time
+    LabelTemplate:
+      type: string
+      enum:
+      - a4_3x8
+      - a4_2x7
+      - a4_4x10
+      default: a4_3x8
+      description: 'A4 label stock: 24 (3 × 8), 14 (2 × 7) or 40 (4 × 10) per sheet'
+    ReportExport:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+          - report
+          - labels
+        report:
+          type:
+          - string
+          - 'null'
+        title:
+          type: string
+        params:
+          type: object
+          additionalProperties: true
+        format:
+          type: string
+          enum:
+          - csv
+          - xlsx
+          - pdf
+        status:
+          type: string
+          enum:
+          - queued
+          - running
+          - ready
+          - failed
+          - expired
+        row_count:
+          type:
+          - integer
+          - 'null'
+        file_name:
+          type:
+          - string
+          - 'null'
+        file_size:
+          type:
+          - integer
+          - 'null'
+        error:
+          type:
+          - string
+          - 'null'
+        created_at:
+          type: string
+          format: date-time
+        finished_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        expires_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        download_path:
+          type:
+          - string
+          - 'null'
+          description: API path (under /api/v1) while ready
+    ActivityHeatmap:
+      type: object
+      properties:
+        period:
+          type: object
+          properties:
+            key:
+              type: string
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+        cell_m:
+          type: integer
+        layers:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              points:
+                type: integer
+        hidden_layers:
+          type: array
+          items:
+            type: string
+        bbox:
+          oneOf:
+          - type: 'null'
+          - type: object
+            properties:
+              south:
+                type: number
+              west:
+                type: number
+              north:
+                type: number
+              east:
+                type: number
+        max:
+          type: integer
+        cells:
+          type: array
+          items:
+            type: object
+            properties:
+              lat:
+                type: number
+              lng:
+                type: number
+              south:
+                type: number
+              west:
+                type: number
+              north:
+                type: number
+              east:
+                type: number
+              count:
+                type: integer
+              layers:
+                type: object
+                additionalProperties:
+                  type: integer
+    HealthMapWidget:
+      type: object
+      properties:
+        key:
+          type: string
+        type:
+          type: string
+          const: health_map
+        bands:
+          type: object
+          properties:
+            good:
+              type: integer
+            watch:
+              type: integer
+            poor:
+              type: integer
+        points:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              title:
+                type: string
+              subtitle:
+                type: string
+              lat:
+                type:
+                - number
+                - 'null'
+              lng:
+                type:
+                - number
+                - 'null'
+              score:
+                type: integer
+                minimum: 0
+                maximum: 100
+              band:
+                type: string
+                enum:
+                - good
+                - watch
+                - poor
+              href:
+                type: string

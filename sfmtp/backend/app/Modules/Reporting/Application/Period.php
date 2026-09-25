@@ -34,6 +34,40 @@ final class Period
         return new self($key, $start->utc(), $end->utc());
     }
 
+    /** A window between two UTC instants (series buckets, report ranges). */
+    public static function between(CarbonImmutable $from, CarbonImmutable $to, string $key = 'custom'): self
+    {
+        return new self($key, $from->utc(), $to->utc());
+    }
+
+    /**
+     * The period cut into consecutive local days, weeks or months, whichever
+     * keeps the series at 31 points or fewer.
+     *
+     * @return array<int, array{label:string, period:self}>
+     */
+    public function buckets(string $timezone): array
+    {
+        $from = $this->from->setTimezone($timezone);
+        $to = $this->to->setTimezone($timezone);
+        $days = (int) $from->startOfDay()->diffInDays($to->startOfDay()) + 1;
+        $unit = $days <= 31 ? 'day' : ($days <= 31 * 7 ? 'week' : 'month');
+
+        $out = [];
+        for ($start = $from; $start <= $to;) {
+            $end = match ($unit) {
+                'day' => $start->endOfDay(),
+                'week' => $start->addDays(6)->endOfDay(),
+                'month' => $start->endOfMonth(),
+            };
+            $end = $end > $to ? $to : $end;
+            $out[] = ['label' => $start->toDateString(), 'period' => new self($this->key, $start->utc(), $end->utc())];
+            $start = $end->addMicrosecond()->startOfDay();
+        }
+
+        return $out;
+    }
+
     /** The equal-length period immediately before this one (for deltas). */
     public function previous(): self
     {

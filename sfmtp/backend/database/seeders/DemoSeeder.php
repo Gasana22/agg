@@ -196,6 +196,7 @@ class DemoSeeder extends Seeder
         $this->seedFinance($mixed, $context);
         $this->seedShipments($crop, $context);
         $this->seedPortals($mixed, $crop, $user, $context);
+        $this->seedActivityLocations($mixed, $crop, $context);
 
         // Project every journey once, and check both chains so the integrity page starts green.
         app(JourneyProjector::class)->resume();
@@ -212,6 +213,61 @@ class DemoSeeder extends Seeder
      * delivered, and 100 kg to a market trader, dispatched nine days ago
      * and not yet confirmed (a traceability alert).
      */
+    /**
+     * Where the work happened, for the activity heat map (Phase 13): a week
+     * of phone GPS trails for the workers, check-in positions, and field
+     * reports and work placed on their plots. Positions stay inside the
+     * mapped plots and buildings.
+     */
+    private function seedActivityLocations(Farm $mixed, Farm $crop, TenantContext $context): void
+    {
+        mt_srand(13);
+        $jitter = fn (float $v, float $by) => round($v + (mt_rand() / mt_getrandmax() - 0.5) * $by, 6);
+        $spots = [
+            // Paddocks, kraal, parlour and store on the mixed farm; plots and the grain store on the crop farm.
+            $mixed->id => [[0.4020, 32.3860], [0.4020, 32.3880], [0.4020, 32.3900], [0.4045, 32.3862], [0.4049, 32.3890], [0.4051, 32.3881]],
+            $crop->id => [[0.3720, 32.7057], [0.3720, 32.7070], [0.3720, 32.7083], [0.3720, 32.7102], [0.3720, 32.7115], [0.3745, 32.7120]],
+        ];
+
+        foreach ([$mixed, $crop] as $farm) {
+            $context->run($farm, function () use ($farm, $spots, $jitter) {
+                $tz = $farm->timezone;
+                $workers = DB::table('workers')->where('farm_id', $farm->id)->orderBy('worker_code')->pluck('id');
+                $rows = [];
+                foreach ($workers as $w => $workerId) {
+                    for ($d = 0; $d < 7; $d++) {
+                        $start = CarbonImmutable::parse(now($tz)->subDays($d)->toDateString().' 07:30', $tz)->utc();
+                        $spot = $spots[$farm->id][($w + $d) % count($spots[$farm->id])];
+                        for ($i = 0; $i < 24; $i++) {
+                            $at = $start->addMinutes(15 * $i);
+                            if ($at->isFuture()) {
+                                break;
+                            }
+                            $rows[] = ['id' => (string) Str::uuid7(), 'farm_id' => $farm->id, 'worker_id' => $workerId, 'recorded_at' => $at,
+                                'lat' => $jitter($spot[0], 0.0015), 'lng' => $jitter($spot[1], 0.0015), 'accuracy_m' => 8, 'created_at' => $at];
+                        }
+                    }
+                }
+                foreach (array_chunk($rows, 500) as $chunk) {
+                    DB::table('worker_gps_points')->insert($chunk);
+                }
+                foreach (DB::table('worker_attendance')->where('farm_id', $farm->id)->get(['id']) as $i => $a) {
+                    $spot = $spots[$farm->id][$i % count($spots[$farm->id])];
+                    DB::table('worker_attendance')->where('id', $a->id)->update(['check_in_lat' => $jitter($spot[0], 0.0006), 'check_in_lng' => $jitter($spot[1], 0.0006), 'check_in_accuracy_m' => 10]);
+                }
+                // Field reports and work where they happened: the plot's centre, give or take.
+                foreach (['crop_observations', 'crop_operations'] as $table) {
+                    $located = DB::table($table)->join('crop_cycles as c', 'c.id', '=', "{$table}.cycle_id")->join('farm_plots as p', 'p.id', '=', 'c.plot_id')
+                        ->where("{$table}.farm_id", $farm->id)->whereNotNull('p.centroid_lat')->get(["{$table}.id", 'p.centroid_lat', 'p.centroid_lng']);
+                    foreach ($located as $r) {
+                        DB::table($table)->where('id', $r->id)->update(['latitude' => $jitter((float) $r->centroid_lat, 0.001), 'longitude' => $jitter((float) $r->centroid_lng, 0.001)]);
+                    }
+                }
+            });
+        }
+        mt_srand();
+    }
+
     private function seedShipments(Farm $farm, TenantContext $context): void
     {
         $owner = FarmUser::where('farm_id', $farm->id)->where('is_owner', true)->firstOrFail();

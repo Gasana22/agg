@@ -5367,8 +5367,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Printable labels (A4, 24 per sheet)
-         * @description Each label has the QR, the code and only approved text (product, farm).
+         * Printable labels (A4 label stock)
+         * @description Each label has the QR, the code and only approved text (product, farm). For many codes in one run, queue a labels export.
          */
         get: operations["getQrLabels"];
         put?: never;
@@ -6392,6 +6392,184 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/farms/{farm}/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Metric catalogue
+         * @description Every KPI the dashboards show that you may see, with its definition, module and the dashboards that use it. Each metric keeps the permission it has on dashboards.
+         */
+        get: operations["listMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/metrics/{metric}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                metric: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * One metric with its series
+         * @description Value, previous period and change, and for period metrics a series per day (up to 31 days), per week or per month. Cached like dashboards.
+         */
+        get: operations["getMetric"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/standard-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Standard reports you may run */
+        get: operations["listStandardReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/standard-reports/{report}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                report: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Run a standard report (preview)
+         * @description Columns are typed; a money column you may not see is left out. The preview holds up to 500 rows (`truncated` says when more exist); exports hold up to 50,000. `from`/`to` default to the last 30 days; `days` applies to expiring lots. 422 period_too_long past three years. 403 report_not_available.
+         */
+        get: operations["runStandardReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Your exports
+         * @description Your own exports on this farm, newest first (50). Other members' exports are never listed.
+         */
+        get: operations["listExports"];
+        put?: never;
+        /**
+         * Queue an export
+         * @description Built by a queued job as you, with your permissions, and kept for 24 hours; you get an inbox notice when it is ready. At most 3 exports in progress per farm and 30 per member per hour (429 export_limit). A label run prints up to 2,000 labels of the farm's active QR codes, each with only its approved text.
+         */
+        post: operations["createExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/exports/{exportId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                exportId: string;
+            };
+            cookie?: never;
+        };
+        /** One of your exports */
+        get: operations["getExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/exports/{exportId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                exportId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Download a ready export
+         * @description Yours only (404 otherwise). 409 export_not_ready; 410 export_expired after 24 hours.
+         */
+        get: operations["downloadExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/maps/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Activity heat map
+         * @description Counts of located records per grid cell in the period. Layers you may not see are listed in `hidden_layers`. Only counts leave the server.
+         */
+        get: operations["getActivityHeatmap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6656,18 +6834,18 @@ export interface components {
                 direction?: "up" | "down" | "flat";
                 vs?: string;
             };
-            /** @description Extra detail, e.g. by_species for livestock.head_count */
+            /** @description Extra detail, e.g. by_species for livestock.head_count, bands (good / watch / poor) for the health scores */
             meta?: Record<string, never>;
         };
         WidgetRef: {
             key: string;
             /** @enum {string} */
-            type: "action_list" | "checklist" | "chart" | "map" | "timeline";
+            type: "action_list" | "checklist" | "chart" | "map" | "timeline" | "health_map";
             inline: boolean;
-            /** @description Present when inline */
+            /** @description Present when inline; a health_map widget carries HealthMapWidget fields */
             data?: {
                 [key: string]: unknown;
-            };
+            } | components["schemas"]["HealthMapWidget"];
             /** @description Present when not inline */
             href?: string;
         };
@@ -10900,6 +11078,162 @@ export interface components {
                 id?: string;
                 code?: string;
             } | null;
+        };
+        MetricDefinition: {
+            key: string;
+            label: string;
+            module: string;
+            /** @enum {string} */
+            format: "number" | "money" | "percent" | "quantity" | "duration" | "status";
+            description?: string | null;
+            period_based: boolean;
+            dashboards: string[];
+        };
+        MetricDetail: components["schemas"]["MetricDefinition"] & {
+            period?: {
+                key?: string;
+                /** Format: date */
+                from?: string;
+                /** Format: date */
+                to?: string;
+            };
+            /** @description As in Kpi.value */
+            value?: unknown;
+            /** @description Previous period value, or null */
+            previous?: unknown;
+            delta?: null | {
+                value?: number | null;
+                /** @enum {string} */
+                direction?: "up" | "down" | "flat";
+                vs?: string;
+            };
+            series?: null | {
+                /** Format: date */
+                label?: string;
+                value?: number | null;
+            }[];
+            meta?: Record<string, never>;
+        };
+        StandardReportDefinition: {
+            key?: string;
+            title?: string;
+            /** @enum {string} */
+            group?: "inventory" | "purchasing" | "sales" | "crops" | "livestock" | "workforce" | "finance" | "traceability";
+            description?: string;
+            params?: ("from" | "to" | "days")[];
+            formats?: ("csv" | "xlsx" | "pdf")[];
+        };
+        StandardReport: components["schemas"]["StandardReportDefinition"] & {
+            params?: {
+                [key: string]: unknown;
+            };
+            columns?: {
+                key?: string;
+                label?: string;
+                /** @enum {string} */
+                type?: "text" | "number" | "integer" | "money" | "percent" | "date" | "datetime";
+            }[];
+            rows?: {
+                [key: string]: unknown;
+            }[];
+            totals?: {
+                [key: string]: unknown;
+            } | null;
+            row_count?: number;
+            truncated?: boolean;
+            currency?: string;
+            /** Format: date-time */
+            generated_at?: string;
+        };
+        /**
+         * @description A4 label stock: 24 (3 × 8), 14 (2 × 7) or 40 (4 × 10) per sheet
+         * @default a4_3x8
+         * @enum {string}
+         */
+        LabelTemplate: "a4_3x8" | "a4_2x7" | "a4_4x10";
+        ReportExport: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            kind?: "report" | "labels";
+            report?: string | null;
+            title?: string;
+            params?: {
+                [key: string]: unknown;
+            };
+            /** @enum {string} */
+            format?: "csv" | "xlsx" | "pdf";
+            /** @enum {string} */
+            status?: "queued" | "running" | "ready" | "failed" | "expired";
+            row_count?: number | null;
+            file_name?: string | null;
+            file_size?: number | null;
+            error?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: date-time */
+            expires_at?: string | null;
+            /** @description API path (under /api/v1) while ready */
+            download_path?: string | null;
+        };
+        ActivityHeatmap: {
+            period?: {
+                key?: string;
+                /** Format: date */
+                from?: string;
+                /** Format: date */
+                to?: string;
+            };
+            cell_m?: number;
+            layers?: {
+                key?: string;
+                label?: string;
+                points?: number;
+            }[];
+            hidden_layers?: string[];
+            bbox?: null | {
+                south?: number;
+                west?: number;
+                north?: number;
+                east?: number;
+            };
+            max?: number;
+            cells?: {
+                lat?: number;
+                lng?: number;
+                south?: number;
+                west?: number;
+                north?: number;
+                east?: number;
+                count?: number;
+                layers?: {
+                    [key: string]: number;
+                };
+            }[];
+        };
+        HealthMapWidget: {
+            key?: string;
+            /** @constant */
+            type?: "health_map";
+            bands?: {
+                good?: number;
+                watch?: number;
+                poor?: number;
+            };
+            points?: {
+                /** Format: uuid */
+                id?: string;
+                title?: string;
+                subtitle?: string;
+                lat?: number | null;
+                lng?: number | null;
+                score?: number;
+                /** @enum {string} */
+                band?: "good" | "watch" | "poor";
+                href?: string;
+            }[];
         };
     };
     responses: {
@@ -21411,6 +21745,7 @@ export interface operations {
     getQrLabels: {
         parameters: {
             query?: {
+                template?: components["schemas"]["LabelTemplate"];
                 copies?: number;
             };
             header?: never;
@@ -23132,6 +23467,280 @@ export interface operations {
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listMetrics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["MetricDefinition"][];
+                    };
+                };
+            };
+        };
+    };
+    getMetric: {
+        parameters: {
+            query?: {
+                period?: "today" | "7d" | "30d" | "90d" | "ytd" | "custom";
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                metric: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["MetricDetail"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listStandardReports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StandardReportDefinition"][];
+                    };
+                };
+            };
+        };
+    };
+    runStandardReport: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                days?: number;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                report: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["StandardReport"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    listExports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["ReportExport"][];
+                    };
+                };
+            };
+        };
+    };
+    createExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @constant */
+                    kind?: "report";
+                    report: string;
+                    /** @enum {string} */
+                    format: "csv" | "xlsx" | "pdf";
+                    params?: {
+                        [key: string]: unknown;
+                    };
+                } | {
+                    /** @constant */
+                    kind: "labels";
+                    /** @constant */
+                    format?: "pdf";
+                    template?: components["schemas"]["LabelTemplate"];
+                    labels: {
+                        /** Format: uuid */
+                        qr_code_id: string;
+                        /** @default 1 */
+                        copies?: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["ReportExport"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+        };
+    };
+    getExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                exportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["ReportExport"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    downloadExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                exportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                    "application/pdf": string;
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            410: components["responses"]["Problem"];
+        };
+    };
+    getActivityHeatmap: {
+        parameters: {
+            query?: {
+                period?: "today" | "7d" | "30d" | "90d" | "ytd" | "custom";
+                from?: string;
+                to?: string;
+                layers?: string;
+                cell?: number;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["ActivityHeatmap"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
     };

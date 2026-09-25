@@ -36,6 +36,7 @@ use App\Modules\Procurement\Application\Purchasing;
 use App\Modules\Procurement\Application\Receiving;
 use App\Modules\Procurement\Domain\Models\PurchaseOrder;
 use App\Modules\Procurement\Domain\Models\SupplierInvoiceSubmission;
+use App\Modules\Reporting\Domain\Models\ReportExport;
 use App\Modules\Sales\Application\Invoicing;
 use App\Modules\Sales\Application\SalesOrders;
 use App\Modules\Sales\Application\Shipments;
@@ -110,6 +111,10 @@ class CrossTenantIsolationTest extends TestCase
                 'role' => FarmRole::where('key', 'manager')->value('id'),
                 'dashboard' => 'owner',
                 'widget' => 'trace_activity',
+                'metric' => 'finance.revenue',
+                'report' => 'profit_and_loss',
+                'exportId' => ReportExport::create(['farm_id' => $this->victim->id, 'kind' => 'report', 'report' => 'harvests', 'title' => 'Harvests', 'params' => [],
+                    'format' => 'csv', 'status' => 'failed', 'requested_by' => $this->ownerOf($this->victim)->id])->id,
             ];
         });
         $this->victimRecords += $this->victimCropRecords($this->victimRecords['plot']);
@@ -332,7 +337,7 @@ class CrossTenantIsolationTest extends TestCase
             'stock_versions' => DB::table('inventory_items')->sum('version') + DB::table('stock_adjustments')->sum('version') + DB::table('inventory_requests')->sum('version')
                 + DB::table('suppliers')->sum('version') + DB::table('purchase_requests')->sum('version') + DB::table('purchase_orders')->sum('version'),
             'stock_quantity' => (string) DB::table('stock_balances')->sum('quantity'),
-            'portal_rows' => collect(['party_links', 'portal_invitations', 'supplier_invoice_submissions', 'supplier_dispatches', 'products', 'sales_orders', 'sales_order_lines'])
+            'portal_rows' => collect(['party_links', 'portal_invitations', 'supplier_invoice_submissions', 'supplier_dispatches', 'products', 'sales_orders', 'sales_order_lines', 'report_exports'])
                 ->mapWithKeys(fn ($t) => [$t => DB::table($t)->count()])->all(),
             'portal_state' => DB::table('party_links')->orderBy('id')->pluck('status')->merge(DB::table('portal_invitations')->orderBy('id')->pluck('revoked_at'))
                 ->merge(DB::table('supplier_invoice_submissions')->orderBy('id')->pluck('status'))->merge(DB::table('sales_orders')->orderBy('id')->pluck('status'))->all(),
@@ -369,7 +374,7 @@ class CrossTenantIsolationTest extends TestCase
         $before = $this->snapshot();
 
         foreach ($this->farmRoutes() as $route) {
-            $names = array_diff($route->parameterNames(), ['farm', 'dashboard', 'widget']);
+            $names = array_diff($route->parameterNames(), ['farm', 'dashboard', 'widget', 'metric', 'report']);   // catalogue keys, not records
             if ($names === []) {
                 continue;   // no record ids in the path
             }

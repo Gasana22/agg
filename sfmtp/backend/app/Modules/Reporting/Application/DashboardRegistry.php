@@ -27,6 +27,7 @@ class DashboardRegistry
         private readonly WorkforceMetrics $workforce,
         private readonly InventoryMetrics $inventory,
         private readonly FinanceMetrics $finance,
+        private readonly HealthScores $health,
         private readonly FarmPermissions $permissions,
         private readonly TenantContext $context,
     ) {}
@@ -37,20 +38,20 @@ class DashboardRegistry
         $trace = ['trace.open_batches', 'trace.events', 'trace.qr_scans'];
 
         return match ($dashboard) {
-            'owner' => ['kpis' => ['farm.area', 'finance.revenue', 'finance.expenses', 'finance.net_profit', 'approvals.pending', 'finance.receivables', 'finance.payables', 'inventory.value', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'livestock.head_count', 'livestock.milk', 'workers.present', 'tasks.pending', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'expenses_to_approve', 'payroll_pending', 'orders_to_approve', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'trace_alerts', 'recent_trace_events', 'income_vs_expenses', 'trace_activity'], 'quick_actions' => ['view_pnl', 'invite_member', 'view_map', 'new_batch', 'view_audit_log']],
+            'owner' => ['kpis' => ['farm.area', 'finance.revenue', 'finance.expenses', 'finance.net_profit', 'approvals.pending', 'finance.receivables', 'finance.payables', 'inventory.value', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'crop.health_score', 'livestock.head_count', 'livestock.milk', 'livestock.health_score', 'workers.present', 'tasks.pending', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'expenses_to_approve', 'payroll_pending', 'orders_to_approve', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'trace_alerts', 'recent_trace_events', 'crop_health', 'animal_health', 'income_vs_expenses', 'trace_activity'], 'quick_actions' => ['view_pnl', 'invite_member', 'view_map', 'new_batch', 'view_audit_log']],
             'manager' => [
                 'kpis' => ['tasks.today', 'tasks.completed', 'tasks.pending', 'tasks.overdue', 'workers.present', 'workers.absent', 'activities.active', 'crop.active_cycles', 'livestock.head_count', 'inventory.requests_pending', 'inventory.low'],
                 'widgets' => ['verification_queue', 'schedule', 'overdue_tasks', 'leave_requests', 'pending_requests', 'purchase_requests_to_approve', 'worker_activity', 'operations_to_verify', 'pest_disease_alerts', 'vaccinations_due', 'trace_alerts', 'recent_trace_events'],
                 'quick_actions' => ['new_task', 'view_workers', 'request_expense', 'invite_member', 'start_cycle', 'register_animal', 'view_map'],
             ],
             'agronomist' => [
-                'kpis' => ['crop.active_cycles', 'crop.planted_area', 'crop.near_harvest', 'crop.expected_yield', 'crop.actual_yield', 'crop.yield_per_ha', 'crop.incidents_open', 'crop.treatments_active'],
-                'widgets' => ['pest_disease_alerts', 'operations_to_verify', 'verification_queue', 'upcoming_harvests', 'expected_vs_actual_yield', 'recent_trace_events'],
+                'kpis' => ['crop.active_cycles', 'crop.planted_area', 'crop.near_harvest', 'crop.expected_yield', 'crop.actual_yield', 'crop.yield_per_ha', 'crop.health_score', 'crop.incidents_open', 'crop.treatments_active', 'crop.cost_per_ha'],
+                'widgets' => ['crop_health', 'pest_disease_alerts', 'operations_to_verify', 'verification_queue', 'upcoming_harvests', 'expected_vs_actual_yield', 'recent_trace_events'],
                 'quick_actions' => ['start_cycle', 'record_operation', 'report_observation', 'record_harvest', 'new_task', 'new_crop_plan', 'view_map'],
             ],
             'livestock' => [
-                'kpis' => ['livestock.head_count', 'livestock.new_animals', 'livestock.pregnant', 'livestock.vaccinations_due', 'livestock.under_withdrawal', 'livestock.mortality_rate', 'livestock.milk', 'livestock.daily_gain', 'livestock.sold'],
-                'widgets' => ['vaccinations_due', 'withdrawal_alerts', 'verification_queue', 'expected_births', 'weight_loss_alerts', 'milk_production', 'recent_trace_events'],
+                'kpis' => ['livestock.head_count', 'livestock.new_animals', 'livestock.pregnant', 'livestock.vaccinations_due', 'livestock.under_withdrawal', 'livestock.mortality_rate', 'livestock.milk', 'livestock.daily_gain', 'livestock.sold', 'livestock.health_score'],
+                'widgets' => ['animal_health', 'vaccinations_due', 'withdrawal_alerts', 'verification_queue', 'expected_births', 'weight_loss_alerts', 'milk_production', 'recent_trace_events'],
                 'quick_actions' => ['register_animal', 'record_health', 'record_weight', 'record_production', 'new_task', 'request_sale', 'view_map'],
             ],
             'store' => [
@@ -59,7 +60,7 @@ class DashboardRegistry
                 'quick_actions' => ['stock_in', 'issue_stock', 'transfer_stock', 'receive_delivery', 'purchase_request', 'stock_count'],
             ],
             'accountant' => [
-                'kpis' => ['finance.revenue', 'finance.expenses', 'finance.net_profit', 'finance.cash_balance', 'finance.receivables', 'finance.payables', 'finance.not_invoiced', 'payroll.current', 'budget.total', 'budget.variance', 'inventory.value'],
+                'kpis' => ['finance.revenue', 'finance.expenses', 'finance.net_profit', 'finance.cash_balance', 'finance.receivables', 'finance.payables', 'finance.not_invoiced', 'payroll.current', 'budget.total', 'budget.variance', 'inventory.value', 'crop.cost_per_ha'],
                 'widgets' => ['expenses_to_approve', 'invoices_due', 'customer_invoices_overdue', 'payroll_pending', 'recent_transactions', 'income_vs_expenses', 'budget_vs_actual', 'cash_flow_forecast', 'inventory_value'],
                 'quick_actions' => ['record_expense', 'record_income', 'new_invoice', 'pay_supplier', 'receive_payment', 'run_payroll', 'new_budget', 'view_pnl', 'view_cash_flow', 'view_ledger'],
             ],
@@ -118,10 +119,18 @@ class DashboardRegistry
                 'value' => fn (Period $p) => ($v = $this->crops->yieldPerHa($p)) === null ? null : ['value' => number_format($v, 1, '.', ''), 'unit' => 'kg/ha']],
             'crop.incidents_open' => ['label' => 'Open pest & disease incidents', 'format' => 'number', 'permission' => 'crops.operations.view',
                 'value' => fn () => $this->crops->openIncidents()],
+            'crop.health_score' => ['label' => 'Crop health', 'format' => 'quantity', 'permission' => 'crops.operations.view',
+                'value' => fn () => ($v = $this->health->cropScore()) === null ? null : ['value' => number_format($v, 1, '.', ''), 'unit' => '/100'],
+                'meta' => fn () => ['bands' => HealthScores::bands($this->health->cropCycles())]],
+            'crop.cost_per_ha' => ['label' => 'Cost per hectare (open cycles)', 'format' => 'money', 'permission' => 'finance.values.view',
+                'value' => fn () => ($v = $this->crops->costPerHa()) === null ? null : $this->money($v)],
             'crop.treatments_active' => ['label' => 'Cycles under withholding', 'format' => 'number', 'permission' => 'crops.operations.view',
                 'value' => fn () => $this->crops->cyclesUnderWithholding()],
             'livestock.head_count' => ['label' => 'Animals', 'format' => 'number', 'permission' => 'livestock.animals.view',
                 'value' => fn () => $this->livestock->headCount(), 'meta' => fn () => ['by_species' => $this->livestock->bySpecies()]],
+            'livestock.health_score' => ['label' => 'Animal health', 'format' => 'quantity', 'permission' => 'livestock.animals.view',
+                'value' => fn () => ($v = $this->health->animalScore()) === null ? null : ['value' => number_format($v, 1, '.', ''), 'unit' => '/100'],
+                'meta' => fn () => ['bands' => HealthScores::bands($this->health->animals())]],
             'livestock.new_animals' => ['label' => 'New animals', 'format' => 'number', 'permission' => 'livestock.animals.view',
                 'value' => fn (Period $p) => $this->livestock->newAnimals($p),
                 'previous' => fn (Period $p) => $this->livestock->newAnimals($p->previous())],
@@ -262,6 +271,29 @@ class DashboardRegistry
                 'data' => fn () => ['items' => $this->crops->incidentAlerts()]],
             'operations_to_verify' => ['type' => 'action_list', 'permission' => 'crops.operations.approve', 'inline' => true,
                 'data' => fn () => ['items' => $this->crops->operationsToVerify()]],
+            'crop_health' => ['type' => 'health_map', 'permission' => 'crops.operations.view', 'inline' => true,
+                'data' => fn () => [
+                    'bands' => HealthScores::bands($this->health->cropCycles()),
+                    'points' => array_map(fn (array $c) => [
+                        'id' => $c['id'],
+                        'title' => trim("{$c['crop']} · Plot {$c['plot']}"),
+                        'subtitle' => $c['reasons'] === [] ? "{$c['code']} · no open incidents" : "{$c['code']} · ".implode('; ', $c['reasons']),
+                        'lat' => $c['lat'], 'lng' => $c['lng'],
+                        'score' => $c['score'], 'band' => $c['band'],
+                        'href' => "/farms/{$farm->id}/crops/cycles/{$c['id']}",
+                    ], $this->health->cropCycles()),
+                ]],
+            'animal_health' => ['type' => 'action_list', 'permission' => 'livestock.animals.view', 'inline' => true,
+                'data' => fn () => [
+                    'bands' => HealthScores::bands($this->health->animals()),
+                    'items' => array_values(array_map(fn (array $a) => [
+                        'id' => $a['id'],
+                        'title' => $a['label'],
+                        'subtitle' => implode(' · ', $a['reasons']),
+                        'badge' => ['label' => "{$a['score']}/100", 'tone' => $a['band'] === 'poor' ? 'danger' : 'warning'],
+                        'href' => "/farms/{$farm->id}/livestock/animals/{$a['id']}",
+                    ], array_slice(array_filter($this->health->animals(), fn ($a) => $a['score'] < 100), 0, 8))),
+                ]],
             'upcoming_harvests' => ['type' => 'action_list', 'permission' => 'crops.plans.view', 'inline' => true,
                 'data' => fn () => ['items' => $this->crops->upcomingHarvests()]],
             'expected_vs_actual_yield' => ['type' => 'chart', 'permission' => 'crops.harvest.view', 'inline' => false,
@@ -417,6 +449,27 @@ class DashboardRegistry
         ];
     }
 
+    /**
+     * Every metric definition, for the metric catalogue.
+     *
+     * @return array<string, array>
+     */
+    public function metricDefinitions(): array
+    {
+        return $this->kpis();
+    }
+
+    /** @return array<int,string> the dashboards showing a metric */
+    public function dashboardsShowing(string $metric): array
+    {
+        return array_values(array_filter(self::FARM_DASHBOARDS, fn ($d) => in_array($metric, $this->layout($d)['kpis'], true)));
+    }
+
+    public function allows(?string $permission): bool
+    {
+        return $this->can($permission);
+    }
+
     public function summary(string $dashboard, Period $period): array
     {
         $this->authorize($dashboard);
@@ -534,7 +587,7 @@ class DashboardRegistry
         return false;
     }
 
-    private function delta(mixed $current, mixed $previous): ?array
+    public function delta(mixed $current, mixed $previous): ?array
     {
         // Quantities compare on their value.
         [$current, $previous] = [is_array($current) ? ($current['value'] ?? null) : $current, is_array($previous) ? ($previous['value'] ?? null) : $previous];
