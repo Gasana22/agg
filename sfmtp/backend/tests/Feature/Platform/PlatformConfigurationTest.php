@@ -41,7 +41,7 @@ class PlatformConfigurationTest extends TestCase
         $this->assertSame('sfmtp', $created['config']['username']);
         $this->assertSame('••••abcd', $created['config']['api_key']);
         $this->assertStringNotContainsString('atsk_live', DB::table('integration_providers')->value('config'));
-        $this->assertStringNotContainsString('atsk_live', json_encode(DB::table('audit_logs')->pluck('new_values')));
+        $this->assertStringNotContainsString('atsk_live', json_encode($this->unscoped(fn () => DB::table('audit_logs')->pluck('new_values'))));
 
         // Sending the masked value back keeps the secret; null removes a key.
         $this->asUser($admin)->patchJson("/api/v1/admin/integrations/{$created['id']}", ['config' => ['api_key' => '••••abcd', 'username' => null, 'sender_id' => 'SFMTP']])->assertOk();

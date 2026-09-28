@@ -14,7 +14,10 @@ use Illuminate\Support\Facades\DB;
  *
  * Registered as a scoped singleton, so it is fresh for every request and
  * queued job. Setting it also sets PostgreSQL's app.farm_id, which the
- * row-level-security policies read.
+ * row-level-security policies read, together with app.user_id (the signed-in
+ * user, who may read their own memberships across farms) and app.platform
+ * (platform administration, which may read the platform-facing farm tables
+ * but no operational data).
  */
 class TenantContext
 {
@@ -23,6 +26,10 @@ class TenantContext
     private ?FarmUser $membership = null;
 
     private bool $bypass = false;
+
+    private ?string $userId = null;
+
+    private bool $platform = false;
 
     /** Set during an owner-granted, read-only support session (ADR-0005). */
     private ?string $supportGrantId = null;
@@ -103,6 +110,34 @@ class TenantContext
         }
     }
 
+    /** The authenticated user, for the "own rows" policies (memberships, their farms' roles and settings). */
+    public function actAs(?string $userId): void
+    {
+        if ($this->userId !== $userId) {
+            $this->userId = $userId;
+            $this->syncDatabase();
+        }
+    }
+
+    /**
+     * Run platform administration (the /admin routes): tickets, grants, farm
+     * settings and status, audit and payments of every farm become readable;
+     * operational farm tables stay closed.
+     */
+    public function platform(Closure $callback): mixed
+    {
+        $previous = $this->platform;
+        $this->platform = true;
+        $this->syncDatabase();
+
+        try {
+            return $callback();
+        } finally {
+            $this->platform = $previous;
+            $this->syncDatabase();
+        }
+    }
+
     public function hasFarm(): bool
     {
         return $this->farm !== null;
@@ -140,9 +175,11 @@ class TenantContext
         }
 
         try {
-            DB::select("SELECT set_config('app.farm_id', ?, false), set_config('app.rls_bypass', ?, false)", [
+            DB::select("SELECT set_config('app.farm_id', ?, false), set_config('app.rls_bypass', ?, false), set_config('app.user_id', ?, false), set_config('app.platform', ?, false)", [
                 $this->farm?->id ?? '',
                 $this->bypass ? 'on' : 'off',
+                $this->userId ?? '',
+                $this->platform ? 'on' : 'off',
             ]);
         } catch (QueryException $e) {
             // 25P02: the surrounding transaction already failed. PostgreSQL

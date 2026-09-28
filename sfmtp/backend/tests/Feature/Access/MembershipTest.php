@@ -83,7 +83,7 @@ class MembershipTest extends TestCase
 
         // They can sign in and hold the agronomist's permissions.
         $this->postJson('/api/v1/auth/login', ['email' => 'new.person@example.com', 'password' => 'Harvest2026!', 'client' => 'web'])->assertOk();
-        $user = FarmUser::where('farm_id', $this->farm->id)->whereHas('user', fn ($q) => $q->where('email', 'new.person@example.com'))->firstOrFail()->user;
+        $user = $this->unscoped(fn () => FarmUser::where('farm_id', $this->farm->id)->whereHas('user', fn ($q) => $q->where('email', 'new.person@example.com'))->firstOrFail()->user);
         $this->assertNotNull($user->email_verified_at);
         $this->asUser($user)->getJson($this->url('/structure'))->assertOk();
         $this->assertProblem($this->asUser($user)->getJson($this->url('/invitations')), 403, 'forbidden');
@@ -198,7 +198,7 @@ class MembershipTest extends TestCase
     {
         $owner = $this->ownerOf($this->farm);
         $worker = $this->memberWithRole($this->farm, 'field_worker');
-        $memberId = FarmUser::where('farm_id', $this->farm->id)->where('user_id', $worker->id)->value('id');
+        $memberId = $this->unscoped(fn () => FarmUser::where('farm_id', $this->farm->id)->where('user_id', $worker->id)->value('id'));
 
         $this->asUser($owner)->patchJson($this->url("/members/{$memberId}"), ['role_ids' => [$this->roleId('store_manager'), $this->roleId('livestock_manager')]])
             ->assertOk()->assertJsonCount(2, 'data.roles');
@@ -220,12 +220,12 @@ class MembershipTest extends TestCase
     public function test_member_guard_rails(): void
     {
         $owner = $this->ownerOf($this->farm);
-        $ownerMembership = FarmUser::where('farm_id', $this->farm->id)->where('is_owner', true)->value('id');
+        $ownerMembership = $this->unscoped(fn () => FarmUser::where('farm_id', $this->farm->id)->where('is_owner', true)->value('id'));
 
         $this->assertProblem($this->asUser($owner)->deleteJson($this->url("/members/{$ownerMembership}")), 403, 'guard_rail_owner');
 
         $manager = $this->memberWithRole($this->farm, 'manager');
-        $managerMembership = FarmUser::where('user_id', $manager->id)->value('id');
+        $managerMembership = $this->unscoped(fn () => FarmUser::where('user_id', $manager->id)->value('id'));
         $this->assertProblem($this->asUser($manager)->patchJson($this->url("/members/{$managerMembership}"), ['status' => 'suspended']), 403, 'forbidden');
 
         $this->assertProblem(
@@ -262,7 +262,7 @@ class MembershipTest extends TestCase
         $this->memberWithRole($this->farm, 'dairy_supervisor', $user);
         $this->assertProblem($this->asUser($owner)->deleteJson($this->url("/roles/{$role['id']}")), 409, 'role_in_use');
 
-        $membership = FarmUser::where('user_id', $user->id)->value('id');
+        $membership = $this->unscoped(fn () => FarmUser::where('user_id', $user->id)->value('id'));
         $this->asUser($owner)->patchJson($this->url("/members/{$membership}"), ['role_ids' => [$this->roleId('livestock_manager')]])->assertOk();
         $this->asUser($owner)->deleteJson($this->url("/roles/{$role['id']}"))->assertNoContent();
 

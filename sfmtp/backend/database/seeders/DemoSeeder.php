@@ -97,6 +97,14 @@ class DemoSeeder extends Seeder
 
     public function run(FarmService $farms, TenantContext $context, Recorder $recorder, StructureService $structure): void
     {
+        // Seeding sets up several farms and the platform at once: an explicit
+        // bypass of row-level security (docs/02 §3). Each farm's records are
+        // still written inside that farm's context below.
+        $context->bypass(fn () => $this->seedAll($farms, $context, $recorder, $structure));
+    }
+
+    private function seedAll(FarmService $farms, TenantContext $context, Recorder $recorder, StructureService $structure): void
+    {
         $user = fn (string $email, string $name, UserType $type = UserType::Member) => User::firstOrCreate(
             ['email' => $email],
             ['name' => $name, 'user_type' => $type, 'password' => self::PASSWORD, 'status' => 'active', 'email_verified_at' => now()],

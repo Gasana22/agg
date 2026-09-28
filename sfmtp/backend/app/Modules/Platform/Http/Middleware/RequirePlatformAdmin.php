@@ -2,6 +2,7 @@
 
 namespace App\Modules\Platform\Http\Middleware;
 
+use App\Modules\Tenancy\TenantContext;
 use App\Support\Http\ApiException;
 use Closure;
 use Illuminate\Http\Request;
@@ -19,6 +20,6 @@ class RequirePlatformAdmin
             throw ApiException::forbidden('platform_admin_required', 'This area is for platform administrators.');
         }
 
-        return $next($request);
+        return app(TenantContext::class)->platform(fn () => $next($request));
     }
 }

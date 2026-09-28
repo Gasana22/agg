@@ -7,6 +7,7 @@ use App\Modules\Integrations\Application\ProviderFailure;
 use App\Modules\Integrations\Contracts\PaymentPurpose;
 use App\Modules\Integrations\Contracts\ProviderDirectory;
 use App\Modules\Integrations\Domain\Models\OnlinePayment;
+use App\Modules\Tenancy\TenantContext;
 use App\Support\Http\ApiException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
@@ -31,7 +32,10 @@ class OnlinePayments
 {
     public const ADAPTERS = ['flutterwave' => Flutterwave::class];
 
-    public function __construct(private readonly ProviderDirectory $directory) {}
+    public function __construct(
+        private readonly ProviderDirectory $directory,
+        private readonly TenantContext $context,
+    ) {}
 
     public function available(): bool
     {
@@ -107,10 +111,15 @@ class OnlinePayments
             if ($reference === null) {
                 return false;
             }
-            $payment = OnlinePayment::where('reference', $reference)->first();
-            if ($payment) {
-                $this->refresh($payment);
-            }
+            // The gateway is no signed-in user: once the signature holds, the
+            // payment is found by its reference across farms, and nothing is
+            // booked until the gateway itself confirms it.
+            $this->context->bypass(function () use ($reference) {
+                $payment = OnlinePayment::where('reference', $reference)->first();
+                if ($payment) {
+                    $this->refresh($payment);
+                }
+            });
 
             return true;
         }

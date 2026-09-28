@@ -54,7 +54,7 @@ class FarmAdministrationTest extends TestCase
 
         $this->admin('/unsuspend', ['note' => 'Resolved'])->assertOk()->assertJsonPath('data.status', 'active');
         $this->asUser($agronomist)->getJson("/api/v1/farms/{$this->farm->id}/traceability/batches")->assertOk();
-        $this->assertSame(3, FarmStatusChange::where('farm_id', $this->farm->id)->count());
+        $this->assertSame(3, $this->unscoped(fn () => FarmStatusChange::where('farm_id', $this->farm->id)->count()));
     }
 
     public function test_unsuspending_a_never_approved_farm_returns_it_to_pending(): void
@@ -117,6 +117,6 @@ class FarmAdministrationTest extends TestCase
         $this->admin('/approve');
 
         $this->expectException(AppendOnlyViolation::class);
-        FarmStatusChange::first()->update(['note' => 'rewritten']);
+        $this->unscoped(fn () => FarmStatusChange::first()->update(['note' => 'rewritten']));
     }
 }

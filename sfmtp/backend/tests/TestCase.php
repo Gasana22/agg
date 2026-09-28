@@ -53,7 +53,7 @@ abstract class TestCase extends BaseTestCase
 
     protected function ownerOf(Farm $farm): User
     {
-        return FarmUser::where('farm_id', $farm->id)->where('is_owner', true)->firstOrFail()->user;
+        return $this->inFarm($farm, fn () => FarmUser::where('farm_id', $farm->id)->where('is_owner', true)->firstOrFail()->user);
     }
 
     /** Add a member holding the given role template to a farm. */
@@ -88,6 +88,28 @@ abstract class TestCase extends BaseTestCase
     protected function inFarm(Farm $farm, callable $callback): mixed
     {
         return $this->app->make(TenantContext::class)->run($farm, $callback(...));
+    }
+
+    /** Read stored rows as they are, outside row-level security (fixtures and assertions only). */
+    protected function unscoped(callable $callback): mixed
+    {
+        return $this->app->make(TenantContext::class)->bypass($callback(...));
+    }
+
+    // Database assertions inspect what was stored, so they see every farm's rows.
+    protected function assertDatabaseHas($table, array $data = [], $connection = null)
+    {
+        return $this->unscoped(fn () => parent::assertDatabaseHas($table, $data, $connection));
+    }
+
+    protected function assertDatabaseMissing($table, array $data = [], $connection = null)
+    {
+        return $this->unscoped(fn () => parent::assertDatabaseMissing($table, $data, $connection));
+    }
+
+    protected function assertDatabaseCount($table, int $count, $connection = null)
+    {
+        return $this->unscoped(fn () => parent::assertDatabaseCount($table, $count, $connection));
     }
 
     protected function assertProblem($response, int $status, string $code): void

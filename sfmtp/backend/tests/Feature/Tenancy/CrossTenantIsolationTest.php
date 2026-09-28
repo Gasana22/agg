@@ -102,7 +102,7 @@ class CrossTenantIsolationTest extends TestCase
                 'section' => $section->id,
                 'plot' => $plot->id,
                 'location' => $location->id,
-                'member' => FarmUser::where('farm_id', $this->victim->id)->where('user_id', $victimMember->id)->value('id'),
+                'member' => $this->unscoped(fn () => FarmUser::where('farm_id', $this->victim->id)->where('user_id', $victimMember->id)->value('id')),
                 'invitation' => FarmInvitation::create([
                     'email' => 'victim-invitee@example.com', 'token_hash' => str_repeat('a', 64), 'invited_by' => $this->ownerOf($this->victim)->id,
                     'expires_at' => now()->addDay(), 'last_sent_at' => now(),
@@ -129,7 +129,7 @@ class CrossTenantIsolationTest extends TestCase
     /** One of each finance and sales document, as the victim's owner. */
     private function victimFinanceRecords(string $storeId, string $orderId): array
     {
-        $owner = FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail();
+        $owner = $this->unscoped(fn () => FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail());
         $this->actingAs($owner->user, 'api');
 
         return $this->app->make(TenantContext::class)->run($this->victim, function () use ($storeId, $orderId) {
@@ -183,7 +183,7 @@ class CrossTenantIsolationTest extends TestCase
     /** Stock, a count, a request, a supplier, a purchase request and order, and a ledger entry, as the victim's owner. */
     private function victimStockRecords(string $storeId): array
     {
-        $owner = FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail();
+        $owner = $this->unscoped(fn () => FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail());
         $this->actingAs($owner->user, 'api');
 
         return $this->app->make(TenantContext::class)->run($this->victim, function () use ($storeId) {
@@ -209,7 +209,7 @@ class CrossTenantIsolationTest extends TestCase
     /** One of each livestock record, created as the victim's owner. */
     private function victimLivestockRecords(): array
     {
-        $owner = FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail();
+        $owner = $this->unscoped(fn () => FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail());
         $this->actingAs($owner->user, 'api');
         $cattle = DB::table('global_animal_species')->where('code', 'cattle')->value('id');
 
@@ -236,7 +236,7 @@ class CrossTenantIsolationTest extends TestCase
     /** One of each workforce record and a stored photo, created as the victim's owner (also their worker). */
     private function victimWorkforceRecords(): array
     {
-        $owner = FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail();
+        $owner = $this->unscoped(fn () => FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail());
         $this->actingAs($owner->user, 'api');
 
         return $this->app->make(TenantContext::class)->run($this->victim, function () use ($owner) {
@@ -263,7 +263,7 @@ class CrossTenantIsolationTest extends TestCase
     /** One of each crop record, created as the victim's owner. */
     private function victimCropRecords(string $plotId): array
     {
-        $owner = FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail();
+        $owner = $this->unscoped(fn () => FarmUser::where('farm_id', $this->victim->id)->where('is_owner', true)->firstOrFail());
         $this->actingAs($owner->user, 'api');
 
         return $this->app->make(TenantContext::class)->run($this->victim, function () use ($plotId) {
@@ -406,7 +406,7 @@ class CrossTenantIsolationTest extends TestCase
             'activity_type_id' => DB::table('global_activity_types')->where('code', 'general_labour')->value('id'),
             'worker_ids' => [$this->victimRecords['worker']],
         ])->assertStatus(422)->assertJsonValidationErrors('worker_ids.0');
-        $this->asUser($attacker)->postJson("{$farm}/workers", ['full_name' => 'Borrowed', 'employment_type' => 'casual', 'farm_user_id' => FarmUser::where('farm_id', $this->victim->id)->value('id')])
+        $this->asUser($attacker)->postJson("{$farm}/workers", ['full_name' => 'Borrowed', 'employment_type' => 'casual', 'farm_user_id' => $this->unscoped(fn () => FarmUser::where('farm_id', $this->victim->id)->value('id'))])
             ->assertStatus(422)->assertJsonValidationErrors('farm_user_id');
         $result = $this->asUser($attacker)->postJson("{$farm}/sync/push", ['mutations' => [[
             'mutation_id' => (string) Str::uuid7(), 'entity' => 'worker_task_logs', 'op' => 'insert', 'id' => (string) Str::uuid7(),

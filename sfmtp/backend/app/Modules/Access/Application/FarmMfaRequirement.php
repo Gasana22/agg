@@ -4,6 +4,7 @@ namespace App\Modules\Access\Application;
 
 use App\Modules\Identity\Contracts\MfaRequirement;
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -13,12 +14,21 @@ use Illuminate\Support\Facades\DB;
  */
 class FarmMfaRequirement implements MfaRequirement
 {
+    public function __construct(private readonly TenantContext $context) {}
+
     public function requiresMfa(User $user): bool
     {
         if ($user->isPlatformAdmin()) {
             return true;
         }
 
+        // A security decision about one known user: it must see all their
+        // memberships whatever the session is, so it never fails open.
+        return $this->context->bypass(fn () => $this->fromMemberships($user));
+    }
+
+    private function fromMemberships(User $user): bool
+    {
         $memberships = DB::table('farm_users')
             ->join('farms', 'farms.id', '=', 'farm_users.farm_id')
             ->where('farm_users.user_id', $user->id)

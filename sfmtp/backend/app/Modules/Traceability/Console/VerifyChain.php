@@ -31,7 +31,7 @@ class VerifyChain extends Command
             if ($result['result'] === 'fail') {
                 $failed++;
                 Log::critical('Traceability hash chain failed', ['farm_id' => $farm->id] + $result);
-                $owner = FarmUser::with('user')->where('farm_id', $farm->id)->where('is_owner', true)->first()?->user;
+                $owner = $context->run($farm, fn () => FarmUser::with('user')->where('farm_id', $farm->id)->where('is_owner', true)->first()?->user);
                 $owner?->notify(new TraceChainBroken($farm, (string) $result['reason'], $result['first_bad_seq']));
                 $this->error($line." — {$result['reason']} at seq {$result['first_bad_seq']}");
             } else {

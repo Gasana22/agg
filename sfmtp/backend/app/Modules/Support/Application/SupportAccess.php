@@ -9,8 +9,10 @@ use App\Modules\Support\Domain\Models\SupportAccessGrant;
 use App\Modules\Support\Domain\Models\SupportTicket;
 use App\Modules\Tenancy\Contracts\SupportAccessResolver;
 use App\Modules\Tenancy\Domain\Models\Organization;
+use App\Modules\Tenancy\TenantContext;
 use App\Support\Http\ApiException;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 /**
  * ADR-0005: the Farm Owner can grant platform support read-only access to one
@@ -23,6 +25,7 @@ class SupportAccess implements SupportAccessResolver
     public function __construct(
         private readonly PlatformPermissions $platform,
         private readonly AuditLogger $audit,
+        private readonly TenantContext $context,
     ) {}
 
     public function grant(SupportTicket $ticket, User $owner, int $hours): SupportAccessGrant
@@ -74,10 +77,22 @@ class SupportAccess implements SupportAccessResolver
             return null;
         }
 
-        return $this->activeGrants($farmId)
+        return $this->grantsUsableBy($userId, $farmId)->first()?->id;
+    }
+
+    /**
+     * Active grants a support staff member may use: to them, or to any staff.
+     * Staff are not farm members, so this is an explicit read of every farm's
+     * grants, filtered to this user only (row-level security bypass).
+     *
+     * @return Collection<int, SupportAccessGrant>
+     */
+    public function grantsUsableBy(string $userId, ?string $farmId = null): Collection
+    {
+        return $this->context->bypass(fn () => $this->activeGrants($farmId)
             ->where(fn ($q) => $q->whereNull('grantee_user_id')->orWhere('grantee_user_id', $userId))
             ->orderByDesc('expires_at')
-            ->value('id');
+            ->get());
     }
 
     public function activeGrantFor(string $farmId): ?SupportAccessGrant

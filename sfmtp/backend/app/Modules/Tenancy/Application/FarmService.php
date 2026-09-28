@@ -55,13 +55,14 @@ class FarmService
                 'name', 'district', 'village', 'country', 'size_ha', 'timezone', 'currency',
             ])));
 
-            $membership = FarmUser::create([
+            // The farm's own rows are written inside its context (row-level security).
+            $membership = $this->context->run($farm, fn () => FarmUser::create([
                 'farm_id' => $farm->id,
                 'user_id' => $owner->id,
                 'status' => MembershipStatus::Active,
                 'is_owner' => true,
                 'joined_at' => now(),
-            ]);
+            ]));
 
             $this->context->run($farm, function () use ($farm, $membership) {
                 DB::table('farm_settings')->insert([
@@ -83,20 +84,22 @@ class FarmService
      */
     public function addMember(Farm $farm, User $user, ?string $invitedBy = null): FarmUser
     {
-        $existing = FarmUser::where('farm_id', $farm->id)->where('user_id', $user->id)->first();
-        if ($existing !== null) {
-            throw ApiException::conflict('duplicate', 'This person is already a member of the farm.');
-        }
+        return $this->context->run($farm, function () use ($farm, $user, $invitedBy) {
+            $existing = FarmUser::where('farm_id', $farm->id)->where('user_id', $user->id)->first();
+            if ($existing !== null) {
+                throw ApiException::conflict('duplicate', 'This person is already a member of the farm.');
+            }
 
-        $this->subscriptions->assertCanAddMember($farm, $user->id);
+            $this->subscriptions->assertCanAddMember($farm, $user->id);
 
-        return FarmUser::create([
-            'farm_id' => $farm->id,
-            'user_id' => $user->id,
-            'status' => MembershipStatus::Active,
-            'invited_by' => $invitedBy,
-            'joined_at' => now(),
-        ]);
+            return FarmUser::create([
+                'farm_id' => $farm->id,
+                'user_id' => $user->id,
+                'status' => MembershipStatus::Active,
+                'invited_by' => $invitedBy,
+                'joined_at' => now(),
+            ]);
+        }, $this->context->hasFarm() && $this->context->farmId() === $farm->id ? $this->context->membership() : null);
     }
 
     public function update(Farm $farm, array $attributes): Farm

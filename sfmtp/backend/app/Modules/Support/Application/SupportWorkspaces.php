@@ -31,9 +31,7 @@ class SupportWorkspaces implements WorkspaceContributor
         unset($workspace);
 
         if ($this->platform->allows($user, 'support.access')) {
-            $grants = $this->access->activeGrants()
-                ->where(fn ($q) => $q->whereNull('grantee_user_id')->orWhere('grantee_user_id', $user->id))
-                ->get()->unique('farm_id');
+            $grants = $this->access->grantsUsableBy($user->id)->unique('farm_id');
             $permissions = FarmPermissions::supportReadOnly();
 
             foreach ($grants as $grant) {

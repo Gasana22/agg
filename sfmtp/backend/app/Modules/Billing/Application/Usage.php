@@ -3,11 +3,14 @@
 namespace App\Modules\Billing\Application;
 
 use App\Modules\Tenancy\Domain\Enums\FarmStatus;
+use App\Modules\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 
 /** What an organization uses, measured against its plan's limits. */
 class Usage
 {
+    public function __construct(private readonly TenantContext $context) {}
+
     public function farms(string $organizationId): int
     {
         return DB::table('farms')
@@ -19,12 +22,12 @@ class Usage
     /** Distinct people with an active membership in any of the organization's open farms. */
     public function users(string $organizationId): int
     {
-        return $this->userQuery($organizationId)->distinct()->count('farm_users.user_id');
+        return $this->context->bypass(fn () => $this->userQuery($organizationId)->distinct()->count('farm_users.user_id'));
     }
 
     public function isCountedUser(string $organizationId, string $userId): bool
     {
-        return $this->userQuery($organizationId)->where('farm_users.user_id', $userId)->exists();
+        return $this->context->bypass(fn () => $this->userQuery($organizationId)->where('farm_users.user_id', $userId)->exists());
     }
 
     /** @return array{farms:array{used:int,limit:?int}, users:array{used:int,limit:?int}, storage_mb:array{used:?int,limit:?int}} */
@@ -38,6 +41,7 @@ class Usage
         ];
     }
 
+    /** Plan limits count every farm of the organization, whoever asks (explicit bypass of row-level security). */
     private function userQuery(string $organizationId)
     {
         return DB::table('farm_users')

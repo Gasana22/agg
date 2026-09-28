@@ -29,8 +29,8 @@ class FarmTenancyTest extends TestCase
             ->assertJsonPath('data.currency', 'UGX');
 
         $farmId = $response->json('data.id');
-        $this->assertTrue(FarmUser::where(['farm_id' => $farmId, 'user_id' => $user->id, 'is_owner' => true])->exists());
-        $this->assertSame(7, DB::table('farm_roles')->where('farm_id', $farmId)->count());
+        $this->assertTrue($this->unscoped(fn () => FarmUser::where(['farm_id' => $farmId, 'user_id' => $user->id, 'is_owner' => true])->exists()));
+        $this->assertSame(7, $this->unscoped(fn () => DB::table('farm_roles')->where('farm_id', $farmId)->count()));
         $this->assertDatabaseHas('farm_settings', ['farm_id' => $farmId]);
 
         // The owner role makes MFA mandatory from now on.
@@ -62,7 +62,7 @@ class FarmTenancyTest extends TestCase
         $farm = $this->farm();
         $this->expectException(QueryException::class);
         $this->expectExceptionMessage('SFMTP_MEMBER_ONLY');
-        FarmUser::create(['farm_id' => $farm->id, 'user_id' => $admin->id, 'status' => 'active']);
+        $this->unscoped(fn () => FarmUser::create(['farm_id' => $farm->id, 'user_id' => $admin->id, 'status' => 'active']));
     }
 
     public function test_a_farm_has_exactly_one_owner(): void
@@ -70,7 +70,7 @@ class FarmTenancyTest extends TestCase
         $farm = $this->farm();
 
         $this->expectException(QueryException::class);
-        FarmUser::create(['farm_id' => $farm->id, 'user_id' => $this->member()->id, 'status' => 'active', 'is_owner' => true]);
+        $this->unscoped(fn () => FarmUser::create(['farm_id' => $farm->id, 'user_id' => $this->member()->id, 'status' => 'active', 'is_owner' => true]));
     }
 
     public function test_farm_scoped_models_refuse_to_run_without_tenant_context(): void
@@ -91,11 +91,11 @@ class FarmTenancyTest extends TestCase
     {
         [$a, $b] = [$this->farm(), $this->farm()];
         $roleOfB = $this->inFarm($b, fn () => FarmRole::where('key', 'manager')->value('id'));
-        $memberOfA = FarmUser::where('farm_id', $a->id)->value('id');
+        $memberOfA = $this->unscoped(fn () => FarmUser::where('farm_id', $a->id)->value('id'));
 
         // A membership of farm A cannot hold a role defined by farm B.
         $this->expectException(QueryException::class);
-        DB::table('farm_user_roles')->insert(['farm_id' => $a->id, 'farm_user_id' => $memberOfA, 'farm_role_id' => $roleOfB]);
+        $this->unscoped(fn () => DB::table('farm_user_roles')->insert(['farm_id' => $a->id, 'farm_user_id' => $memberOfA, 'farm_role_id' => $roleOfB]));
     }
 
     public function test_row_level_security_hides_other_farms_from_raw_sql(): void
@@ -121,6 +121,54 @@ class FarmTenancyTest extends TestCase
         $this->inFarm($a, fn () => DB::table('trace_batches')->insert([
             'id' => (string) Str::uuid7(), 'farm_id' => $b->id, 'batch_code' => 'SFM-RLS0-TEST', 'kind' => 'seed_lot', 'status' => 'open',
         ]));
+    }
+
+    public function test_every_table_with_a_farm_has_forced_row_level_security(): void
+    {
+        if (! $this->isPgsql()) {
+            $this->markTestSkipped('Row-level security is PostgreSQL-only (docs/02 §6).');
+        }
+
+        $unprotected = collect(DB::select(<<<'SQL'
+            SELECT c.relname AS name, c.relrowsecurity AS enabled, c.relforcerowsecurity AS forced,
+                   EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid) AS has_policy
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = current_schema()
+            JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'farm_id' AND NOT a.attisdropped
+            WHERE c.relkind IN ('r', 'p')
+        SQL))->reject(fn ($t) => $t->enabled && $t->forced && $t->has_policy)->pluck('name')->all();
+
+        $this->assertSame([], $unprotected, 'Farm tables without forced row-level security (Ddl::rls in the migration).');
+    }
+
+    public function test_a_signed_in_user_sees_only_their_own_memberships_before_choosing_a_farm(): void
+    {
+        if (! $this->isPgsql()) {
+            $this->markTestSkipped('Row-level security is PostgreSQL-only (docs/02 §6).');
+        }
+
+        [$a, $b] = [$this->farm(), $this->farm()];
+        $ownerOfA = $this->ownerOf($a);
+        $context = $this->app->make(TenantContext::class);
+        $this->inFarm($a, fn () => $this->app->make(Recorder::class)->createBatch(BatchKind::SeedLot));
+
+        $context->actAs($ownerOfA->id);
+        try {
+            // Their own membership and their farm's roles and settings, nothing of farm B.
+            $this->assertSame([$a->id], DB::table('farm_users')->pluck('farm_id')->unique()->values()->all());
+            $this->assertSame([$a->id], DB::table('farm_roles')->pluck('farm_id')->unique()->values()->all());
+            $this->assertSame([$a->id], DB::table('farm_settings')->pluck('farm_id')->all());
+            // Operational tables stay closed until the farm is entered.
+            $this->assertSame(0, DB::table('trace_batches')->count());
+        } finally {
+            $context->actAs(null);
+        }
+
+        // Platform administration reads farm status and settings, not farm operations.
+        $context->platform(function () use ($a, $b) {
+            $this->assertEqualsCanonicalizing([$a->id, $b->id], DB::table('farm_settings')->pluck('farm_id')->all());
+            $this->assertSame(0, DB::table('trace_batches')->count());
+        });
     }
 
     public function test_suspended_farms_are_blocked_and_closed_farms_disappear(): void

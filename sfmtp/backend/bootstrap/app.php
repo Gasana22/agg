@@ -6,6 +6,7 @@ use App\Modules\Parties\Http\Middleware\ResolvePartyContext;
 use App\Modules\Platform\Http\Middleware\RequirePlatformAdmin;
 use App\Modules\Platform\Http\Middleware\RequirePlatformCapability;
 use App\Modules\Tenancy\Http\Middleware\ResolveFarmContext;
+use App\Modules\Tenancy\Http\Middleware\ShareUserWithDatabase;
 use App\Support\Http\Middleware\AssignRequestId;
 use App\Support\Http\Middleware\EnforceIdempotency;
 use App\Support\Http\ProblemRenderer;
@@ -25,7 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prepend(AssignRequestId::class);
         // The API has no login page: a guest gets a 401 problem, never a redirect.
         $middleware->redirectGuestsTo(fn () => null);
-        $middleware->api(append: [EnforceIdempotency::class]);
+        $middleware->api(append: [ShareUserWithDatabase::class, EnforceIdempotency::class]);
 
         $middleware->alias([
             'mfa.compliant' => EnsureMfaCompliant::class,
@@ -40,6 +41,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // models are resolved through the farm scope (docs/02 §2 layer 4).
         $middleware->prependToPriorityList(SubstituteBindings::class, ResolveFarmContext::class);
         $middleware->prependToPriorityList(SubstituteBindings::class, ResolvePartyContext::class);
+        // The row-level-security policies learn the user before any farm or party lookup.
+        $middleware->prependToPriorityList(ResolveFarmContext::class, ShareUserWithDatabase::class);
 
         // Idempotency runs after authentication (the key is per user).
         $middleware->appendToPriorityList(AuthenticatesRequests::class, EnforceIdempotency::class);

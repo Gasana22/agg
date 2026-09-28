@@ -42,7 +42,7 @@ class AuditLogTest extends TestCase
 
         $this->expectException(QueryException::class);
         $this->expectExceptionMessage(AppendOnlyViolation::MARKER);
-        DB::table('audit_logs')->where('id', $log->id)->delete();
+        $this->unscoped(fn () => DB::table('audit_logs')->where('id', $log->id)->delete());
     }
 
     public function test_failed_logins_are_audited_without_the_password(): void
@@ -50,7 +50,7 @@ class AuditLogTest extends TestCase
         $user = $this->member(['email' => 'amina@example.com']);
         $this->postJson('/api/v1/auth/login', ['email' => 'amina@example.com', 'password' => 'hunter2']);
 
-        $entry = AuditLog::where('action', 'auth.login_failed')->firstOrFail();
+        $entry = $this->unscoped(fn () => AuditLog::where('action', 'auth.login_failed')->firstOrFail());
         $this->assertSame($user->id, $entry->user_id);
         $this->assertSame('bad_password', $entry->new_values['reason']);
         $this->assertStringNotContainsString('hunter2', json_encode($entry->new_values));

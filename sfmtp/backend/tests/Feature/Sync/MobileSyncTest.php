@@ -199,7 +199,7 @@ class MobileSyncTest extends TestCase
 
     public function test_managers_verify_from_the_phone_and_hear_about_refused_steps(): void
     {
-        $member = FarmUser::where('farm_id', $this->farm->id)->where('user_id', $this->fieldWorker->id)->value('id');
+        $member = $this->unscoped(fn () => FarmUser::where('farm_id', $this->farm->id)->where('user_id', $this->fieldWorker->id)->value('id'));
         $worker = $this->asUser($this->manager)->postJson($this->url('/workers'), ['full_name' => 'Okello', 'employment_type' => 'permanent', 'farm_user_id' => $member])->json('data.id');
         $activity = fn (string $title) => $this->asUser($this->manager)->postJson($this->url('/activities'), [
             'activity_type_id' => DB::table('global_activity_types')->where('code', 'general_labour')->value('id'), 'title' => $title, 'worker_ids' => [$worker],
@@ -279,7 +279,7 @@ class MobileSyncTest extends TestCase
 
     public function test_a_thousand_queued_mutations_sync_in_five_pushes(): void
     {
-        $member = FarmUser::where('farm_id', $this->farm->id)->where('user_id', $this->fieldWorker->id)->value('id');
+        $member = $this->unscoped(fn () => FarmUser::where('farm_id', $this->farm->id)->where('user_id', $this->fieldWorker->id)->value('id'));
         $this->asUser($this->manager)->postJson($this->url('/workers'), ['full_name' => 'Okello', 'employment_type' => 'permanent', 'farm_user_id' => $member])->assertCreated();
         $this->push($this->fieldWorker, [$this->m('worker_attendance', 'check_in', ['lat' => 0.35, 'lng' => 32.58], ['occurred_at' => now()->subHours(9)->toIso8601String()])]);
 

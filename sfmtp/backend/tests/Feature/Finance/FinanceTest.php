@@ -187,7 +187,7 @@ class FinanceTest extends TestCase
                 $act = $plan->create(['activity_type_id' => $type, 'subject_type' => $st, 'subject_id' => $sid, 'planned_on' => $start->toDateString(), 'worker_ids' => [$okello['id']]]);
                 Task::where('activity_id', $act->id)->update(['status' => 'verified', 'worked_minutes' => $min, 'verified_at' => $start->addDay()->setTime(16, 0)->utc()]);
             }
-        }, FarmUser::where('farm_id', $this->farm->id)->where('user_id', $this->owner->id)->first());
+        }, $this->unscoped(fn () => FarmUser::where('farm_id', $this->farm->id)->where('user_id', $this->owner->id)->first()));
 
         $period = ['period_start' => $start->toDateString(), 'period_end' => $start->addDays(6)->toDateString()];
         $this->as($this->manager)->postJson($this->url('/payroll-runs'), $period)->assertForbidden();

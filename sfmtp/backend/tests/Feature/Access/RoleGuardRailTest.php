@@ -67,7 +67,7 @@ class RoleGuardRailTest extends TestCase
     public function test_effective_permissions_are_the_union_with_the_widest_scope(): void
     {
         $user = $this->memberWithRole($this->farm, 'field_worker');
-        $membership = FarmUser::where(['farm_id' => $this->farm->id, 'user_id' => $user->id])->first();
+        $membership = $this->unscoped(fn () => FarmUser::where(['farm_id' => $this->farm->id, 'user_id' => $user->id])->first());
 
         $this->inFarm($this->farm, function () use ($membership) {
             DB::table('farm_user_roles')->insert([
@@ -77,7 +77,7 @@ class RoleGuardRailTest extends TestCase
             ]);
         });
 
-        $grants = $this->app->make(FarmPermissions::class)->for($membership);
+        $grants = $this->inFarm($this->farm, fn () => $this->app->make(FarmPermissions::class)->for($membership));
         $this->assertSame(PermissionScope::All, $grants['tasks.view']);       // assigned ∪ all
         $this->assertSame(PermissionScope::Own, $grants['attendance.record']); // only via worker
         $this->assertArrayHasKey('tasks.verify', $grants);                     // only via manager

@@ -52,7 +52,7 @@ class StockConcurrencyTest extends BaseTestCase
         $owner = User::factory()->create(['mfa_enabled_at' => now()]);
         $farm = $this->app->make(FarmService::class)->create($owner, ['name' => 'Race Farm']);
         $farm->forceFill(['status' => FarmStatus::Active])->save();
-        $membership = FarmUser::where('farm_id', $farm->id)->where('user_id', $owner->id)->firstOrFail();
+        $membership = app(TenantContext::class)->bypass(fn () => FarmUser::where('farm_id', $farm->id)->where('user_id', $owner->id)->firstOrFail());
         Auth::setUser($owner);
 
         [$itemId, $storeId, $lotItemId] = $this->app->make(TenantContext::class)->run($farm, function () {

@@ -58,7 +58,7 @@ class WorkforceTest extends TestCase
 
     private function membership(User $user): string
     {
-        return FarmUser::where('farm_id', $this->farm->id)->where('user_id', $user->id)->value('id');
+        return $this->unscoped(fn () => FarmUser::where('farm_id', $this->farm->id)->where('user_id', $user->id)->value('id'));
     }
 
     private function worker(?User $user = null, array $data = []): array

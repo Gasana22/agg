@@ -48,7 +48,7 @@ class BenchDashboards extends Command
             return self::FAILURE;
         }
         $this->farm = $farm;
-        $this->membership = FarmUser::with('user')->where('farm_id', $farm->id)->where('is_owner', true)->firstOrFail();
+        $this->membership = $context->run($farm, fn () => FarmUser::with('user')->where('farm_id', $farm->id)->where('is_owner', true)->firstOrFail());
         Auth::setUser($this->membership->user);
         $runs = max(3, (int) $this->option('runs'));
         $dashboards = $this->option('dashboards') ? explode(',', $this->option('dashboards')) : array_diff(DashboardRegistry::FARM_DASHBOARDS, ['worker']);

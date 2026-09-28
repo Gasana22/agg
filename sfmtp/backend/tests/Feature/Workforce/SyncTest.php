@@ -37,7 +37,7 @@ class SyncTest extends TestCase
         $this->fieldWorker = $this->memberWithRole($this->farm, 'field_worker');
         $this->worker = $this->asUser($this->manager)->postJson($this->url('/workers'), [
             'full_name' => 'Amina Field', 'employment_type' => 'permanent',
-            'farm_user_id' => FarmUser::where('farm_id', $this->farm->id)->where('user_id', $this->fieldWorker->id)->value('id'),
+            'farm_user_id' => $this->unscoped(fn () => FarmUser::where('farm_id', $this->farm->id)->where('user_id', $this->fieldWorker->id)->value('id')),
         ])->assertCreated()->json('data');
     }
 
@@ -157,7 +157,7 @@ class SyncTest extends TestCase
         $theirs = $this->memberWithRole($this->farm, 'field_worker');
         $this->assertSame('no_worker_profile', $this->push([$this->mutation('worker_task_logs', 'insert', ['task_id' => $task['id'], 'event' => 'note', 'note' => 'hi'])], $theirs)[0]['error']['code']);
         $this->asUser($this->manager)->postJson($this->url('/workers'), ['full_name' => 'Other Worker', 'employment_type' => 'casual',
-            'farm_user_id' => FarmUser::where('farm_id', $this->farm->id)->where('user_id', $theirs->id)->value('id')])->assertCreated();
+            'farm_user_id' => $this->unscoped(fn () => FarmUser::where('farm_id', $this->farm->id)->where('user_id', $theirs->id)->value('id'))])->assertCreated();
         $this->assertSame('not_found', $this->push([$this->mutation('worker_task_logs', 'insert', ['task_id' => $task['id'], 'event' => 'note', 'note' => 'hi'])], $theirs)[0]['error']['code']);
         $bad = $this->push([$this->mutation('worker_task_logs', 'insert', ['task_id' => $task['id'], 'event' => 'verify'])])[0];
         $this->assertSame(['rejected', 'validation_failed'], [$bad['status'], $bad['error']['code']]);

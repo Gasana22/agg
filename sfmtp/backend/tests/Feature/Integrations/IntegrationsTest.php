@@ -278,7 +278,7 @@ class IntegrationsTest extends TestCase
         $this->assertSame($payment['reference'], $this->asUser($owner)->postJson('/api/v1/billing/subscription/pay')->json('data.reference'));
 
         // Not yet paid: still pending.
-        $model = OnlinePayment::where('reference', $payment['reference'])->firstOrFail();
+        $model = $this->unscoped(fn () => OnlinePayment::where('reference', $payment['reference'])->firstOrFail());
         Http::fake(['api.flutterwave.com/v3/transactions/*' => Http::sequence()
             ->push(['status' => 'error', 'message' => 'No transaction was found for this id', 'data' => null], 400)
             ->push($this->verified($model))]);
@@ -289,7 +289,7 @@ class IntegrationsTest extends TestCase
         $this->asUser($owner)->getJson("/api/v1/online-payments/{$payment['reference']}")->assertJsonPath('data.status', 'succeeded')->assertJsonPath('data.checkout_url', null);
         $this->assertSame('active', $subscription->refresh()->status->value);
         $this->assertSame(1, SubscriptionPayment::where('subscription_id', $subscription->id)->where('provider', 'flutterwave')->where('provider_ref', '4455')->count());
-        $this->assertNotNull($model->refresh()->fulfilled_at);
+        $this->assertNotNull($this->unscoped(fn () => $model->refresh())->fulfilled_at);
 
         // Someone else's payment is a 404.
         $this->asUser($this->member())->getJson("/api/v1/online-payments/{$payment['reference']}")->assertNotFound();
@@ -302,7 +302,7 @@ class IntegrationsTest extends TestCase
         $party = Party::create(['name' => 'Kampala Millers', 'status' => 'active']);
         $party->users()->attach($buyer->id, ['id' => (string) Str::uuid7(), 'created_at' => now()]);
         $customer = $this->inFarm($this->farm, fn () => tap(new Customer(['code' => 'CUS-001', 'name' => 'Kampala Millers', 'is_active' => true]))->forceFill(['party_id' => $party->id])->save() ? Customer::where('code', 'CUS-001')->first() : null);
-        PartyLink::create(['party_id' => $party->id, 'farm_id' => $this->farm->id, 'kind' => 'customer', 'record_id' => $customer->id, 'status' => 'active', 'linked_by' => $owner->id, 'linked_at' => now()]);
+        $this->inFarm($this->farm, fn () => PartyLink::create(['party_id' => $party->id, 'farm_id' => $this->farm->id, 'kind' => 'customer', 'record_id' => $customer->id, 'status' => 'active', 'linked_by' => $owner->id, 'linked_at' => now()]));
         // Reading the accounts sets up the farm's chart of accounts.
         $income = collect($this->asUser($owner)->getJson($this->url('/ledger/accounts'))->assertOk()->json('data'))->firstWhere('code', '4000')['id'];
         $invoice = $this->asUser($owner)->postJson($this->url('/customer-invoices'), ['customer_id' => $customer->id, 'lines' => [
@@ -333,15 +333,15 @@ class IntegrationsTest extends TestCase
         Http::assertSent(fn (HttpRequest $r) => $r['subaccounts'] === [['id' => 'RS_A1B2C3']] && $r['customer']['phonenumber'] === '+256700000001');
 
         // Flutterwave calls the webhook: a wrong signature is refused, the right one confirms the payment.
-        $model = OnlinePayment::where('reference', $payment['reference'])->firstOrFail();
+        $model = $this->unscoped(fn () => OnlinePayment::where('reference', $payment['reference'])->firstOrFail());
         Http::fake(['api.flutterwave.com/v3/transactions/*' => Http::response($this->verified($model, id: '9001'))]);
         $hook = ['event' => 'charge.completed', 'data' => ['id' => 9001, 'tx_ref' => $payment['reference'], 'status' => 'successful']];
         $this->withHeaders(['verif-hash' => 'wrong'])->postJson('/api/v1/webhooks/payments/flutterwave', $hook)->assertUnauthorized();
-        $this->assertSame('pending', $model->refresh()->status);
+        $this->assertSame('pending', $this->unscoped(fn () => $model->refresh())->status);
         $this->withHeaders(['verif-hash' => 'whsec-123'])->postJson('/api/v1/webhooks/payments/flutterwave', $hook)->assertOk();
         $this->withHeaders(['verif-hash' => 'whsec-123'])->postJson('/api/v1/webhooks/payments/flutterwave', $hook)->assertOk();   // repeated
 
-        $this->assertSame('succeeded', $model->refresh()->status);
+        $this->assertSame('succeeded', $this->unscoped(fn () => $model->refresh())->status);
         $this->inFarm($this->farm, function () use ($invoice) {
             $payments = Payment::where('payable_id', $invoice)->get();
             $this->assertCount(1, $payments, 'recorded once');
@@ -358,11 +358,11 @@ class IntegrationsTest extends TestCase
         $this->inFarm($this->farm, fn () => app(FarmSettings::class)->update($this->farm, ['online_payments' => ['enabled' => true, 'subaccount_id' => 'RS_1']]));
         Http::fake(['api.flutterwave.com/v3/payments' => Http::response(['status' => 'success', 'data' => ['link' => 'https://x']])]);
         $ref = $this->asUser($buyer)->postJson("/api/v1/customer/{$party->id}/farms/{$this->farm->id}/invoices/{$invoice}/pay")->json('data.reference');
-        $model = OnlinePayment::where('reference', $ref)->firstOrFail();
+        $model = $this->unscoped(fn () => OnlinePayment::where('reference', $ref)->firstOrFail());
 
         Http::fake(['api.flutterwave.com/v3/transactions/*' => Http::response($this->verified($model, amount: 1000))]);
         $this->asUser($buyer)->getJson("/api/v1/online-payments/{$ref}")->assertJsonPath('data.status', 'failed');
-        $this->assertStringContainsString('instead of 950000', $model->refresh()->failure_reason);
+        $this->assertStringContainsString('instead of 950000', $this->unscoped(fn () => $model->refresh())->failure_reason);
         $this->assertSame(0, $this->inFarm($this->farm, fn () => Payment::count()));
     }
 
