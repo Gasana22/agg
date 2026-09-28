@@ -28,11 +28,13 @@ npm run api:types
 
 ## Maps
 
-The farm map (`/farms/{id}/structure`) uses Leaflet with any XYZ tile server.
-`NEXT_PUBLIC_MAP_TILE_URL` and `NEXT_PUBLIC_MAP_ATTRIBUTION` choose it; the
-default is OpenStreetMap. Respect the provider's usage policy in production:
-set a commercial or self-hosted tile URL. `NEXT_PUBLIC_*` values are fixed at
-build time (`--build-arg` in the Docker image).
+Every map (farm map, traceability map, crop health widget) uses Leaflet and
+takes its base layer from `GET /map-config`: the maps provider chosen in the
+admin portal (Mapbox, Google Map Tiles or OpenStreetMap, ADR-0018).
+`NEXT_PUBLIC_MAP_TILE_URL` and `NEXT_PUBLIC_MAP_ATTRIBUTION` only set the
+fallback used before the API answers; the default is OpenStreetMap. Respect
+the provider's usage policy in production. `NEXT_PUBLIC_*` values are fixed
+at build time (`--build-arg` in the Docker image).
 
 ## Public pages
 
@@ -55,6 +57,20 @@ member's own exports (kept 24 hours), and the metric catalogue with each
 number's definition and trend (ADR-0017). The farm map has an *Activity*
 layer (a heat map of located work), and the QR codes list prints labels for
 several codes in one run.
+
+## Integrations
+
+- `/admin/integrations` shows each provider's health and priority, has a
+  *Test* button per provider, and gives payment providers the webhook URL
+  to paste into their dashboard (ADR-0018).
+- Owners pay their subscription online from the billing page. Customers pay
+  invoices from the portal when the farm has turned online payments on
+  (farm settings, with its Flutterwave subaccount). Both return to
+  `/payments/return`, which waits for the gateway to confirm.
+- Dashboards gain a *Weather* widget. The structure page lists the farm's
+  IoT sensors with their latest readings; a device's token is shown once.
+- Each person picks email and SMS copies of their notices at
+  `/account/notifications` (the bell in the header).
 
 ## Develop
 

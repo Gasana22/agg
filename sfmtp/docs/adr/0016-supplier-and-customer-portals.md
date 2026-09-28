@@ -109,8 +109,9 @@ records. Phase 12 builds the portals on top of that. Four questions came up:
   the number of linked farms, which stays small in practice.
 - A party's people are managed by the farms' invitations; there is no
   self-service team management yet.
-- Customers pay outside the platform until online collection
-  (Flutterwave) arrives in Phase 14. The portal shows what is due.
+- Customers pay outside the platform, or online through Flutterwave
+  where the farm has turned it on (Phase 14, ADR-0018). The portal shows
+  what is due.
 - Farms only see buyers they have linked: there is no public marketplace
   for strangers yet.
 - Unit conversion between an order's unit and a batch's unit remains

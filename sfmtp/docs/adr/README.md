@@ -22,6 +22,7 @@ consequences.
 | [0015](0015-mobile-roles-conflicts-and-notifications.md) | The complete mobile app: role feeds by permission, field-level merge of animal edits, server-side conflicts, the notification inbox with FCM push, the encrypted database, background sync, store builds | Accepted |
 | [0016](0016-supplier-and-customer-portals.md) | Supplier and customer portals: party links by invitation, portal reads per linked farm without bypassing isolation, supplier answers, dispatches and invoice submissions, products and sales orders | Accepted |
 | [0017](0017-analytics-reports-and-exports.md) | Analytics: one metric definition with a catalogue and series, explainable health scores, standard reports with typed columns, queued personal exports (CSV, XLSX, PDF) and label runs, activity heat maps of counts, the dashboard performance budget | Accepted |
+| [0018](0018-integrations-providers-failover-and-payments.md) | Integrations: a provider directory with ordered failover, a circuit breaker and health; SMS, email, weather, maps, push and payment adapters; online payments verified with the gateway and fulfilled once through registered purposes; notice copies by email and SMS; accounting export and IoT ingestion as extension points | Accepted |
 
 ## Product-owner decisions (2026-09-23)
 

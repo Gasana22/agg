@@ -36,9 +36,11 @@ actions.
    Support open on a paused farm.
 5. **Plan changes** must fit current usage (`422 plan_limit_exceeded`
    otherwise). Owners may pick only public plans; billing staff may assign any
-   active plan. Proration arrives with payment gateways (Phase 14).
+   active plan. Proration is not done: online payments (Phase 14, ADR-0018) pay the plan price for
+   the next period.
 6. **Payments** are append-only financial records (the database blocks
-   DELETE). Until Phase 14 they are recorded by SFMTP billing staff.
+   DELETE). They are recorded by SFMTP billing staff, or by a
+   verified online payment since Phase 14 (ADR-0018).
 
 ## Consequences
 - Tenancy, Access and the farm modules never import Billing classes.

@@ -44,8 +44,8 @@ Everything in the Phase 2 row below, with these notes:
   `cancelled`. The requirements' "past due" is the `grace` state, when farms
   stay open with a warning ([ADR-0008](adr/0008-subscription-lifecycle.md)).
 - **Payments are recorded by SFMTP staff** (mobile money, bank transfer,
-  cash). Online checkout through payment gateways is Phase 14. Integration
-  providers can already be configured; the adapters that call them come in
+  cash). Online checkout through payment gateways came in Phase 14. Integration
+  providers can already be configured; the adapters that call them came in
   Phase 14.
 - **Support access** follows ADR-0005: the owner grants it from a ticket, for
   up to 72 h. It is read-only, and every request is written to the farm's
@@ -110,7 +110,7 @@ Everything in the Phase 4 row below, with these notes:
   Picking inventory items and deducting stock comes with inventory in
   Phase 7.
 - **Deferred:** the crop health score KPI and the crop health map widget
-  (Phase 13, delivered), and the weather widget (Phase 14, weather provider).
+  (Phase 13, delivered), and the weather widget (Phase 14, delivered).
 - **Test gate met:** 172 API tests on PostgreSQL (169 on MySQL, plus 3 that
   need PostgreSQL features) and 36 web unit tests. They include the crop
   lifecycle from plan to packed grain with a backward journey to the seed
@@ -298,7 +298,7 @@ Everything in the Phase 8 row below, with these notes
 - **Deferred:** payment approval above a threshold, credit notes and
   returns, VAT, bank reconciliation, statutory payroll deductions (PAYE,
   NSSF) and payslips (entered as deductions for now), finance exports
-  (Phase 13, delivered), mobile money collection through Flutterwave (Phase 14), sales
+  (Phase 13, delivered), mobile money collection through Flutterwave (Phase 14, delivered), sales
   orders and products (Phase 12).
 - **Test gate met:** 214 API tests on PostgreSQL (210 on MySQL, plus 4 that
   need PostgreSQL features) and 53 web unit tests. They include the
@@ -311,6 +311,80 @@ Everything in the Phase 8 row below, with these notes
   finance, sales and report route, and the cross-tenant sweep over every
   new route and request body. The accountant's, manager's and owner's
   journeys were checked in a browser.
+
+### Phase 14 — delivered
+
+Everything in the Phase 14 row below, with these notes
+([ADR-0018](adr/0018-integrations-providers-failover-and-payments.md)):
+
+- **Providers and failover.**
+  - A new `Integrations` module reads the providers set in the admin
+    portal through a `ProviderDirectory` contract.
+  - Providers of a kind are tried default first, then by priority.
+    Connection errors, HTTP errors and retryable failures fail over;
+    a refused request (a bad number, a rejected recipient) does not.
+  - Circuit breaker: after three failures in a row a provider is skipped
+    for five minutes.
+  - Health per provider (last success, last error, failures in a row) and
+    a *Test* button in admin.
+- **Adapters.**
+  - SMS: Africa's Talking and Twilio.
+  - Email: SMTP and SendGrid, behind the `providers` mailer that all app
+    email now uses.
+  - Weather: OpenWeather and Tomorrow.io in one forecast shape, with heavy
+    rain, heat and spray window advisories; a farm forecast endpoint and a
+    weather widget on the owner, manager, agronomist and livestock
+    dashboards.
+  - Maps: Mapbox (public tokens only), Google Map Tiles or OpenStreetMap
+    for every map on the web.
+  - Push: the FCM service account can be set in admin. APNs is reached
+    through FCM.
+- **Online payments (Flutterwave).**
+  - Owners pay their subscription; customers pay invoices into the farm's
+    subaccount when the farm turns it on.
+  - Every payment is verified with the gateway. Webhooks need the shared
+    secret hash. Each payment is booked once, and an underpaid or wrong
+    currency payment is never booked.
+  - Billing and Sales register what a payment settles (`PaymentPurpose`),
+    so Integrations depends on neither.
+- **Notice copies.** Task assignments and rejections, sales orders,
+  supplier dispatches and invoices, and finished exports are also sent by
+  email and/or SMS. Each person chooses (email on, SMS off by default).
+- **Extension points.**
+  - Accounting: a `journal` standard report (every ledger line with
+    account codes) for QuickBooks, Xero or Sage import.
+  - IoT: devices with their own tokens post append-only sensor readings;
+    the structure page lists them with their latest values.
+- **Web**:
+  - admin integrations with health, priority, tests and webhook URLs;
+  - pay online on the billing page and customer invoices, with a return
+    page;
+  - weather widget, sensors, notification settings, farm online payment
+    settings.
+- **Demo**: two sensors with a day of readings on the mixed farm.
+- **Deferred:**
+  - proration on plan changes, and refunds (made in the gateway's
+    dashboard);
+  - IoT thresholds and alerts;
+  - per-farm weather or map keys;
+  - a live sync to accounting packages.
+- **Test gate met.**
+  - A contract test per adapter checks the request sent and how the
+    answer is read.
+  - Failover tests: Africa's Talking down → Twilio; a refused number
+    stops; SMTP down → SendGrid; weather failover with caching; the
+    circuit breaker; nothing configured versus everything down.
+  - Payments: a subscription paid online, a customer invoice paid through
+    the webhook and booked once, an underpaid payment never booked, a
+    gateway that does not answer.
+  - Also covered: notice copies by preference, IoT tokens and ingestion
+    limits, admin tests and health, the journal export, and the
+    cross-tenant sweep over the new routes and tables.
+  - 261 API tests on PostgreSQL (256 on MySQL, plus 5 that need
+    PostgreSQL features) and 72 web unit tests.
+  - Admin integrations, pay online and its return page, the weather
+    widget, sensors, notification settings and farm payment settings
+    were checked in a browser.
 
 ### Phase 13 — delivered
 
@@ -421,7 +495,7 @@ Everything in the Phase 12 row below, with these notes
 - **Demo**: `supplier@aggfarms.test` (Kakiri Agro-Vet) and
   `customer@aggfarms.test` (Kampala Millers).
 - **Deferred:**
-  - online payment by customers (Phase 14);
+  - online payment by customers (Phase 14, delivered);
   - a public marketplace for buyers the farm has not linked;
   - self-service team management for parties;
   - unit conversion between order and batch units.
@@ -497,7 +571,7 @@ Everything in the Phase 11 row below, with these notes
   - offline editing of records other than animals (via `FieldMerge`);
   - a generated Dart client;
   - trimming the change feed (Phase 15);
-  - SMS and email channels for notifications (Phase 14).
+  - SMS and email channels for notifications (Phase 14, delivered).
 - **Test gate met.**
   - 233 API tests on PostgreSQL (228 on MySQL, plus 5 that need
     PostgreSQL features) and 56 web unit tests.

@@ -25,7 +25,8 @@ REST API.
 | 11 — Mobile app (complete) | ✅ Done: agronomist, livestock and supervisor flows on the phone, a sync feed filtered by permission, field-level merge with conflicts resolved in the app, a notification inbox with FCM push, an encrypted local database, background sync, remote wipe, and store builds for the internal testing tracks |
 | 12 — Supplier & customer portals | ✅ Done: party accounts linked to farm suppliers and customers by invitation, one sign-in across farms; the supplier portal (answer orders, announce dispatches, send invoices, payment status); products with list prices and sales orders with approval; the customer portal (shop, order tracking, delivery confirmation, invoices, bought batches with their public traceability); portal dashboards |
 | 13 — Analytics & reporting | ✅ Done: metric catalogue with definitions and trends; crop and animal health scores with a crop health map; 19 standard reports; CSV, Excel and PDF exports built in the background (24 h, requester only); bulk QR label runs on three A4 templates; activity heat map on the farm map; dashboard performance bench within budget |
-| 14 — Integrations | Next |
+| 14 — Integrations | ✅ Done: providers per kind with ordered failover, a circuit breaker and health in admin, plus a test button; SMS (Africa's Talking, Twilio), email (SMTP, SendGrid), weather (OpenWeather, Tomorrow.io) with a dashboard widget, map tiles (Mapbox, Google, OpenStreetMap), FCM push; Flutterwave online payments for subscriptions and customer invoices, verified with the gateway; email and SMS copies of notices by member choice; a ledger journal export for accounting packages and IoT sensor ingestion |
+| 15 — Security & production | Next |
 
 ## Repository layout
 
