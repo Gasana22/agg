@@ -9,6 +9,7 @@ use App\Modules\Tenancy\Http\Middleware\ResolveFarmContext;
 use App\Modules\Tenancy\Http\Middleware\ShareUserWithDatabase;
 use App\Support\Http\Middleware\AssignRequestId;
 use App\Support\Http\Middleware\EnforceIdempotency;
+use App\Support\Http\Middleware\SecurityHeaders;
 use App\Support\Http\ProblemRenderer;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(AssignRequestId::class);
+        $middleware->append(SecurityHeaders::class);
         // The API has no login page: a guest gets a 401 problem, never a redirect.
         $middleware->redirectGuestsTo(fn () => null);
         $middleware->api(append: [ShareUserWithDatabase::class, EnforceIdempotency::class]);
