@@ -8,6 +8,7 @@ use App\Modules\Livestock\Domain\Models\Animal;
 use App\Modules\Livestock\Domain\Models\AnimalGroup;
 use App\Modules\Notifications\Domain\Models\MemberNotification;
 use App\Modules\Sync\Application\ChangeFeed;
+use App\Modules\Sync\Console\PrepareLoadTest;
 use App\Modules\Sync\Domain\Models\SyncConflict;
 use App\Modules\Workforce\Domain\Models\Activity;
 use App\Modules\Workforce\Domain\Models\Attendance;
@@ -25,6 +26,10 @@ class SyncServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        if ($this->app->runningInConsole()) {
+            $this->commands([PrepareLoadTest::class]);
+        }
+
         Route::model('syncConflict', SyncConflict::class);
 
         // docs/06 §1: sync push 30 / min per device (per user without one).
