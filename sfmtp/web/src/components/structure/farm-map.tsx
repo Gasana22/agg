@@ -6,6 +6,7 @@ import L from "leaflet";
 import { useEffect, useRef } from "react";
 
 import { heatStyle } from "@/lib/analytics";
+import { useBaseLayer } from "@/lib/map-config";
 import { type Block, LAND_USE_COLOR, type Location, type NodeType, type Plot, type Section } from "@/lib/structure";
 
 export type HeatCell = { south?: number; west?: number; north?: number; east?: number; count?: number; layers?: Record<string, number> };
@@ -27,8 +28,6 @@ type Props = {
   heat?: { cells: HeatCell[]; max: number } | null;
 };
 
-const TILE_URL = process.env.NEXT_PUBLIC_MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-const TILE_ATTRIBUTION = process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || "&copy; OpenStreetMap contributors";
 const UGANDA: L.LatLngExpression = [1.37, 32.29];
 
 /**
@@ -55,7 +54,6 @@ export default function FarmMap({ blocks, sections, plots, locations, selected, 
   useEffect(() => {
     if (!container.current || map.current) return;
     const m = L.map(container.current, { zoomControl: true, doubleClickZoom: false }).setView(UGANDA, 7);
-    L.tileLayer(TILE_URL, { maxZoom: 20, attribution: TILE_ATTRIBUTION }).addTo(m);
     shapes.current = L.layerGroup().addTo(m);
     heatLayer.current = L.layerGroup().addTo(m);
     sketch.current = L.layerGroup().addTo(m);
@@ -73,6 +71,8 @@ export default function FarmMap({ blocks, sections, plots, locations, selected, 
       map.current = null;
     };
   }, []);
+
+  useBaseLayer(map, null);
 
   // Draw the structure.
   useEffect(() => {

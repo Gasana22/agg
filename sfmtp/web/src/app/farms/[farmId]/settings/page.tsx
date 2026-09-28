@@ -121,6 +121,10 @@ function FarmPolicies({ farmId, currency }: { farmId: string; currency: string }
             purchase_order: amount("purchase_order"),
             stock_adjustment_pct: amount("stock_adjustment_pct"),
           },
+          online_payments: {
+            enabled: f.get("online_payments") === "on",
+            subaccount_id: String(f.get("subaccount_id") ?? "").trim() || null,
+          },
         },
       });
       await queryClient.invalidateQueries({ queryKey: ["farm-settings", farmId] });
@@ -167,6 +171,15 @@ function FarmPolicies({ farmId, currency }: { farmId: string; currency: string }
             </div>
             <Checkbox name="allow_negative_stock" defaultChecked={s.allow_negative_stock} label="Allow stock to go below zero" />
             <Checkbox name="allow_intercropping" defaultChecked={s.allow_intercropping} label="Allow more than one crop cycle on a plot at once (intercropping)" />
+            <div className="space-y-2 rounded-lg border border-border p-3">
+              <Checkbox name="online_payments" defaultChecked={s.online_payments?.enabled ?? false} label="Let customers pay invoices online (mobile money, card)" />
+              <div className="max-w-64">
+                <Label htmlFor="subaccount_id">Flutterwave subaccount</Label>
+                <Input id="subaccount_id" name="subaccount_id" defaultValue={s.online_payments?.subaccount_id ?? ""} placeholder="RS_…" aria-invalid={!!error?.fieldError("online_payments.subaccount_id")} />
+                <FieldError>{error?.fieldError("online_payments.subaccount_id")}</FieldError>
+              </div>
+              <p className="text-xs text-muted">Payments settle into this subaccount and are recorded as mobile money receipts. SFMTP support sets the subaccount up with your bank or mobile money details.</p>
+            </div>
             <div className="max-w-48">
               <Label htmlFor="units">Units</Label>
               <Select id="units" name="units" defaultValue={s.units ?? "metric"}>

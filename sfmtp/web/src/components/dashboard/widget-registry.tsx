@@ -10,6 +10,7 @@ import { humanize } from "@/lib/format";
 import { ActionListWidget } from "./widgets/action-list";
 import { ChecklistWidget } from "./widgets/checklist";
 import { type Bands, HealthBands, HealthMapWidget, type HealthPoint } from "./widgets/health";
+import { WeatherWidget } from "./widgets/weather";
 
 // Charts pull in Recharts: load them only when a dashboard has one.
 const ChartWidget = dynamic(() => import("./widgets/chart").then((m) => m.ChartWidget), {
@@ -62,6 +63,7 @@ const TITLES: Record<string, string> = {
   cash_flow_forecast: "Cash expected, next 13 weeks",
   crop_health: "Crop health by cycle",
   animal_health: "Animals needing attention",
+  weather: "Weather at the farm",
 };
 
 /**
@@ -81,6 +83,9 @@ export function Widget({ widget }: { widget: WidgetRef }) {
           <ActionListWidget data={data} />
         </>
       );
+      break;
+    case "weather":
+      body = widget.href ? <WeatherWidget href={widget.href} /> : null;
       break;
     case "health_map":
       body = <HealthMapWidget data={data as { points?: HealthPoint[]; bands?: Bands }} />;

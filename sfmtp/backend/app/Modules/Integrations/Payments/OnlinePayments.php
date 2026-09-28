@@ -8,6 +8,8 @@ use App\Modules\Integrations\Contracts\PaymentPurpose;
 use App\Modules\Integrations\Contracts\ProviderDirectory;
 use App\Modules\Integrations\Domain\Models\OnlinePayment;
 use App\Support\Http\ApiException;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -62,8 +64,8 @@ class OnlinePayments
         try {
             $url = $this->adapter($config)->checkout($config, $payment, $customer,
                 rtrim(config('sfmtp.web_url'), '/').'/payments/return?reference='.$payment->reference, $subaccount);
-        } catch (ProviderFailure $e) {
-            $this->directory->report($config->id, false, $e->getMessage());
+        } catch (ProviderFailure|ConnectionException|RequestException $e) {
+            $this->directory->report($config->id, false, $e instanceof ProviderFailure ? $e->getMessage() : 'no connection');
             $payment->forceFill(['status' => 'failed', 'failure_reason' => 'The payment page could not be opened.'])->save();
             throw new ApiException(502, 'payment_gateway_error', 'The payment service did not answer. Try again in a few minutes.');
         }
@@ -82,7 +84,7 @@ class OnlinePayments
         $config = $this->directory->find($payment->provider_id) ?? throw ApiException::conflict('online_payment_unavailable', 'The payment provider is no longer configured.');
         try {
             $result = $this->adapter($config)->verify($config, $payment);
-        } catch (ProviderFailure $e) {
+        } catch (ProviderFailure|ConnectionException|RequestException $e) {
             Log::warning('Payment verification failed', ['reference' => $payment->reference, 'error' => $e->getMessage()]);
 
             return $payment;   // still pending; the webhook or the next look tries again

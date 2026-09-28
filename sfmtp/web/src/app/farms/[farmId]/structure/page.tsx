@@ -10,6 +10,7 @@ import type { DrawMode, MapSelection } from "@/components/structure/farm-map";
 import { NodeDetails } from "@/components/structure/node-details";
 import { NodeDialog, type NodeDialogState } from "@/components/structure/node-dialog";
 import { SoilDialog } from "@/components/structure/soil-dialog";
+import { Sensors } from "@/components/structure/sensors";
 import { StructureTree } from "@/components/structure/structure-tree";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -204,6 +205,7 @@ export default function StructurePage() {
               }
             />
           ) : null}
+          <Sensors farmId={farmId} plots={data!.plots ?? []} locations={data!.locations ?? []} canManage={canManage} />
         </div>
 
         <div className="flex min-h-[540px] flex-col gap-2">

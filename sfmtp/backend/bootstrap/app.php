@@ -23,6 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(AssignRequestId::class);
+        // The API has no login page: a guest gets a 401 problem, never a redirect.
+        $middleware->redirectGuestsTo(fn () => null);
         $middleware->api(append: [EnforceIdempotency::class]);
 
         $middleware->alias([

@@ -77,3 +77,9 @@ body {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+/* Leaflet's panes use z-index 400 and up: keep them inside their map, below dialogs and menus. */
+.leaflet-container {
+  isolation: isolate;
+  z-index: 0;
+}

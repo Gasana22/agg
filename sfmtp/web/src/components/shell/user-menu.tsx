@@ -1,10 +1,11 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut } from "lucide-react";
+import { BellRing, LogOut } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useMe } from "@/lib/api/hooks";
 
 export function UserMenu() {
@@ -38,6 +39,9 @@ export function UserMenu() {
       <span className="grid size-9 place-items-center rounded-full bg-primary-soft text-sm font-semibold text-primary" aria-hidden>
         {initials || "·"}
       </span>
+      <Link href="/account/notifications" className={buttonVariants({ variant: "ghost", size: "icon" })} aria-label="Notification settings" title="Notification settings">
+        <BellRing />
+      </Link>
       <Button variant="ghost" size="icon" onClick={signOut} disabled={pending} aria-label="Sign out" title="Sign out">
         <LogOut />
       </Button>

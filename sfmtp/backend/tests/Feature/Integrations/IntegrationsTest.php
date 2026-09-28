@@ -264,7 +264,10 @@ class IntegrationsTest extends TestCase
         $this->assertProblem($this->asUser($owner)->postJson('/api/v1/billing/subscription/pay'), 409, 'online_payment_unavailable');
 
         $this->flutterwave();
-        Http::fake(['api.flutterwave.com/v3/payments' => Http::response(['status' => 'success', 'data' => ['link' => 'https://checkout.flutterwave.com/v3/hosted/pay/abc']])]);
+        // The gateway unreachable: a clear 502, never a 500.
+        Http::fake(['api.flutterwave.com/v3/payments' => Http::sequence()->pushFailedConnection()
+            ->push(['status' => 'success', 'data' => ['link' => 'https://checkout.flutterwave.com/v3/hosted/pay/abc']])]);
+        $this->assertProblem($this->asUser($owner)->postJson('/api/v1/billing/subscription/pay'), 502, 'payment_gateway_error');
         $payment = $this->asUser($owner)->postJson('/api/v1/billing/subscription/pay')->assertCreated()
             ->assertJsonPath('data.status', 'pending')->assertJsonPath('data.checkout_url', 'https://checkout.flutterwave.com/v3/hosted/pay/abc')->json('data');
         Http::assertSent(fn (HttpRequest $r) => $r->url() === 'https://api.flutterwave.com/v3/payments' && $r->hasHeader('Authorization', 'Bearer FLWSECK_TEST-x')

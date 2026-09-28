@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { Check, CreditCard } from "lucide-react";
 import { useState } from "react";
 
 import { money, UsageMeters } from "@/components/billing/usage";
@@ -66,7 +66,16 @@ export default function BillingPage() {
               {s.status === "trialing" ? "Free trial until" : s.status === "grace" ? "Ended on" : "Renews on"} {s.current_period_end}
             </p>
             {s.status === "grace" ? <p className="text-warning">Renew before {s.grace_until} to avoid interruption.</p> : null}
-            {s.status === "suspended" || s.status === "cancelled" ? <p className="text-danger">Your farms are paused. Contact SFMTP to renew; data is kept.</p> : null}
+            {s.status === "suspended" || s.status === "cancelled" ? <p className="text-danger">Your farms are paused. Pay to renew, or contact SFMTP; data is kept.</p> : null}
+            {Number(s.plan?.price?.amount ?? 0) > 0 && s.status !== "cancelled" ? (
+              <Button size="sm" className="mt-1" onClick={() => act(async () => {
+                const res = await api.POST("/billing/subscription/pay");
+                const url = res.data?.data?.checkout_url;
+                if (url) window.location.assign(url);
+              })}>
+                <CreditCard /> Pay {money(s.plan?.price)} online
+              </Button>
+            ) : null}
             {s.cancel_at_period_end ? (
               <div className="rounded-lg bg-surface-muted p-3">
                 <p>Cancels at the end of this period.</p>
@@ -104,7 +113,7 @@ export default function BillingPage() {
           );
         })}
       </div>
-      <p className="mt-3 text-xs text-muted">Payments are recorded by SFMTP (mobile money or bank transfer). Online checkout arrives with payment integrations.</p>
+      <p className="mt-3 text-xs text-muted">Pay online with mobile money or card, or pay SFMTP by bank transfer and it is recorded for you.</p>
 
       <Card className="mt-8">
         <CardHeader><CardTitle>Payments</CardTitle></CardHeader>

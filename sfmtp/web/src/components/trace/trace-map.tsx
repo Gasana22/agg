@@ -7,20 +7,19 @@ import { useEffect, useRef } from "react";
 
 import type { components } from "@/lib/api/client";
 import { humanize } from "@/lib/format";
+import { useBaseLayer } from "@/lib/map-config";
 
 type Locations = components["schemas"]["JourneyLocations"];
 
-const TILE_URL = process.env.NEXT_PUBLIC_MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-const TILE_ATTRIBUTION = process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || "&copy; OpenStreetMap contributors";
 
 /** The geographic trail of a batch: the plots of its lineage and every GPS-stamped event, in order. */
 export default function TraceMap({ data }: { data: Locations }) {
   const container = useRef<HTMLDivElement>(null);
+  const map = useRef<L.Map | null>(null);
 
   useEffect(() => {
     if (!container.current) return;
     const m = L.map(container.current, { zoomControl: true }).setView([1.37, 32.29], 7);
-    L.tileLayer(TILE_URL, { maxZoom: 20, attribution: TILE_ATTRIBUTION }).addTo(m);
     const bounds = L.latLngBounds([]);
 
     for (const p of data.plots ?? []) {
@@ -47,10 +46,13 @@ export default function TraceMap({ data }: { data: Locations }) {
     });
 
     if (bounds.isValid()) m.fitBounds(bounds.pad(0.2), { maxZoom: 17 });
+    map.current = m;
     return () => {
       m.remove();
+      map.current = null;
     };
   }, [data]);
+  useBaseLayer(map, data);
 
   return <div ref={container} className="h-[380px] w-full rounded-lg border border-border" role="region" aria-label="Map of the batch's plots and GPS points" />;
 }
