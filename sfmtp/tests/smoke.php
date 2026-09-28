@@ -41,6 +41,18 @@ final class Browser
         return $this->request('POST', $path, ['_csrf' => $m[1] ?? ''] + $data, $follow);
     }
 
+    /** POST a JSON body (the field app's sync) with the page's CSRF token in a header. */
+    public function json(string $path, array $body, string $csrf): ?array
+    {
+        $ch = curl_init($this->base . '/' . ltrim($path, '/'));
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_COOKIEJAR => $this->jar, CURLOPT_COOKIEFILE => $this->jar, CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($body), CURLOPT_HTTPHEADER => ['Content-Type: application/json', "X-CSRF-Token: $csrf"]]);
+        $this->last = (string) curl_exec($ch);
+        $this->status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        curl_close($ch);
+        return json_decode($this->last, true);
+    }
+
     private function request(string $method, string $path, array $data = [], bool $follow = true): string
     {
         $GLOBALS['lastBrowser'] = $this;
@@ -374,6 +386,91 @@ $o->post('portal-access.php', ['action' => 'unlink', 'link_id' => $lk[1] ?? ''])
 $nb->get('shop.php');
 check($nb->status === 403, 'stopping access closes the portal at once');
 
+// Purchase requests, payroll, budgets and reports.
+echo "\nRequests, payroll, budgets, reports\n";
+$o->post('farms.php', ['farm_id' => $mixed]);
+$mgr->get('purchasing.php?tab=requests');
+clean($mgr, 'manager: purchase requests');
+preg_match('/<select name="lines\[0\]\[item_id\]">(?:(?!<\/select>).)*?<option value="([0-9a-f-]{36})"/s', $mgr->last, $rim);
+$mgr->post('purchasing.php', ['action' => 'request', 'reason' => 'Smoke: running low', 'lines' => [['item_id' => $rim[1] ?? '', 'quantity' => '4', 'estimated_unit_price' => '2500']]]);
+check(str_contains($mgr->last, 'Request sent for approval'), 'the manager requests items');
+preg_match('/Smoke: running low.*?name="request_id" value="([0-9a-f-]{36})"/s', $mgr->last, $rq);
+$mgr->post('purchasing.php?tab=requests', ['action' => 'decide', 'request_id' => $rq[1] ?? '', 'decision' => 'approve']);
+check(str_contains($mgr->last, 'Someone else must approve'), 'nobody approves their own request');
+$o->get('purchasing.php?tab=requests');
+$o->post('purchasing.php?tab=requests', ['action' => 'decide', 'request_id' => $rq[1] ?? '', 'decision' => 'approve']);
+check(str_contains($o->last, 'approved'), 'the owner approves the request');
+preg_match('/name="request_id" value="' . preg_quote($rq[1] ?? 'x', '/') . '"><select name="supplier_id" required[^>]*>(?:(?!<\/select>).)*?<option value="([0-9a-f-]{36})"/s', $o->last, $rs);
+$o->post('purchasing.php?tab=requests', ['action' => 'order_request', 'request_id' => $rq[1] ?? '', 'supplier_id' => $rs[1] ?? '']);
+check(str_contains($o->last, 'Draft purchase order made from the request'), 'the approved request becomes a purchase order');
+
+foreach (['payroll.php', 'budgets.php', 'reports.php'] as $page) {
+    $o->get($page);
+    clean($o, "owner: $page");
+}
+// Pay from the day after the last payroll (at most 30 days back) to today, with today's check-in in it.
+$w->get('dashboard.php');
+$w->post('workers.php', ['action' => 'check_in']);
+$o->get('payroll.php');
+preg_match('/name="period_start" required value="([^"]+)"/', $o->last, $ps);
+$from = max($ps[1] ?? date('Y-m-d'), date('Y-m-d', strtotime('-30 days')));
+$o->post('payroll.php', ['action' => 'prepare', 'period_start' => $from, 'period_end' => date('Y-m-d')]);
+check(str_contains($o->last, 'Payroll prepared from attendance'), 'payroll is prepared from attendance');
+$run = str_replace($base . '/', '', (string) $o->location);
+$o->post($run, ['action' => 'approve']);
+check(str_contains($o->last, 'wages are now owed'), 'the owner approves the payroll');
+preg_match('/<select name="account_id" required><option value="([0-9a-f-]{36})"/', $o->last, $pa);
+preg_match('/name="amount" required inputmode="decimal" value="([^"]+)"/', $o->last, $pm2);
+if ((float) ($pm2[1] ?? 0) > 0) {
+    $o->post($run, ['action' => 'pay', 'amount' => $pm2[1], 'account_id' => $pa[1] ?? '', 'method' => 'mobile_money']);
+    check(str_contains($o->last, 'Payment of'), 'the workers are paid');
+}
+$o->get($run . '&view=slips');
+clean($o, 'payslips');
+$mgr->get(preg_replace('/&view=slips$/', '', $run));
+check($mgr->status === 200 && !str_contains($mgr->last, 'UGX') && !str_contains($mgr->last, 'name="action" value="approve"'), 'the manager sees hours but no pay and cannot approve');
+$o->post('budgets.php', ['action' => 'create', 'name' => 'Smoke budget', 'period_start' => date('Y-01-01'), 'period_end' => date('Y-12-31'), 'scope' => '']);
+preg_match_all('/name="amount\[([0-9a-f-]{36})\]"/', $o->last, $ba);
+$o->post(str_replace($base . '/', '', (string) $o->location), ['action' => 'lines', 'amount' => [$ba[1][0] ?? 'x' => '500000', $ba[1][8] ?? 'y' => '300000']]);
+check(str_contains($o->last, 'Budget saved') && str_contains($o->last, 'Actual costs'), 'a budget compares plan and actual');
+foreach (['cash_flow', 'sales_by_customer', 'sales_by_product', 'purchases_by_supplier', 'aged_receivables', 'aged_payables', 'stock_valuation', 'labour', 'cost_centres', 'general_ledger', 'qr_scans'] as $r) {
+    $o->get("reports.php?r=$r&from=" . date('Y-01-01') . '&to=' . date('Y-m-d'));
+    clean($o, "report $r");
+}
+$o->get('reports.php?r=general_ledger&format=csv');
+check(str_starts_with($o->last, "\xEF\xBB\xBF") && str_contains($o->last, 'Debit'), 'a report downloads as CSV');
+$w->get('reports.php?r=general_ledger');
+check(!str_contains($w->last, 'Debit'), 'the worker cannot read the ledger');
+$o->get('finance.php?tab=accounts');
+check(str_contains($o->last, 'The books balance'), 'the books balance after payroll');
+
+// Field app: actions queued on a phone are applied once, in order.
+echo "\nField app\n";
+$w->get('field.php');
+clean($w, 'field app page');
+preg_match('/name="csrf" content="([^"]+)"/', $w->last, $fcs);
+$w->get('sync.php');
+$state = json_decode($w->last, true)['state'] ?? [];
+check(($state['can']['attendance'] ?? false) && isset($state['worker']['id']), 'the app gets the worker, tasks and permissions');
+$fu = fn () => sprintf('%s-%s-4%s-8%s-%s', bin2hex(random_bytes(4)), bin2hex(random_bytes(2)), substr(bin2hex(random_bytes(2)), 1), substr(bin2hex(random_bytes(2)), 1), bin2hex(random_bytes(6)));
+$open = array_values(array_filter($state['tasks'] ?? [], fn ($t) => in_array($t['status'], ['assigned', 'rejected', 'in_progress'], true)));
+$muts = [['id' => $fu(), 'farm_id' => $state['farm']['id'] ?? '', 'type' => 'observation.create', 'occurred_at' => gmdate('Y-m-d H:i:s'), 'data' => []]];
+if ($open) {
+    $first = $open[0];
+    if ($first['status'] !== 'in_progress') {
+        $muts[] = ['id' => $fu(), 'farm_id' => $state['farm']['id'], 'type' => 'task.start', 'occurred_at' => gmdate('Y-m-d H:i:s', time() - 1800), 'data' => ['task_id' => $first['id']]];
+    }
+    $muts[] = ['id' => $fu(), 'farm_id' => $state['farm']['id'], 'type' => 'task.submit', 'occurred_at' => gmdate('Y-m-d H:i:s', time() - 60), 'data' => ['task_id' => $first['id'], 'quantity' => '2', 'note' => 'offline']];
+}
+$res = $w->json('sync.php', ['device_id' => $fu(), 'mutations' => $muts], $fcs[1] ?? '');
+$statuses = array_column($res['results'] ?? [], 'status');
+check($statuses && $statuses[0] === 'rejected' && !in_array('retry', $statuses, true), 'an action the worker may not do is refused, not retried');
+check(!$open || end($statuses) === 'applied', 'queued task steps are applied');
+$again = $w->json('sync.php', ['device_id' => $fu(), 'mutations' => $muts], $fcs[1] ?? '');
+check(count(array_filter($again['results'] ?? [], fn ($r) => !empty($r['repeat']))) === count($muts), 'sending the same actions again changes nothing');
+$w->json('sync.php', ['mutations' => []], 'forged');
+check($w->status === 419, 'sync refuses a forged request');
+
 // Platform admin.
 echo "\nPlatform admin\n";
 $a = signin($base, 'admin@sfmtp.test');
@@ -383,6 +480,54 @@ $a->get('admin.php?tab=accounts');
 clean($a, 'admin accounts');
 $a->get('finance.php');
 check(str_contains((string) $a->location, 'admin.php'), 'platform staff have no farm pages');
+
+// Integrations: email and SMS (log drivers), online payment (test gateway, debug only).
+echo "\nIntegrations\n";
+foreach ([['email', 'log'], ['sms', 'log'], ['payment', 'simulator']] as [$kind, $driver]) {
+    $a->get('admin.php?tab=integrations');
+    $a->post('admin.php?tab=integrations', ['action' => 'provider', 'kind' => $kind, 'provider' => $driver, 'name' => "Smoke $kind"]);
+    check(str_contains($a->last, "Smoke $kind saved"), "platform staff add a $kind service");
+}
+$a->post('admin.php?tab=integrations', ['action' => 'provider_test', 'kind' => 'sms', 'to' => '+256772000111']);
+check(str_contains($a->last, 'Test logged through Smoke sms'), 'a test SMS goes through the SMS service');
+$a->get('admin.php?tab=messages');
+clean($a, 'messages sent');
+$g2 = new Browser($base);
+$g2->get('login.php');
+check(str_contains($g2->last, 'forgot.php'), 'with email set up, sign-in offers password reset');
+$g2->get('forgot.php');
+$g2->post('forgot.php', ['email' => 'nobody@example.test']);
+check(str_contains($g2->last, 'If that address has an account'), 'password reset does not reveal which accounts exist');
+$o->post('farms.php', ['farm_id' => $crop]);
+$o->get('settings.php');
+preg_match('/name="name" required value="([^"]*)"/', $o->last, $fnm);
+$o->post('settings.php', ['name' => html_entity_decode($fnm[1] ?? 'AGG Crop Farm'), 'online_payments' => '1']);
+check(str_contains($o->last, 'Settings saved'), 'the farm turns on online payments');
+$cus->get('customer.php?tab=invoices');
+$issued = null;
+foreach ([...array_unique((preg_match_all('/customer-invoice\.php\?id=([0-9a-f-]{36})/', $cus->last, $im2) ? $im2[1] : []))] as $iid) {
+    $cus->get("customer-invoice.php?id=$iid");
+    if (str_contains($cus->last, 'online</button>')) {
+        $issued = $iid;
+        break;
+    }
+}
+check($issued !== null, 'the customer can pay an open invoice online');
+if ($issued) {
+    $cus->post("customer-invoice.php?id=$issued", ['action' => 'pay']);
+    preg_match('/href="([^"]*pay-simulator\.php[^"]*)"/', $cus->last, $sm2);
+    $cus->get(html_entity_decode($sm2[1] ?? 'pay-simulator.php'));
+    $cus->post(html_entity_decode($sm2[1] ?? 'pay-simulator.php'), ['outcome' => 'pay']);
+    check(str_contains($cus->last, 'Thank you'), 'the payment is confirmed and recorded');
+    $cus->get("customer-invoice.php?id=$issued");
+    check(str_contains($cus->last, 'badge ok">Paid'), 'the invoice shows as paid');
+    $o->get('finance.php?tab=accounts');
+    check(str_contains($o->last, 'The books balance'), 'the books balance after the online payment');
+}
+$wh = curl_init("$base/pay-webhook.php");
+curl_setopt_array($wh, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => '{"data":{"id":1,"tx_ref":"SFMP-0000000000000000"}}', CURLOPT_RETURNTRANSFER => true]);
+curl_exec($wh);
+check(curl_getinfo($wh, CURLINFO_RESPONSE_CODE) === 401, 'a payment notification without the secret hash is refused');
 
 echo "\n$checks checks, $failures failed\n";
 exit($failures ? 1 : 0);

@@ -8,8 +8,6 @@ $cycle = farm_row('crop_cycles', input_id('id'));
 $id = $cycle['id'];
 
 const OPERATION_TYPES = ['land_preparation', 'planting', 'weeding', 'fertilizing', 'spraying', 'irrigation', 'scouting', 'pruning', 'thinning', 'other'];
-const OBSERVATION_KINDS = ['pest', 'disease', 'weed', 'nutrient', 'water', 'growth', 'weather', 'other'];
-const SEVERITIES = ['low', 'medium', 'high', 'critical'];
 const STAGES = ['nursery', 'planted', 'growing', 'harvesting', 'closed'];
 
 if (is_post()) {
@@ -18,17 +16,7 @@ if (is_post()) {
         if ($cycle['stage'] === 'closed' && $action !== 'resolve') {
             fail('This cycle is closed.');
         }
-        $lot = $cycle['crop_lot_batch_id'];
-        if ($lot === null) {
-            // Older cycles may have no crop lot yet; open one on first use so every step has a history.
-            $lot = tx(function () use ($cycle, $fid, $id) {
-                $names = row('SELECT c.name AS crop, p.code AS plot FROM crops c JOIN farm_plots p ON p.id = ? WHERE c.id = ?', [$cycle['plot_id'], $cycle['crop_id']]);
-                $batch = trace_create_batch('crop_lot', ['name' => ($names['crop'] ?? 'Crop') . ' on ' . ($names['plot'] ?? ''), 'origin_plot_id' => $cycle['plot_id'],
-                    'source_type' => 'crop_cycle', 'source_id' => $id], ['plot_id' => $cycle['plot_id']]);
-                q('UPDATE crop_cycles SET crop_lot_batch_id = ?, updated_at = ? WHERE id = ? AND farm_id = ?', [$batch['id'], now_utc(), $id, $fid]);
-                return $batch['id'];
-            });
-        }
+        $lot = cycle_lot($cycle);
         if ($action === 'operation') {
             require_can('crops.operations.record');
             $type = input_in('type', OPERATION_TYPES) ?? fail('Choose the kind of work.');
@@ -63,22 +51,8 @@ if (is_post()) {
             flash('success', label($type) . ' recorded.');
         } elseif ($action === 'observation') {
             require_can('crops.operations.record');
-            $kind = input_in('kind', OBSERVATION_KINDS) ?? fail('Choose what you saw.');
-            $sev = input_in('severity', SEVERITIES) ?? 'low';
-            $title = input('title', 150) ?? fail('Give the report a short title.');
-            $pct = input_num('affected_pct');
-            $obsId = uuid();
-            tx(function () use ($obsId, $fid, $id, $kind, $sev, $title, $pct, $lot, $cycle) {
-                insert('crop_observations', ['id' => $obsId, 'farm_id' => $fid, 'cycle_id' => $id, 'kind' => $kind, 'severity' => $sev, 'title' => $title,
-                    'description' => input('description', 2000), 'affected_pct' => $pct, 'observed_at' => gmdate('Y-m-d H:i:s'), 'status' => 'open',
-                    'recorded_by' => $_SESSION['uid'], 'version' => 1, 'created_at' => now_utc(), 'updated_at' => now_utc()]);
-                trace_record($lot, 'observation', ['plot_id' => $cycle['plot_id'], 'subject_type' => 'crop_observation', 'subject_id' => $obsId,
-                    'payload' => array_filter(['kind' => $kind, 'title' => $title, 'severity' => $sev, 'affected_pct' => $pct !== null ? number_format($pct, 2, '.', '') : null])]);
-                if (in_array($sev, ['high', 'critical'], true)) {
-                    $owners = array_column(rows('SELECT user_id FROM farm_users WHERE farm_id = ? AND is_owner = 1', [$fid]), 'user_id');
-                    notify($owners, 'pest_report', "$title on {$cycle['code']}", label($sev) . ' ' . $kind . ' report', url('cycle.php', ['id' => $id]));
-                }
-            });
+            crop_observation_add($cycle, (string) input_in('kind', OBSERVATION_KINDS), input_in('severity', SEVERITIES) ?? 'low', (string) input('title', 150),
+                input('description', 2000), input_num('affected_pct'));
             flash('success', 'Report saved.');
         } elseif ($action === 'resolve') {
             require_can('crops.operations.record');

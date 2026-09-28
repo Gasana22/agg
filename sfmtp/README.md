@@ -1,9 +1,10 @@
 # SFMTP — Smart Farm Management & Traceability Platform
 
 A plain PHP + MySQL web app for running a farm: its structure, crops, livestock,
-workers and tasks, stock, purchasing, money and sales. It also records traceability
-from seed to customer, with public QR pages, and has portals for the farm's suppliers
-and customers.
+workers and tasks, stock, purchasing, payroll, budgets, money and sales, with reports
+you can download. It also records traceability from seed to customer, with public QR pages. It has
+portals for the farm's suppliers and customers, and a field app for phones that keeps working without
+a connection. Email, SMS and online payment can be switched on.
 
 - **No framework, no Composer, no build step.** Copy the folder to any PHP host (XAMPP,
   cPanel shared hosting, a VPS) and it runs.
@@ -54,6 +55,30 @@ location ~ ^/config(\.sample)?\.php$ { deny all; }
 location ~ /\. { deny all; }
 ```
 
+### Email, SMS and online payment
+
+These are off until platform staff add a service under **Platform admin → Integrations**:
+- **Email:** an SMTP server (e.g. your hosting mail account), or PHP `mail()` on shared hosting.
+- **SMS:** Africa's Talking.
+- **Payments:** Flutterwave. Set its webhook to `https://your-site/pay-webhook.php`, with the same secret hash you enter here.
+
+Keys and passwords are stored encrypted with `secret_key`, so keep that key safe and never change it after setup. *Messages sent* lists every email and SMS. With email on, sign-in offers a password reset and invitations are emailed.
+
+Members choose under *My account* whether to get their notifications by email or SMS. Workers without an account get an SMS when a task is assigned.
+
+A farm lets its customers pay online in *Farm settings*. A payment is recorded only after Flutterwave confirms it.
+
+The **test gateway** and the log-only services are for trying things out. The test gateway works only while `'debug' => true`, so turn debug off on a live site.
+
+### The field app on phones
+
+Phones can install the field app ("Add to home screen") and use it offline. Browsers allow this only over **HTTPS**; cPanel hosts offer free certificates. Over plain HTTP the app still works while online.
+
+### Upgrading a database imported earlier
+
+Run the files in `database/upgrades/` that are newer than your import, in order, e.g.
+`mysql -u root -p sfmtp < database/upgrades/001-message-outbox.sql`.
+
 ## Demo accounts
 
 Every account's password is **`Password123!`**.
@@ -96,12 +121,17 @@ WhatsApp. The app does not send email itself. The link works once, for 14 days, 
 | Workers and tasks | `workers.php` (workers, attendance, leave), `tasks.php`, `task.php`: plan and assign work → start → submit → verify. Nobody verifies their own work. |
 | Inventory | `inventory.php`: items, receive and issue stock at average cost, lots and expiry, movements |
 | Finance | `finance.php`, `invoice.php`: expenses with an approval limit, payments, income, a double-entry journal, profit and loss, trial balance |
-| Purchasing | `purchasing.php`, `po.php`: suppliers and purchase orders (draft → approve → send, with an owner limit), receiving into stock against the supplier's dispatch, supplier invoices matched to what was received, payments |
+| Field app | `field.php` (with `sync.php`, `sw.js`, `manifest.webmanifest`): a phone page for workers and agronomists. It can be added to the home screen. Check in and out with location, work through tasks, send crop field reports. It keeps working offline: actions wait on the phone and are sent when the network is back, each applied once. |
+| Payroll | `payroll.php`: pay runs from attendance × daily rate, with bonuses and deductions, approved by a second person (or the owner), paid, and printed as payslips |
+| Budgets | `budgets.php`: planned amounts per account for the farm, a crop cycle or an animal group, against actual figures from the books |
+| Reports | `reports.php`: cash flow, sales by customer and product, purchases by supplier, aged receivables and payables, stock value, labour, costs per crop cycle and animal group, general ledger, QR scans. Print them or download them as CSV for Excel. |
+| Purchasing | `purchasing.php`, `po.php`: purchase requests from staff (approved by someone else, then turned into an order), suppliers and purchase orders (draft → approve → send, with an owner limit), receiving into stock against the supplier's dispatch, supplier invoices matched to what was received, payments |
 | Sales | `sales.php`, `order.php`, `invoice.php`: orders (from the portal or recorded by staff) → approve → invoice → ship from trace batches → delivered; customers, products and prices, invoices, shipments |
 | Portal access | `portal-access.php`: invite a supplier or customer by a one-time link, see who has access, stop it |
 | Supplier portal | `portal.php`, `supplier.php`, `supplier-order.php`: answer purchase orders, announce dispatches with the delivery note, send invoices for what the farm received, see what has been paid |
 | Customer portal | `shop.php`, `customer.php`, `customer-order.php`, `customer-invoice.php`: order published products at list price, follow orders, confirm deliveries, see invoices and payments, and open the farm-to-you history of what they bought |
 | Invitations | `invite.php`: accept an invitation, creating an account if needed |
+| Integrations | Platform admin → Integrations: email (SMTP server or PHP `mail()`), SMS (Africa's Talking) and online payment (Flutterwave). Also log-only email/SMS services and a test payment gateway for trying things out. `forgot.php`/`reset.php` (password reset by email), `pay-go.php`, `pay-return.php`, `pay-webhook.php` |
 | Traceability | `trace.php`, `batch.php`, `labels.php`, `q.php`: batch history with a tamper check, split/process/package, recall, publish with QR codes and printable labels, and the public scan page |
 | Administration | `members.php` (people and roles), `settings.php` (farm rules), `audit-log.php`, `admin.php` (platform staff) |
 
@@ -149,7 +179,10 @@ page. It runs the main flows:
 - expenses, invoices and payments, stock and tasks;
 - a purchase order through the supplier portal: dispatch, receipt, invoice and payment;
 - a portal order through to delivery;
-- inviting a new customer.
+- inviting a new customer;
+- purchase requests, payroll, budgets and every report;
+- the field app's sync (applied once, refusals, forged requests);
+- email/SMS services, password reset and paying an invoice through the test gateway.
 
 It also checks the role and portal boundaries.
 GitHub Actions runs it on every push (`.github/workflows/sfmtp-ci.yml`).
@@ -160,9 +193,6 @@ Before this, SFMTP was a Laravel API with a Next.js web app and a Flutter mobile
 is still in the git history, up to commit `d64eb10`. This plain PHP version replaces it and
 uses the same database design, demo data and hash chain.
 
-Not in this version yet, planned for later rounds:
-- purchase requests;
-- payroll and budgets;
-- report exports;
-- SMS, email and payment integrations;
-- the offline mobile app.
+Everything from the earlier roadmap is in this version, including the phone app, which is now a web
+app that works offline rather than a separate Flutter app. Not included: a native app-store app,
+weather and map services, and IoT sensors.

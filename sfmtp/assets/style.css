@@ -112,3 +112,8 @@ a.btn:hover { text-decoration: none; filter: brightness(.97); }
 .products { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); margin-bottom: 1rem; }
 .product { border: 1px solid var(--border); border-radius: 10px; padding: .75rem; display: flex; flex-direction: column; gap: .35rem; }
 .product .price { font-weight: 600; font-size: 1.05rem; }
+[hidden] { display: none !important; }
+body.field main.bare.wide { max-width: 640px; }
+body.field .task { border-top: 1px solid var(--border); padding: .75rem 0; display: flex; flex-direction: column; gap: .35rem; }
+body.field .task:first-child { border-top: 0; }
+body.field button { min-height: 2.6rem; }

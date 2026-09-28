@@ -46,7 +46,8 @@ function task_step(array $task, string $event, array $data = []): string
     if (!in_array($task['status'], $from, true)) {
         fail('This task is ' . label($task['status']) . ', so it cannot be ' . ($event === 'note' ? 'noted' : $event . 'ed') . ' now.');
     }
-    $now = gmdate('Y-m-d H:i:s.u');
+    // The offline app sends when it happened; anything else is now.
+    $now = isset($data['occurred_at']) ? $data['occurred_at'] . '.000000' : gmdate('Y-m-d H:i:s.u');
     return tx(function () use ($task, $event, $to, $data, $now) {
         $fid = farm_id();
         $new = $to ?? $task['status'];

@@ -4465,4 +4465,24 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
+
+-- Outbound email and SMS log.
+DROP TABLE IF EXISTS `message_outbox`;
+CREATE TABLE `message_outbox` (
+  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `farm_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `channel` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `recipient` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `subject` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `body` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `purpose` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `provider` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `error` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `message_outbox_created_at_index` (`created_at`),
+  KEY `message_outbox_farm_id_index` (`farm_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

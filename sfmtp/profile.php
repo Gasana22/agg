@@ -13,7 +13,8 @@ if (is_post()) {
             if ($phone !== null && !preg_match('/^\+?[0-9 ]{7,20}$/', $phone)) {
                 fail('Enter the phone number with digits only, e.g. +256 772 123456.');
             }
-            q('UPDATE users SET name = ?, phone = ?, updated_at = ? WHERE id = ?', [$name, $phone, now_utc(), $user['id']]);
+            $channels = json_encode(['email' => (bool) input('notify_email'), 'sms' => (bool) input('notify_sms')]);
+            q('UPDATE users SET name = ?, phone = ?, notification_channels = ?, updated_at = ? WHERE id = ?', [$name, $phone, $channels, now_utc(), $user['id']]);
             flash('success', 'Saved.');
         } elseif ($action === 'password') {
             if (!password_verify((string) ($_POST['current'] ?? ''), $user['password'])) {
@@ -51,7 +52,13 @@ $hasMfa = user_has_mfa($user['id']);
 <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="profile">
 <div class="stack"><?= field('Name', '<input name="name" required value="' . e($user['name']) . '">') ?>
 <?= field('Email', '<input value="' . e($user['email']) . '" disabled>') ?>
-<?= field('Phone', '<input name="phone" value="' . e($user['phone']) . '">') ?></div>
+<?= field('Phone', '<input name="phone" value="' . e($user['phone']) . '">') ?>
+<?php $ch = json_decode((string) ($user['notification_channels'] ?? ''), true) ?: []; ?>
+<?php if (has_provider('email') || has_provider('sms')): ?>
+<span class="muted">Send me my notifications also</span>
+<?php if (has_provider('email')): ?><label class="row"><input type="checkbox" style="width:auto" name="notify_email" value="1"<?= !empty($ch['email']) ? ' checked' : '' ?>> by email</label><?php endif ?>
+<?php if (has_provider('sms')): ?><label class="row"><input type="checkbox" style="width:auto" name="notify_sms" value="1"<?= !empty($ch['sms']) ? ' checked' : '' ?>> by SMS to my phone</label><?php endif ?>
+<?php endif ?></div>
 <div class="actions"><button class="primary">Save</button></div></form></div>
 
 <div class="card"><h2>Password</h2>

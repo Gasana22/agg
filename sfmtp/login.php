@@ -37,5 +37,9 @@ page_start('Sign in', true);
     <div class="actions"><button class="primary">Sign in</button></div>
   </form>
 </div>
+<?php if (has_provider('email')): ?>
+<p><a href="<?= e(url('forgot.php')) ?>">Forgotten your password?</a></p>
+<?php else: ?>
 <p class="muted">Forgotten your password? Ask the farm owner or the platform team to reset it.</p>
+<?php endif ?>
 <?php page_end();

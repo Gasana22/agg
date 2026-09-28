@@ -59,6 +59,7 @@ jobs:
               -e "s/'password' => ''/'password' => 'secret'/" \
               -e "s#'app_url' => 'http://localhost/sfmtp'#'app_url' => 'http://127.0.0.1:8090'#" \
               -e "s/change-me-to-a-long-random-string/$(openssl rand -hex 32)/" \
+              -e "s/'debug' => false/'debug' => true/" \
               config.sample.php > config.php
           grep -q "'user' => 'sfmtp'" config.php
 

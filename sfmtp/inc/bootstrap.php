@@ -66,4 +66,6 @@ require __DIR__ . '/stock.php';
 require __DIR__ . '/procurement.php';
 require __DIR__ . '/orders.php';
 require __DIR__ . '/portal.php';
+require __DIR__ . '/integrations.php';
+require __DIR__ . '/field.php';
 require __DIR__ . '/layout.php';

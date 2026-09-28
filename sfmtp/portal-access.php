@@ -17,6 +17,9 @@ if (is_post()) {
             $record = farm_row(PORTAL_KINDS[$kind], uuid_or_null($recordId));
             $token = portal_invite($kind, $record, (string) input('email', 150), input('message', 500));
             $shownLink = ['url' => portal_invite_url($token), 'email' => mb_strtolower((string) input('email', 150)), 'name' => $record['name']];
+            $shownLink['emailed'] = has_provider('email') && send_email($shownLink['email'], $farm['name'] . ' invites you to its ' . $kind . ' portal',
+                "Hello,\n\n{$farm['name']} opened its $kind portal to {$record['name']}." . (input('message', 500) ? "\n\n\"" . input('message', 500) . "\"" : '')
+                . "\n\nOpen this link to accept (it works once, for " . PORTAL_INVITE_DAYS . " days):\n\n{$shownLink['url']}\n", 'portal_invitation');
         } else {
             handle(function () use ($action, $fid) {
                 if ($action === 'revoke_invite') {
@@ -52,7 +55,7 @@ $invites = rows("SELECT i.*, u.name AS inviter FROM portal_invitations i LEFT JO
 
 page_start('Portal access');
 if ($shownLink) {
-    echo '<div class="card"><h2>Invitation ready</h2><p>Send this link to <b>' . e($shownLink['email']) . '</b> (by email, SMS or WhatsApp). It opens ' . e($shownLink['name']) . '\'s portal and works once, for '
+    echo '<div class="card"><h2>Invitation ready</h2><p>' . ($shownLink['emailed'] ? 'We emailed it to <b>' . e($shownLink['email']) . '</b>. You can also send the link yourself' : 'Send this link to <b>' . e($shownLink['email']) . '</b>') . ' (by email, SMS or WhatsApp). It opens ' . e($shownLink['name']) . '\'s portal and works once, for '
         . PORTAL_INVITE_DAYS . ' days. It is shown only now.</p><p><input readonly value="' . e($shownLink['url']) . '"></p></div>';
 }
 echo '<p class="muted">Suppliers see the purchase orders you send them, tell you what they send and submit invoices. Customers order your published products and follow their orders, invoices and deliveries. Neither sees anything else of the farm.</p>';

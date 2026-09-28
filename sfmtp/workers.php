@@ -17,17 +17,7 @@ if (is_post()) {
         if ($action === 'check_in' || $action === 'check_out') {
             require_can('attendance.record');
             $me ?? fail('Your account is not linked to a worker record. Ask the manager.');
-            $row = row('SELECT * FROM worker_attendance WHERE farm_id = ? AND worker_id = ? AND work_date = ?', [$fid, $me['id'], $today]);
-            if ($action === 'check_in') {
-                $row && fail('You already checked in today.');
-                insert('worker_attendance', ['id' => uuid(), 'farm_id' => $fid, 'worker_id' => $me['id'], 'work_date' => $today, 'check_in_at' => gmdate('Y-m-d H:i:s.u'),
-                    'source' => 'web', 'recorded_by' => $_SESSION['uid'], 'version' => 1, 'created_at' => now_utc(), 'updated_at' => now_utc()]);
-                flash('success', 'Checked in. Have a good day.');
-            } else {
-                ($row && !$row['check_out_at']) || fail('Check in first.');
-                q('UPDATE worker_attendance SET check_out_at = ?, updated_at = ?, version = version + 1 WHERE id = ? AND farm_id = ?', [gmdate('Y-m-d H:i:s.u'), now_utc(), $row['id'], $fid]);
-                flash('success', 'Checked out.');
-            }
+            flash('success', attendance_record($action, $me));
             redirect('dashboard.php');
         } elseif ($action === 'worker') {
             require_can('workers.manage');

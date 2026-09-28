@@ -47,6 +47,9 @@ if (is_post()) {
                 $uid = val('SELECT fu.user_id FROM workers w JOIN farm_users fu ON fu.id = w.farm_user_id WHERE w.id = ?', [$wid]);
                 if ($uid) {
                     notify([$uid], 'task_assigned', "New task: $title", 'Due ' . fdate($due ?? $planned), url('task.php', ['id' => $tid]));
+                } elseif ($phone = val('SELECT phone FROM workers WHERE id = ?', [$wid])) {
+                    // Workers without an account hear about their work by SMS (when an SMS service is set up).
+                    send_sms($phone, current_farm()['name'] . ": new task - $title. Due " . fdate($due ?? $planned) . '.', 'task_assigned', true);
                 }
             }
             audit('workforce.activity.created', null, ['type' => 'activity', 'id' => $aid], null, ['title' => $title, 'tasks' => count($workerIds)]);

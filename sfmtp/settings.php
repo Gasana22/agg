@@ -20,6 +20,7 @@ if (is_post()) {
         $s['require_mfa_for_all'] = (bool) input('require_mfa_for_all');
         $s['allow_negative_stock'] = (bool) input('allow_negative_stock');
         $s['allow_intercropping'] = (bool) input('allow_intercropping');
+        $s['online_payments'] = ['enabled' => (bool) input('online_payments'), 'subaccount_id' => input('subaccount_id', 60)];
         q('UPDATE farm_settings SET settings = ?, updated_at = ? WHERE farm_id = ?', [json_encode($s), now_utc(), $fid]);
         audit('farm.settings.updated', null, ['type' => 'farm', 'id' => $fid], null, $s);
         flash('success', 'Settings saved.');
@@ -50,6 +51,8 @@ page_start('Farm settings');
 <label class="row"><input type="checkbox" style="width:auto" name="require_mfa_for_all" value="1"<?= $check('require_mfa_for_all') ?>> Everyone on this farm must use two-step sign-in</label>
 <label class="row"><input type="checkbox" style="width:auto" name="allow_negative_stock" value="1"<?= $check('allow_negative_stock') ?>> Allow issuing stock that is not recorded yet (negative stock)</label>
 <label class="row"><input type="checkbox" style="width:auto" name="allow_intercropping" value="1"<?= $check('allow_intercropping') ?>> Allow more than one crop on a plot at a time</label>
+<label class="row"><input type="checkbox" style="width:auto" name="online_payments" value="1"<?= !empty($s['online_payments']['enabled']) ? ' checked' : '' ?>> Customers may pay invoices online in their portal<?= payment_provider() ? '' : ' <span class="muted">(the platform has no payment service set up yet)</span>' ?></label>
+<?= field('Flutterwave subaccount (optional: pays straight into the farm\'s account)', '<input name="subaccount_id" maxlength="60" value="' . e($s['online_payments']['subaccount_id'] ?? '') . '">') ?>
 </div>
 <div class="actions"><button class="primary">Save</button></div>
 </form>

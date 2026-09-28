@@ -76,15 +76,15 @@ function require_farm(?string $permission = null): array
 /** permission key => scope (all / assigned / own) for the member on this farm. */
 function my_permissions(): array
 {
-    static $perms = null;
-    if ($perms !== null) {
-        return $perms;
+    static $cache = [];
+    $farm = current_farm();
+    if (!$farm || empty($farm['membership_id'])) {
+        return [];
+    }
+    if (isset($cache[$farm['membership_id']])) {
+        return $cache[$farm['membership_id']];
     }
     $perms = [];
-    $farm = current_farm();
-    if (!$farm) {
-        return $perms;
-    }
     $rank = ['own' => 1, 'assigned' => 2, 'all' => 3];
     $list = rows('SELECT p.`key`, frp.scope FROM farm_user_roles fur
         JOIN farm_role_permissions frp ON frp.farm_role_id = fur.farm_role_id
@@ -95,7 +95,7 @@ function my_permissions(): array
             $perms[$p['key']] = $p['scope'];
         }
     }
-    return $perms;
+    return $cache[$farm['membership_id']] = $perms;
 }
 
 function can(string $permission): bool
@@ -129,7 +129,7 @@ function is_owner(): bool
 function my_worker(): ?array
 {
     $farm = current_farm();
-    return $farm ? row('SELECT * FROM workers WHERE farm_id = ? AND farm_user_id = ?', [$farm['id'], $farm['membership_id']]) : null;
+    return $farm && !empty($farm['membership_id']) ? row('SELECT * FROM workers WHERE farm_id = ? AND farm_user_id = ?', [$farm['id'], $farm['membership_id']]) : null;
 }
 
 function farm_settings(): array
@@ -158,11 +158,27 @@ function belongs(string $table, ?string $id): bool
     return $id !== null && (bool) val("SELECT 1 FROM `$table` WHERE id = ? AND farm_id = ?", [$id, farm_id()]);
 }
 
+/** An in-app notification, also sent by email and/or SMS to people who chose that (My account). */
 function notify(array $userIds, string $kind, string $title, ?string $body = null, ?string $link = null): void
 {
+    static $channels = null;
+    $channels ??= ['email' => has_provider('email'), 'sms' => has_provider('sms')];
     foreach (array_unique(array_filter($userIds)) as $uid) {
         insert('member_notifications', ['id' => uuid(), 'farm_id' => farm_id(), 'user_id' => $uid, 'kind' => $kind, 'title' => mb_substr($title, 0, 150),
             'body' => $body ? mb_substr($body, 0, 500) : null, 'link' => $link, 'created_at' => gmdate('Y-m-d H:i:s.u')]);
+        if (!$channels['email'] && !$channels['sms']) {
+            continue;
+        }
+        $u = row('SELECT email, phone, notification_channels FROM users WHERE id = ?', [$uid]);
+        $want = json_decode((string) ($u['notification_channels'] ?? ''), true) ?: [];
+        $farmName = current_farm()['name'] ?? config('app_name', 'SFMTP');
+        $full = $link && !str_starts_with($link, 'http') ? rtrim((string) config('app_url'), '/') . '/' . ltrim(preg_replace('#^.*?/([^/]+\.php)#', '$1', $link), '/') : $link;
+        if ($channels['email'] && !empty($want['email'])) {
+            send_email($u['email'], "[$farmName] $title", trim(($body ? "$body\n\n" : '') . ($full ? "Open: $full\n" : '')), 'notification');
+        }
+        if ($channels['sms'] && !empty($want['sms']) && $u['phone']) {
+            send_sms($u['phone'], "$farmName: $title" . ($body ? " - $body" : ''), 'notification');
+        }
     }
 }
 
