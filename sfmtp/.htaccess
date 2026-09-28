@@ -1,0 +1,12 @@
+# Apache (XAMPP, cPanel shared hosting). Only the pages and assets are public.
+Options -Indexes
+DirectoryIndex index.php
+
+<FilesMatch "^(config(\.sample)?\.php|\..*)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(inc|database|tests)(/|$) - [F,L]
+</IfModule>

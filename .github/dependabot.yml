@@ -1,25 +1,6 @@
-# Weekly dependency updates for SFMTP (docs/11-security.md §5).
+# Weekly updates for the GitHub Actions used in CI. The app itself has no package dependencies.
 version: 2
 updates:
-  - package-ecosystem: composer
-    directory: /sfmtp/backend
-    schedule: { interval: weekly }
-    groups:
-      laravel: { patterns: ["laravel/*", "illuminate/*"] }
-    open-pull-requests-limit: 5
-  - package-ecosystem: npm
-    directory: /sfmtp/web
-    schedule: { interval: weekly }
-    groups:
-      next: { patterns: ["next", "react", "react-dom", "eslint-config-next", "@types/react*"] }
-    open-pull-requests-limit: 5
-  - package-ecosystem: pub
-    directory: /sfmtp/mobile
-    schedule: { interval: weekly }
-    open-pull-requests-limit: 5
-  - package-ecosystem: docker
-    directory: /sfmtp/infra/docker
-    schedule: { interval: weekly }
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }

@@ -1,100 +1,146 @@
 # SFMTP — Smart Farm Management & Traceability Platform
 
-> Track every seed, every worker, every harvest, every sale.
+A plain PHP + MySQL web app for running a farm: its structure, crops, livestock,
+workers and tasks, stock, money and sales. It also records traceability from seed
+to customer, with public QR pages.
 
-SFMTP is a commercial, multi-tenant SaaS platform for farm operations and
-end-to-end traceability. It has a responsive web application, an offline-first
-mobile app for Android and iOS, supplier and customer portals, and a versioned
-REST API.
+- **No framework, no Composer, no build step.** Copy the folder to any PHP host (XAMPP,
+  cPanel shared hosting, a VPS) and it runs.
+- **One database.** `database/sfmtp.sql` creates every table and loads the demo farms,
+  people and history.
 
-## Status
+## Requirements
 
-| Phase | State |
-|---|---|
-| 0 — Design | ✅ Done ([docs](docs/)) |
-| 1 — Architecture & foundation | ✅ Done: identity + MFA, multi-tenancy, permissions, audit log, traceability core, dashboards framework, web shell, CI |
-| 2 — Platform administration | ✅ Done: platform roles, farm approval/suspension, plans & subscriptions with limits and lifecycle, owner billing page, global catalogues, integrations, settings, system health, support tickets with owner-granted read-only access |
-| 3 — Farm management | ✅ Done: farm map with blocks / sections / plots / locations and soil tests, member invitations, member management, custom roles and the role editor, farm policies, "My farms" |
-| 4 — Crop management | ✅ Done: crop list and seasons, plans with approval, cycles from nursery to harvest, field work with inputs and withholding periods, pest and disease reports, harvests, all feeding traceability; agronomist dashboard |
-| 5 — Livestock | ✅ Done: animals and groups with lineage, breeding and births, feeding, health and vaccinations with milk and meat withdrawal periods, weights, milk and egg records with daily lots, movements, deaths and culls, sale requests with approval, all feeding traceability; livestock dashboard |
-| 6 — Workers & activities | ✅ Done: workers, activities and tasks with a state machine and verification, attendance with GPS and photos, leave, photo uploads, the offline sync API, manager and field-worker dashboards, and the Flutter field app v0 (offline outbox, push / pull) |
-| 7 — Procurement & inventory | ✅ Done: items, lots as trace batches, the stock ledger with average cost, issues, transfers, counts with approval, stock requests, alerts; suppliers, purchase requests and orders with approval, deliveries and supplier invoices; the double-entry ledger core; Store Manager dashboard |
-| 8 — Finance | ✅ Done: accounts and manual entries, expenses with approval thresholds, income, customer invoices (with livestock sales), payments against any document, payroll from attendance charged to the work done, budgets, profit and loss, cash flow with a forecast, cost per crop and per acre; accountant dashboard and the owner's financial KPIs |
-| 9 — Traceability (full) | ✅ Done: split / merge / process / package with quantity checks, recall to the customer, shipments, journey views (timeline, workers, inputs, customers, map), the journey projection, integrity checks and alerts; the traceability explorer |
-| 10 — QR system | ✅ Done: approved public fields with preview, random QR codes with revoke and recall notices, the public scan page, signed payloads, rate limits, anonymous scan statistics, printable PDF labels |
-| 11 — Mobile app (complete) | ✅ Done: agronomist, livestock and supervisor flows on the phone, a sync feed filtered by permission, field-level merge with conflicts resolved in the app, a notification inbox with FCM push, an encrypted local database, background sync, remote wipe, and store builds for the internal testing tracks |
-| 12 — Supplier & customer portals | ✅ Done: party accounts linked to farm suppliers and customers by invitation, one sign-in across farms; the supplier portal (answer orders, announce dispatches, send invoices, payment status); products with list prices and sales orders with approval; the customer portal (shop, order tracking, delivery confirmation, invoices, bought batches with their public traceability); portal dashboards |
-| 13 — Analytics & reporting | ✅ Done: metric catalogue with definitions and trends; crop and animal health scores with a crop health map; 19 standard reports; CSV, Excel and PDF exports built in the background (24 h, requester only); bulk QR label runs on three A4 templates; activity heat map on the farm map; dashboard performance bench within budget |
-| 14 — Integrations | ✅ Done: providers per kind with ordered failover, a circuit breaker and health in admin, plus a test button; SMS (Africa's Talking, Twilio), email (SMTP, SendGrid), weather (OpenWeather, Tomorrow.io) with a dashboard widget, map tiles (Mapbox, Google, OpenStreetMap), FCM push; Flutterwave online payments for subscriptions and customer invoices, verified with the gateway; email and SMS copies of notices by member choice; a ledger journal export for accounting packages and IoT sensor ingestion |
-| 15 — Security & production | ✅ Done: row-level security on every farm table; security headers, CSP and CORS; dependency audits in CI; security tests; a load test (24× a peak hour of 10,000 activities a day within budget); backup role, restore and point-in-time drills; security, operations, deployment, user and API guides; the [launch checklist](docs/16-launch-checklist.md) |
+- PHP 8.2 or newer with the `pdo_mysql`, `openssl` and `mbstring` extensions (all standard in XAMPP).
+- MySQL 8.0 or newer. MariaDB 10.6+ should also work but is not tested.
+- Apache with `.htaccess` enabled (XAMPP and cPanel have this by default), or nginx (see below).
 
-## Repository layout
+## Install
+
+1. **Copy the folder** into your web root. For example:
+   - XAMPP: `C:\xampp\htdocs\sfmtp`
+   - cPanel: `public_html/sfmtp`
+2. **Create the database** and import the dump. You can use phpMyAdmin (create `sfmtp` with
+   collation `utf8mb4_unicode_ci`, then Import → `database/sfmtp.sql`) or the command line:
+
+   ```sh
+   mysql -u root -p -e "CREATE DATABASE sfmtp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+   mysql -u root -p sfmtp < database/sfmtp.sql
+   ```
+
+   Optional but recommended: also import `database/sfmtp-triggers.sql`. It adds triggers that
+   make the traceability history, ledger and audit log append-only inside MySQL itself. On
+   hosts with binary logging, the importing user needs the `TRIGGER` privilege, or
+   `log_bin_trust_function_creators = 1`.
+3. **Configure.** Copy `config.sample.php` to `config.php`, then:
+   - enter the database details;
+   - set `app_url` to the site's address (QR codes link to it);
+   - set `secret_key` to a long random string: `php -r "echo bin2hex(random_bytes(32));"`.
+
+   `config.php` is never committed.
+4. **Open** `http://localhost/sfmtp/` and sign in.
+
+To try it without Apache, run `php -S 127.0.0.1:8090` in this folder and open
+`http://127.0.0.1:8090`. The built-in server is for local use only.
+
+### nginx
+
+Point `root` at this folder, pass `*.php` to PHP-FPM, and deny the private parts:
+
+```nginx
+location ~ ^/(inc|database|tests)/ { deny all; }
+location ~ ^/config(\.sample)?\.php$ { deny all; }
+location ~ /\. { deny all; }
+```
+
+## Demo accounts
+
+Every account's password is **`Password123!`**.
+
+| Email | Role |
+| --- | --- |
+| owner@aggfarms.test | Owner of *AGG Crop Farm* and *AGG Mixed Farm* |
+| manager@aggfarms.test | Farm manager (Mixed farm) |
+| agronomist@aggfarms.test | Agronomist (both farms) |
+| livestock@aggfarms.test | Livestock officer (Mixed farm) |
+| store@aggfarms.test | Store keeper (Mixed farm) |
+| accountant@aggfarms.test | Accountant (Mixed farm) |
+| worker@aggfarms.test | Field worker (both farms) |
+| admin@sfmtp.test | Platform admin (approves and suspends farms) |
+
+**Two-step sign-in.** Owners, accountants and platform admins must set up an authenticator app
+(Google Authenticator, Microsoft Authenticator, Aegis…) the first time they sign in, so have
+one ready. Each gets 10 one-time recovery codes. For a quick local demo only, you can set
+`'require_mfa' => false` in `config.php`.
+
+The supplier and customer accounts in the demo data belong to the portals, which are not in
+this version yet.
+
+## What is in it
+
+| Area | Pages |
+| --- | --- |
+| Sign-in and account | `login.php`, `mfa.php`, `mfa-setup.php`, `profile.php`, `farms.php` (switch or create a farm), `notifications.php` |
+| Dashboard | `dashboard.php`: figures for your role, your tasks with check-in and check-out, work to verify, field alerts, animal health due |
+| Farm structure | `structure.php`: blocks, sections, plots, stores and buildings |
+| Crops | `crops.php`, `cycle.php`: crop cycles, field work and inputs (with withholding periods), field reports, stages, harvests |
+| Livestock | `livestock.php`, `animal.php`: animals and groups, weights, health treatments with withdrawal periods, milk and eggs, moves and exits |
+| Workers and tasks | `workers.php` (workers, attendance, leave), `tasks.php`, `task.php`: plan and assign work → start → submit → verify. Nobody verifies their own work. |
+| Inventory | `inventory.php`: items, receive and issue stock at average cost, lots and expiry, movements |
+| Finance | `finance.php`, `invoice.php`: expenses with an approval limit, payments, income, a double-entry journal, profit and loss, trial balance |
+| Sales | `sales.php`: customers, invoices, shipments |
+| Traceability | `trace.php`, `batch.php`, `labels.php`, `q.php`: batch history with a tamper check, split/process/package, recall, publish with QR codes and printable labels, and the public scan page |
+| Administration | `members.php` (people and roles), `settings.php` (farm rules), `audit-log.php`, `admin.php` (platform staff) |
+
+## How it is built
 
 ```
-sfmtp/
-├── backend/                 Laravel 12 API (modular monolith)          → backend/README.md
-├── web/                     Next.js 16 web app + backend-for-frontend  → web/README.md
-├── mobile/                  Flutter app for every farm role (offline)  → mobile/README.md
-├── packages/api-contracts/  OpenAPI 3.1 contract (source of the typed clients)
-├── infra/docker/            Dockerfiles and the local compose stack
-└── docs/                    Architecture and design documents
+*.php            one file per page
+inc/             shared code: database, sign-in, permissions, ledger, stock, traceability, QR, layout
+assets/          style.css, app.js
+database/        sfmtp.sql (schema + demo data), sfmtp-triggers.sql (optional)
+tests/smoke.php  end-to-end test
 ```
 
-## Quick start (Docker)
+- **Farms are kept apart.** Every farm query filters on the current farm, and a record from
+  another farm is a 404. What each person can do comes from their roles on that farm (Members
+  → Roles & permissions).
+- **Security.**
+  - Every query is a prepared statement and all output is escaped.
+  - Every form has a CSRF token.
+  - Sessions use HttpOnly SameSite cookies.
+  - A strict Content-Security-Policy allows no inline scripts.
+  - Passwords are hashed with bcrypt, and accounts lock after 5 wrong tries.
+  - Authenticator secrets are encrypted with AES-256-GCM.
+- **Traceability is tamper-evident.** Each batch event is chained to the one before it with
+  SHA-256. *Traceability → Integrity* re-checks the whole chain.
+- **Money is double-entry.** Every expense, payment, invoice and stock movement posts a
+  balanced journal entry. Mistakes are reversed, never edited.
 
-```bash
-cd sfmtp
-cp infra/docker/.env.example infra/docker/.env   # fill APP_KEY and JWT_SECRET
-docker compose -f infra/docker/compose.yaml up --build
+## Testing
+
+Run this against a **throw-away copy** of the database, because it adds data:
+
+```sh
+php -S 127.0.0.1:8090 &          # with config.php pointing at the test database
+php tests/smoke.php http://127.0.0.1:8090
 ```
 
-Open http://localhost:3000 and sign in with a demo account (password
-`Password123!`), e.g. `agronomist@aggfarms.test`, `manager@aggfarms.test`, or
-`owner@aggfarms.test` (the owner is asked to set up MFA first). Platform staff:
-`admin@sfmtp.test`, `support@sfmtp.test`, `billing@sfmtp.test`. The full list is
-in [backend/README.md](backend/README.md).
+It signs in as each demo role (setting up two-step sign-in where needed) and opens every
+page. It runs the main flows (field work, harvest, processing, publishing and scanning a
+QR code, expenses, invoices and payments, stock, tasks). It also checks the role boundaries.
+GitHub Actions runs it on every push (`.github/workflows/sfmtp-ci.yml`).
 
-To run without Docker, follow [backend/README.md](backend/README.md) and
-[web/README.md](web/README.md).
+## Earlier version
 
-## Quality gates
+Before this, SFMTP was a Laravel API with a Next.js web app and a Flutter mobile app. That code
+is still in the git history, up to commit `d64eb10`. This plain PHP version replaces it and
+uses the same database design, demo data and hash chain.
 
-CI (`.github/workflows/sfmtp-ci.yml`) runs on every change under `sfmtp/`:
-
-- API tests on **PostgreSQL 16** (as a non-superuser, so row-level security is
-  exercised) and on **MySQL 8**, plus code style
-- the cross-tenant sweep: every `/farms/{farm}` route is called as another
-  farm's owner and must answer 404 without changing data
-- OpenAPI lint, and a check that routes, contract and generated web types agree
-- web lint, type-check, unit tests and production build
-- mobile analyze, unit and widget tests (the docs/08 §6 offline suite), the
-  offline scenarios against a live API, and release APKs with a size budget
-- Docker image builds
-
-## Design documents
-
-| # | Document | What it answers |
-|---|----------|-----------------|
-| 01 | [System Architecture](docs/01-system-architecture.md) | How the system is structured, from the deployment view down to the code layers |
-| 02 | [Tenant Isolation Strategy](docs/02-tenant-isolation.md) | How Farm A is kept from ever seeing Farm B's data |
-| 03 | [Database ERD](docs/03-database-erd.md) | Tables, relationships, keys and constraints |
-| 04 | [Role & Permission Matrix](docs/04-roles-and-permissions.md) | Who can do what, at module, record and field level |
-| 05 | [Dashboard Architecture](docs/05-dashboard-architecture.md) | Ten role-specific dashboards and how their data is computed |
-| 06 | [API Conventions & Dashboard Contracts](docs/06-api-contracts.md) | `/api/v1` conventions, dashboard payloads, traceability and sync endpoints |
-| 07 | [Traceability & Audit Design](docs/07-traceability-and-audit.md) | Batch graph, append-only events, QR codes, audit trail |
-| 08 | [Offline Sync Design](docs/08-offline-sync.md) | Mobile outbox, pull/push protocol, conflict resolution |
-| 09 | [Module Dependency Map](docs/09-module-dependency-map.md) | Which modules depend on which, and the build order that follows |
-| 10 | [Development Roadmap](docs/10-roadmap.md) | Phases, exit criteria and test gates |
-| 11 | [Security](docs/11-security.md) | Accounts, API surface, isolation, data protection, dependency and security testing |
-| 12 | [Operations & DR Runbook](docs/12-operations.md) | Monitoring, capacity, backups, restore, drills, incident scenarios |
-| 13 | [Deployment](docs/13-deployment.md) | Production shape, configuration, first and rolling deployments |
-| 14 | [User Guide](docs/14-user-guide.md) | What each role does in the app |
-| 15 | [API Guide](docs/15-api-guide.md) | Signing in, safe writes, sync, webhooks, devices, exports, limits |
-| 16 | [Launch Checklist](docs/16-launch-checklist.md) | What is done and what remains before real farms go live |
-| — | [Architecture Decision Records](docs/adr/README.md) | Decisions taken to fill gaps in the requirements, with open questions |
-
-## Source of truth
-
-The master requirements document (*SFMTP Master System Requirements &
-Development Prompt*) takes precedence. Where these documents go beyond it or
-resolve an ambiguity in it, the reasoning is recorded as an ADR.
+Not in this version yet, planned for later rounds:
+- supplier and customer portals;
+- procurement;
+- payroll and budgets;
+- report exports;
+- SMS, email and payment integrations;
+- the offline mobile app.
