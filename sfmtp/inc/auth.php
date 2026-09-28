@@ -62,9 +62,6 @@ function attempt_login(string $email, string $password): array|string
     if ($user['locked_until'] && strtotime($user['locked_until'] . ' UTC') > time()) {
         return 'Too many wrong passwords. Try again in 15 minutes.';
     }
-    if ($user['user_type'] === 'party') {
-        return 'Supplier and customer portals are not in this version yet.';
-    }
     if (!password_verify($password, $user['password'])) {
         $failures = (int) $user['failed_logins'] + 1;
         $locked = $failures >= MAX_FAILED_LOGINS ? gmdate('Y-m-d H:i:s', time() + LOCKOUT_SECONDS) : null;

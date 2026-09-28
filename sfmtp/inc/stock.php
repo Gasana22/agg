@@ -18,12 +18,14 @@ function stock_balance_row(string $itemId, string $locationId, ?string $lotId): 
  * Receive stock. $creditCode is where the value comes from:
  * 3100 opening balances, 2000 accounts payable, 1000 cash, 1010 mobile money.
  */
-function stock_receive(array $item, string $locationId, float $quantity, float $unitCost, string $date, string $creditCode, ?string $lotNumber, ?string $expiresOn, ?string $note): void
+function stock_receive(array $item, string $locationId, float $quantity, float $unitCost, string $date, string $creditCode, ?string $lotNumber, ?string $expiresOn, ?string $note, array $ref = []): array
 {
     if ($quantity <= 0 || $unitCost < 0) {
         fail('Quantity must be above zero and the unit cost cannot be negative.');
     }
-    tx(function () use ($item, $locationId, $quantity, $unitCost, $date, $creditCode, $lotNumber, $expiresOn, $note) {
+    // $ref: source_type / source_id (e.g. a delivery), supplier_id, memo for the ledger.
+    $source = $ref['source_type'] ?? 'manual_receipt';
+    return tx(function () use ($item, $locationId, $quantity, $unitCost, $date, $creditCode, $lotNumber, $expiresOn, $note, $ref, $source) {
         $value = round($quantity * $unitCost, 2);
         $lotId = null;
         if ($item['tracks_lots']) {
@@ -32,21 +34,23 @@ function stock_receive(array $item, string $locationId, float $quantity, float $
             $lotId = uuid();
             insert('stock_lots', ['id' => $lotId, 'farm_id' => farm_id(), 'item_id' => $item['id'], 'code' => next_code('stock_lots', 'LOT', 4),
                 'lot_number' => $lotNumber, 'expires_on' => $expiresOn, 'received_on' => $date, 'unit_cost' => number_format($unitCost, 4, '.', ''),
-                'supplier_id' => null, 'trace_batch_id' => $batch['id'], 'source_type' => 'manual_receipt', 'source_id' => null, 'created_at' => now_utc()]);
+                'supplier_id' => $ref['supplier_id'] ?? null, 'trace_batch_id' => $batch['id'], 'source_type' => $source, 'source_id' => $ref['source_id'] ?? null, 'created_at' => now_utc()]);
         }
         $bal = stock_balance_row($item['id'], $locationId, $lotId);
         $newQty = (float) $bal['quantity'] + $quantity;
         q('UPDATE stock_balances SET quantity = ?, value = ?, updated_at = ? WHERE id = ?', [$newQty, (float) $bal['value'] + $value, now_utc(), $bal['id']]);
 
-        $entry = $value > 0 ? ledger_post($date, 'stock_receipt', null, "Stock in: {$item['name']}", [
+        $entry = $value > 0 ? ledger_post($date, $source === 'manual_receipt' ? 'stock_receipt' : $source, $ref['source_id'] ?? null, $ref['memo'] ?? "Stock in: {$item['name']}", [
             ['account_id' => account_id('1300'), 'debit' => $value],
             ['account_id' => account_id($creditCode), 'credit' => $value],
         ]) : null;
-        insert('stock_movements', ['id' => uuid(), 'farm_id' => farm_id(), 'item_id' => $item['id'], 'lot_id' => $lotId, 'location_id' => $locationId,
+        $movementId = uuid();
+        insert('stock_movements', ['id' => $movementId, 'farm_id' => farm_id(), 'item_id' => $item['id'], 'lot_id' => $lotId, 'location_id' => $locationId,
             'type' => 'receipt', 'quantity' => $quantity, 'unit_cost' => $unitCost, 'value' => $value, 'balance_after' => $newQty,
-            'source_type' => 'manual_receipt', 'ledger_entry_id' => $entry, 'note' => $note, 'occurred_at' => $date . ' 12:00:00.000000',
+            'source_type' => $source, 'source_id' => $ref['source_id'] ?? null, 'ledger_entry_id' => $entry, 'note' => $note, 'occurred_at' => $date . ' 12:00:00.000000',
             'recorded_by' => $_SESSION['uid'] ?? null, 'created_at' => gmdate('Y-m-d H:i:s.u')]);
         audit('inventory.received', null, ['type' => 'inventory_item', 'id' => $item['id']], null, ['quantity' => $quantity, 'unit_cost' => $unitCost]);
+        return ['movement_id' => $movementId, 'lot_id' => $lotId];
     });
 }
 

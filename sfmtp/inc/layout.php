@@ -3,8 +3,12 @@
 
 function nav_items(): array
 {
+    if (!empty($GLOBALS['sfmtp_portal'])) {
+        return array_map(fn ($i) => [$i[0], $i[1], null], portal_nav());
+    }
+    $portals = portal_links() ? [['portal.php', 'Supplier & customer portals', null]] : [];
     if (!current_farm()) {
-        return is_platform_admin() ? [['admin.php', 'Platform admin', null]] : [['farms.php', 'My farms', null]];
+        return is_platform_admin() ? [['admin.php', 'Platform admin', null]] : [...(current_user()['user_type'] === 'party' ? [] : [['farms.php', 'My farms', null]]), ...$portals];
     }
     $items = [
         ['dashboard.php', 'Dashboard', null],
@@ -13,6 +17,7 @@ function nav_items(): array
         ['crops.php', 'Crops', 'crops.operations.view'],
         ['livestock.php', 'Livestock', 'livestock.animals.view'],
         ['inventory.php', 'Inventory', 'inventory.view'],
+        ['purchasing.php', 'Purchasing', 'suppliers.view'],
         ['workers.php', 'Workers', 'workers.view'],
         ['finance.php', 'Finance', 'finance.view'],
         ['sales.php', 'Sales', 'sales.view'],
@@ -21,7 +26,11 @@ function nav_items(): array
         ['audit-log.php', 'Audit log', 'audit.view'],
         ['settings.php', 'Farm settings', 'farm.settings.manage'],
     ];
-    return array_values(array_filter($items, fn ($i) => $i[2] === null || can($i[2])));
+    $items = array_values(array_filter($items, fn ($i) => $i[2] === null || can($i[2])));
+    if (can('suppliers.manage') || can('customers.manage')) {
+        array_splice($items, count($items) - (can('farm.settings.manage') ? 1 : 0), 0, [['portal-access.php', 'Portal access', null]]);
+    }
+    return [...$items, ...$portals];
 }
 
 function page_start(string $title, bool $bare = false): void
@@ -29,8 +38,15 @@ function page_start(string $title, bool $bare = false): void
     $_SESSION['old_view'] = $_SESSION['old'] ?? [];
     unset($_SESSION['old']);
     $user = current_user();
-    $farm = $user && ($_SESSION['mfa_ok'] ?? false) ? current_farm() : null;
-    $self = basename($_SERVER['SCRIPT_NAME'] ?? '');
+    if ($user && $user['user_type'] === 'party') {
+        $GLOBALS['sfmtp_portal'] = true;
+    }
+    $portal = !empty($GLOBALS['sfmtp_portal']);
+    if ($portal) {
+        act_in_farm(null);
+    }
+    $farm = $user && ($_SESSION['mfa_ok'] ?? false) && !$portal ? current_farm() : null;
+    $self = basename($_SERVER['SCRIPT_NAME'] ?? '') . (($_GET['tab'] ?? null) && $portal ? '?tab=' . $_GET['tab'] : '');
     $appName = e(config('app_name', 'SFMTP'));
     echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">';
     echo '<title>' . e($title) . ' · ' . $appName . '</title><link rel="stylesheet" href="' . e(url('assets/style.css')) . '"></head><body>';
@@ -44,8 +60,8 @@ function page_start(string $title, bool $bare = false): void
     }
 
     $unread = $farm ? (int) val('SELECT COUNT(*) FROM member_notifications WHERE farm_id = ? AND user_id = ? AND read_at IS NULL', [$farm['id'], $user['id']]) : 0;
-    echo '<header class="top"><a class="brand" href="' . e(url('index.php')) . '">🌱 ' . $appName . '</a>';
-    $farms = my_farms();
+    echo '<header class="top"><a class="brand" href="' . e(url($portal ? 'portal.php' : 'index.php')) . '">🌱 ' . $appName . ($portal ? ' <span class="muted">portal</span>' : '') . '</a>';
+    $farms = $portal ? [] : my_farms();
     if ($farms) {
         echo '<form method="post" action="' . e(url('farms.php')) . '" class="switcher">' . csrf_field() . '<select name="farm_id" data-autosubmit aria-label="Farm">';
         foreach ($farms as $f) {
@@ -53,7 +69,8 @@ function page_start(string $title, bool $bare = false): void
         }
         echo '</select><noscript><button>Go</button></noscript></form>';
     }
-    echo '<div class="user"><a href="' . e(url('notifications.php')) . '" title="Notifications">🔔' . ($unread ? '<span class="dot">' . $unread . '</span>' : '') . '</a>';
+    echo '<div class="user">' . ($farm ? '<a href="' . e(url('notifications.php')) . '" title="Notifications">🔔' . ($unread ? '<span class="dot">' . $unread . '</span>' : '') . '</a>' : '')
+        . ($portal && my_farms() ? '<a href="' . e(url('dashboard.php')) . '">My farms</a>' : '');
     echo '<a href="' . e(url('profile.php')) . '">' . e($user['name']) . '</a>';
     echo '<form method="post" action="' . e(url('logout.php')) . '">' . csrf_field() . '<button class="link">Sign out</button></form></div></header>';
 

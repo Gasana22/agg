@@ -109,3 +109,6 @@ dl.facts dd { margin: 0; }
 a.btn { display: inline-block; border-radius: 8px; border: 1px solid var(--border); background: #fff; padding: .45rem .9rem; color: var(--text); }
 a.btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
 a.btn:hover { text-decoration: none; filter: brightness(.97); }
+.products { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); margin-bottom: 1rem; }
+.product { border: 1px solid var(--border); border-radius: 10px; padding: .75rem; display: flex; flex-direction: column; gap: .35rem; }
+.product .price { font-weight: 600; font-size: 1.05rem; }

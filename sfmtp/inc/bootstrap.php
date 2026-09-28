@@ -63,4 +63,7 @@ require __DIR__ . '/audit.php';
 require __DIR__ . '/trace.php';
 require __DIR__ . '/ledger.php';
 require __DIR__ . '/stock.php';
+require __DIR__ . '/procurement.php';
+require __DIR__ . '/orders.php';
+require __DIR__ . '/portal.php';
 require __DIR__ . '/layout.php';

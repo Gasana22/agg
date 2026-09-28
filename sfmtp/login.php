@@ -13,7 +13,11 @@ if (is_post()) {
         $_SESSION['old'] = ['email' => $_POST['email'] ?? ''];
         redirect('login.php');
     }
+    $next = $_SESSION['after_login'] ?? null;
     start_session_for($result);
+    if (is_string($next) && preg_match('/^invite\.php\?token=[0-9a-f]{48}$/', $next)) {
+        $_SESSION['after_login'] = $next;
+    }
     if (empty($_SESSION['mfa_ok'])) {
         redirect(user_has_mfa($result['id']) ? 'mfa.php' : 'mfa-setup.php');
     }

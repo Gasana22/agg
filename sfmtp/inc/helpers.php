@@ -85,6 +85,22 @@ function input_num(string $key): ?float
     return is_numeric($v) ? (float) $v : null;
 }
 
+/** A number from a nested form field (lines[0][quantity]), or null. */
+function num(mixed $v): ?float
+{
+    if ($v === null || is_array($v)) {
+        return null;
+    }
+    $v = str_replace([',', ' '], '', trim((string) $v));
+    return $v !== '' && is_numeric($v) ? (float) $v : null;
+}
+
+/** A UUID from a nested form field, or null. */
+function uuid_or_null(mixed $v): ?string
+{
+    return is_string($v) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $v) ? $v : null;
+}
+
 function input_date(string $key): ?string
 {
     $v = input($key, 10);
@@ -187,21 +203,21 @@ function label(?string $value): string
 function badge(?string $status): string
 {
     $tone = match ($status) {
-        'active', 'verified', 'approved', 'paid', 'delivered', 'resolved', 'issued', 'open' => 'ok',
-        'submitted', 'requested', 'pending', 'in_progress', 'assigned', 'monitoring', 'dispatched', 'draft', 'trialing' => 'warn',
-        'rejected', 'void', 'failed', 'suspended', 'recalled', 'revoked', 'dead', 'cancelled' => 'bad',
+        'active', 'verified', 'approved', 'paid', 'delivered', 'resolved', 'issued', 'open', 'accepted', 'received', 'recorded' => 'ok',
+        'submitted', 'requested', 'pending', 'in_progress', 'assigned', 'monitoring', 'dispatched', 'draft', 'trialing', 'sent', 'partially_received', 'invoiced' => 'warn',
+        'rejected', 'void', 'failed', 'suspended', 'recalled', 'revoked', 'dead', 'cancelled', 'expired' => 'bad',
         default => 'neutral',
     };
     return '<span class="badge ' . $tone . '">' . e(label($status)) . '</span>';
 }
 
 /** <option> list from rows. */
-function options(array $rows, string $valueKey, string|callable $labelKey, ?string $selected = null, bool $blank = true): string
+function options(array $rows, string $valueKey, string|Closure $labelKey, ?string $selected = null, bool $blank = true): string
 {
     $html = $blank ? '<option value="">—</option>' : '';
     foreach ($rows as $r) {
         $v = $r[$valueKey];
-        $l = is_callable($labelKey) ? $labelKey($r) : $r[$labelKey];
+        $l = $labelKey instanceof Closure ? $labelKey($r) : $r[$labelKey];
         $html .= '<option value="' . e($v) . '"' . ($selected !== null && (string) $selected === (string) $v ? ' selected' : '') . '>' . e($l) . '</option>';
     }
     return $html;

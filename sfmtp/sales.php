@@ -1,10 +1,10 @@
 <?php
-/* Sales: customers, invoices with payments, and shipments that end a batch's journey at the customer. */
+/* Sales: orders, invoices with payments, shipments that end a batch's journey at the customer, customers and products. */
 require __DIR__ . '/inc/bootstrap.php';
 
 $farm = require_farm('sales.view');
 $fid = $farm['id'];
-$tab = input_in('tab', ['invoices', 'customers', 'shipments']) ?? 'invoices';
+$tab = input_in('tab', ['orders', 'invoices', 'customers', 'shipments', 'products']) ?? 'orders';
 $money = can('finance.view') || can('sales.invoice');
 
 if (is_post()) {
@@ -23,85 +23,121 @@ if (is_post()) {
             flash('success', "$name added.");
         } elseif ($action === 'invoice') {
             require_can('sales.invoice');
-            ensure_chart();
             $customer = farm_row('customers', input_id('customer_id'));
-            $date = input_date('invoice_date') ?? farm_today();
             $lines = [];
             foreach ((array) ($_POST['lines'] ?? []) as $l) {
                 $desc = trim((string) ($l['description'] ?? ''));
                 if ($desc === '') {
                     continue;
                 }
-                $q = (float) str_replace(',', '', (string) ($l['quantity'] ?? 0));
-                $p = (float) str_replace(',', '', (string) ($l['unit_price'] ?? 0));
-                ($q > 0 && $p >= 0) || fail("Check the quantity and price of \"$desc\".");
-                $acc = $l['account_id'] ?? '';
-                val("SELECT 1 FROM ledger_accounts WHERE id = ? AND farm_id = ? AND type = 'income'", [$acc, $fid]) || fail('Choose the kind of sale for each line.');
-                $lines[] = ['description' => mb_substr($desc, 0, 300), 'quantity' => $q, 'unit' => mb_substr(trim((string) ($l['unit'] ?? '')), 0, 20) ?: null, 'unit_price' => $p, 'amount' => round($q * $p, 2), 'account_id' => $acc];
+                $q = num($l['quantity'] ?? null);
+                $p = num($l['unit_price'] ?? null);
+                ($q > 0 && $p !== null && $p >= 0) || fail("Check the quantity and price of \"$desc\".");
+                $lines[] = ['description' => $desc, 'quantity' => $q, 'unit' => mb_substr(trim((string) ($l['unit'] ?? '')), 0, 20) ?: null, 'unit_price' => $p,
+                    'account_id' => (string) ($l['account_id'] ?? '')];
             }
             $lines || fail('Add at least one line.');
-            $total = array_sum(array_column($lines, 'amount'));
-            $total > 0 || fail('The invoice total must be above zero.');
-            $id = uuid();
-            tx(function () use ($id, $fid, $customer, $date, $lines, $total) {
-                $code = next_code('customer_invoices', 'INV', 4);
-                $posting = [['account_id' => account_id('1200'), 'debit' => $total]];
-                foreach ($lines as $l) {
-                    $posting[] = ['account_id' => $l['account_id'], 'credit' => $l['amount'], 'memo' => $l['description']];
-                }
-                $entry = ledger_post($date, 'customer_invoice', $id, "$code to {$customer['name']}", $posting);
-                $due = input_date('due_on') ?? ($customer['payment_terms_days'] ? date('Y-m-d', strtotime("$date +{$customer['payment_terms_days']} days")) : null);
-                insert('customer_invoices', ['id' => $id, 'farm_id' => $fid, 'code' => $code, 'status' => 'issued', 'customer_id' => $customer['id'], 'invoice_date' => $date, 'due_on' => $due,
-                    'amount' => $total, 'paid_amount' => 0, 'notes' => input('notes', 500), 'ledger_entry_id' => $entry, 'created_by' => $_SESSION['uid'], 'issued_by' => $_SESSION['uid'],
-                    'issued_at' => now_utc(), 'version' => 1, 'created_at' => now_utc(), 'updated_at' => now_utc()]);
-                foreach ($lines as $i => $l) {
-                    insert('customer_invoice_lines', ['id' => uuid(), 'farm_id' => $fid, 'invoice_id' => $id, 'position' => $i + 1] + $l + ['created_at' => now_utc(), 'updated_at' => now_utc()]);
-                }
-                audit('sales.invoice.issued', null, ['type' => 'customer_invoice', 'id' => $id], null, ['code' => $code, 'amount' => $total]);
-            });
-            flash('success', 'Invoice issued for ' . money($total) . '.');
+            $id = customer_invoice_issue($customer, $lines, input_date('invoice_date') ?? farm_today(), input_date('due_on'), input('notes', 500));
+            flash('success', 'Invoice issued.');
             redirect('invoice.php', ['id' => $id]);
         } elseif ($action === 'dispatch') {
             require_can('sales.fulfil');
             $customer = farm_row('customers', input_id('customer_id'));
             $batch = row("SELECT * FROM trace_batches WHERE id = ? AND farm_id = ? AND status = 'open' AND kind <> 'shipment'", [input_id('batch_id'), $fid]) ?? fail('Choose an open batch to ship.');
-            $qty = input_num('quantity');
-            $sid = uuid();
-            tx(function () use ($sid, $fid, $customer, $batch, $qty) {
-                $code = next_code('shipments', 'SHP');
-                $ship = trace_create_batch('shipment', ['name' => "$code to {$customer['name']}", 'quantity' => $qty ?? $batch['quantity'], 'unit' => $batch['unit'], 'source_type' => 'shipment', 'source_id' => $sid]);
-                trace_link($batch, $ship, 'ship', $qty ?? ($batch['quantity'] !== null ? (float) $batch['quantity'] : null), $batch['unit']);
-                insert('shipments', ['id' => $sid, 'farm_id' => $fid, 'code' => $code, 'status' => 'dispatched', 'customer_id' => $customer['id'], 'trace_batch_id' => $ship['id'],
-                    'destination' => input('destination', 300), 'vehicle' => input('vehicle', 60), 'driver' => input('driver', 120), 'notes' => input('notes', 500),
-                    'dispatched_at' => gmdate('Y-m-d H:i:s'), 'dispatched_by' => $_SESSION['uid'], 'version' => 1, 'created_at' => now_utc(), 'updated_at' => now_utc()]);
-                insert('shipment_lines', ['id' => uuid(), 'farm_id' => $fid, 'shipment_id' => $sid, 'position' => 1, 'trace_batch_id' => $batch['id'], 'description' => $batch['name'],
-                    'quantity' => $qty ?? $batch['quantity'], 'unit' => $batch['unit'], 'created_at' => now_utc()]);
-                trace_record($ship['id'], 'dispatched', ['subject_type' => 'shipment', 'subject_id' => $sid, 'payload' => array_filter(['shipment' => $code, 'customer' => $customer['name'],
-                    'customer_code' => $customer['code'], 'batches' => $batch['batch_code'], 'destination' => input('destination', 300), 'vehicle' => input('vehicle', 60)])]);
-            });
+            ship_dispatch($customer, [['batch' => $batch, 'quantity' => input_num('quantity')]], ['destination' => input('destination', 300), 'vehicle' => input('vehicle', 60),
+                'driver' => input('driver', 120), 'notes' => input('notes', 500)]);
             flash('success', 'Shipment dispatched.');
         } elseif ($action === 'deliver') {
             require_can('sales.fulfil');
-            $s = farm_row('shipments', input_id('shipment_id'));
-            $s['status'] === 'dispatched' || fail('This shipment is not on the road.');
-            $by = input('received_by', 120) ?? fail('Who received it?');
-            tx(function () use ($s, $by, $fid) {
-                q("UPDATE shipments SET status = 'delivered', delivered_at = ?, received_by = ?, closed_by = ?, updated_at = ?, version = version + 1 WHERE id = ? AND farm_id = ?",
-                    [gmdate('Y-m-d H:i:s'), $by, $_SESSION['uid'], now_utc(), $s['id'], $fid]);
-                $customer = row('SELECT name FROM customers WHERE id = ?', [$s['customer_id']]);
-                trace_record($s['trace_batch_id'], 'delivered', ['subject_type' => 'shipment', 'subject_id' => $s['id'], 'payload' => ['shipment' => $s['code'], 'customer' => $customer['name'], 'received_by' => $by]]);
-                q("UPDATE trace_batches SET status = 'closed', updated_at = ? WHERE id = ? AND farm_id = ?", [now_utc(), $s['trace_batch_id'], $fid]);
-            });
+            ship_deliver(farm_row('shipments', input_id('shipment_id')), input('received_by', 120) ?? fail('Who received it?'));
             flash('success', 'Delivered.');
+        } elseif ($action === 'order') {
+            require_can('sales.orders.create');
+            $customer = farm_row('customers', input_id('customer_id'));
+            $id = so_place($customer, (array) ($_POST['lines'] ?? []), ['requested_delivery_on' => input_date('requested_delivery_on'), 'delivery_address' => input('delivery_address', 300),
+                'internal_note' => input('internal_note', 500)], 'internal');
+            flash('success', 'Order recorded.');
+            redirect('order.php', ['id' => $id]);
+        } elseif ($action === 'product') {
+            require_can('sales.pricing.manage');
+            $name = input('name', 150) ?? fail('Name the product.');
+            $unit = input('unit', 20) ?? fail('Give the unit it is sold in.');
+            val('SELECT 1 FROM units WHERE code = ?', [$unit]) || fail('Unknown unit.');
+            $price = input_num('list_price');
+            ($price !== null && $price >= 0) || fail('Give the price.');
+            $item = input_id('inventory_item_id');
+            if ($item && !belongs('inventory_items', $item)) {
+                fail('Unknown stock item.');
+            }
+            insert('products', ['id' => uuid(), 'farm_id' => $fid, 'code' => next_code('products', 'PRD'), 'name' => $name, 'description' => input('description', 1000),
+                'category' => input('category', 60), 'unit' => $unit, 'list_price' => $price, 'currency' => current_farm()['currency'], 'min_order_quantity' => input_num('min_order_quantity'),
+                'availability_note' => input('availability_note', 200), 'inventory_item_id' => $item, 'is_published' => input('is_published') ? 1 : 0, 'is_active' => 1,
+                'created_by' => $_SESSION['uid'], 'version' => 1, 'created_at' => now_utc(), 'updated_at' => now_utc()]);
+            audit('sales.product.created', null, ['type' => 'product', 'id' => null], null, ['name' => $name, 'price' => $price]);
+            flash('success', "$name added.");
+        } elseif ($action === 'product_update') {
+            require_can('sales.pricing.manage');
+            $p = farm_row('products', input_id('product_id'));
+            $price = input_num('list_price');
+            ($price !== null && $price >= 0) || fail('Give the price.');
+            q('UPDATE products SET list_price = ?, availability_note = ?, is_published = ?, is_active = ?, updated_at = ?, version = version + 1 WHERE id = ? AND farm_id = ?',
+                [$price, input('availability_note', 200), input('is_published') ? 1 : 0, input('is_active') ? 1 : 0, now_utc(), $p['id'], $fid]);
+            audit('sales.product.updated', null, ['type' => 'product', 'id' => $p['id']], ['price' => $p['list_price']], ['price' => $price, 'published' => (bool) input('is_published')]);
+            flash('success', "{$p['name']} saved.");
         }
-    }, 'sales.php', ['tab' => $action === 'customer' ? 'customers' : ($action === 'invoice' ? 'invoices' : 'shipments')]);
+    }, 'sales.php', ['tab' => match ($action) { 'customer' => 'customers', 'invoice' => 'invoices', 'order' => 'orders', 'product', 'product_update' => 'products', default => 'shipments' }]);
 }
 
 page_start('Sales');
-tabs(['invoices' => 'Invoices', 'customers' => 'Customers', 'shipments' => 'Shipments'], $tab);
-$customers = rows('SELECT * FROM customers WHERE farm_id = ? ORDER BY name', [$fid]);
+tabs(['orders' => 'Orders', 'invoices' => 'Invoices', 'shipments' => 'Shipments', 'customers' => 'Customers', 'products' => 'Products'], $tab);
+$customers = rows('SELECT c.*, (SELECT p.name FROM party_links pl JOIN parties p ON p.id = pl.party_id WHERE pl.farm_id = c.farm_id AND pl.kind = \'customer\' AND pl.record_id = c.id AND pl.status = \'active\' LIMIT 1) AS portal
+    FROM customers c WHERE c.farm_id = ? ORDER BY c.name', [$fid]);
 
-if ($tab === 'invoices') {
+if ($tab === 'orders') {
+    $status = input_in('status', ['open', 'all']) ?? 'open';
+    $orders = rows('SELECT o.*, c.name AS customer FROM sales_orders o JOIN customers c ON c.id = o.customer_id WHERE o.farm_id = ?'
+        . ($status === 'open' ? " AND o.status IN ('requested','approved','invoiced','dispatched')" : '') . ' ORDER BY o.created_at DESC LIMIT 200', [$fid]);
+    echo '<p class="row"><a class="btn' . ($status === 'open' ? ' primary' : '') . '" href="?tab=orders&status=open">Open</a><a class="btn' . ($status === 'all' ? ' primary' : '') . '" href="?tab=orders&status=all">All</a></p><div class="card">';
+    table($orders, ['Order' => fn ($o) => '<a href="' . e(url('order.php', ['id' => $o['id']])) . '"><b>' . e($o['code']) . '</b></a>' . ($o['source'] === 'portal' ? ' <span class="badge">portal</span>' : ''),
+        'Customer' => fn ($o) => e($o['customer']), 'Placed' => fn ($o) => e(fdate($o['created_at'])), 'Wanted by' => fn ($o) => e(fdate($o['requested_delivery_on'])),
+        '#Total' => fn ($o) => e(money($o['total_amount'])), 'Status' => fn ($o) => badge($o['status'])], 'No orders.');
+    echo '</div>';
+    if (can('sales.orders.create')) {
+        $products = rows('SELECT * FROM products WHERE farm_id = ? AND is_active = 1 ORDER BY name', [$fid]);
+        form_start('Record an order');
+        echo '<input type="hidden" name="action" value="order"><div class="fields">' . field('Customer', '<select name="customer_id" required>' . options(array_filter($customers, fn ($c) => $c['is_active']), 'id', 'name') . '</select>')
+            . field('Wanted by', '<input type="date" name="requested_delivery_on">') . field('Deliver to', '<input name="delivery_address" maxlength="300">', 'Empty: the customer\'s address.') . '</div>';
+        for ($i = 0; $i < 4; $i++) {
+            echo '<div class="fields">' . field('Product', '<select name="lines[' . $i . '][product_id]">' . options($products, 'id', fn ($p) => $p['name'] . ' · ' . money($p['list_price']) . '/' . $p['unit']) . '</select>')
+                . field('Quantity', '<input name="lines[' . $i . '][quantity]" inputmode="decimal">') . field('Price (empty: list price)', '<input name="lines[' . $i . '][unit_price]" inputmode="decimal">') . '</div>';
+        }
+        echo field('Internal note', '<input name="internal_note" maxlength="500">');
+        form_end('Record order');
+    }
+} elseif ($tab === 'products') {
+    $products = rows('SELECT p.*, i.name AS item FROM products p LEFT JOIN inventory_items i ON i.id = p.inventory_item_id WHERE p.farm_id = ? ORDER BY p.is_active DESC, p.name', [$fid]);
+    echo '<div class="card"><p class="muted">Published products are what customers see and order in their portal, at these prices.</p>';
+    table($products, ['Product' => fn ($p) => '<b>' . e($p['name']) . '</b> <span class="muted">' . e($p['code']) . '</span><div class="muted">' . e($p['description'] ?? '') . '</div>',
+        '#Price' => fn ($p) => e(money($p['list_price'])) . ' / ' . e($p['unit']), '#Minimum' => fn ($p) => $p['min_order_quantity'] !== null ? e(qty($p['min_order_quantity'], $p['unit'])) : '—',
+        'Availability' => fn ($p) => e($p['availability_note'] ?? '—'),
+        'Shown' => fn ($p) => $p['is_active'] ? ($p['is_published'] ? badge('active') . ' in the portal' : '<span class="muted">farm only</span>') : badge('inactive'),
+        '' => fn ($p) => can('sales.pricing.manage') ? '<details><summary class="muted">Change</summary><form method="post">' . csrf_field() . '<input type="hidden" name="action" value="product_update"><input type="hidden" name="product_id" value="' . e($p['id']) . '">'
+            . '<input name="list_price" inputmode="decimal" value="' . e((float) $p['list_price']) . '" aria-label="Price"><input name="availability_note" maxlength="200" placeholder="Availability" value="' . e($p['availability_note'] ?? '') . '">'
+            . '<label class="row"><input type="checkbox" style="width:auto" name="is_published" value="1"' . ($p['is_published'] ? ' checked' : '') . '> In the portal</label>'
+            . '<label class="row"><input type="checkbox" style="width:auto" name="is_active" value="1"' . ($p['is_active'] ? ' checked' : '') . '> Still sold</label><button class="small">Save</button></form></details>' : ''], 'No products yet.');
+    echo '</div>';
+    if (can('sales.pricing.manage')) {
+        $units = rows('SELECT code, name FROM units WHERE is_active = 1 ORDER BY dimension, code');
+        $items = rows('SELECT id, name FROM inventory_items WHERE farm_id = ? AND is_active = 1 ORDER BY name', [$fid]);
+        form_start('Add a product');
+        echo '<input type="hidden" name="action" value="product"><div class="fields">' . field('Name', '<input name="name" required maxlength="150">') . field('Category', '<input name="category" maxlength="60">')
+            . field('Sold in', '<select name="unit" required>' . options($units, 'code', fn ($u) => $u['code'] . ' · ' . $u['name']) . '</select>') . field('Price per unit', '<input name="list_price" required inputmode="decimal">')
+            . field('Minimum order', '<input name="min_order_quantity" inputmode="decimal">') . field('Availability', '<input name="availability_note" maxlength="200" placeholder="e.g. From July">')
+            . field('Stock item (optional)', '<select name="inventory_item_id">' . options($items, 'id', 'name') . '</select>') . field('Description', '<input name="description" maxlength="1000">') . '</div>'
+            . '<label class="row"><input type="checkbox" style="width:auto" name="is_published" value="1"> Show it to customers in the portal</label>';
+        form_end('Add product');
+    }
+} elseif ($tab === 'invoices') {
     $inv = rows('SELECT i.*, c.name AS customer FROM customer_invoices i JOIN customers c ON c.id = i.customer_id WHERE i.farm_id = ? ORDER BY i.invoice_date DESC LIMIT 200', [$fid]);
     $open = array_filter($inv, fn ($i) => $i['status'] === 'issued');
     if ($money) {
@@ -130,7 +166,8 @@ if ($tab === 'invoices') {
 } elseif ($tab === 'customers') {
     echo '<div class="card">';
     table($customers, ['Code' => fn ($c) => e($c['code']), 'Customer' => fn ($c) => '<b>' . e($c['name']) . '</b><div class="muted">' . e($c['contact_person'] ?? '') . '</div>',
-        'Phone' => fn ($c) => e($c['phone'] ?? '—'), 'Email' => fn ($c) => e($c['email'] ?? '—'), '#Terms (days)' => fn ($c) => e($c['payment_terms_days'] ?? '—')], 'No customers.');
+        'Phone' => fn ($c) => e($c['phone'] ?? '—'), 'Email' => fn ($c) => e($c['email'] ?? '—'), '#Terms (days)' => fn ($c) => e($c['payment_terms_days'] ?? '—'),
+        'Portal' => fn ($c) => $c['portal'] ? '<span class="badge ok">' . e($c['portal']) . '</span>' : (can('customers.manage') ? '<a href="' . e(url('portal-access.php', ['kind' => 'customer', 'record' => $c['id']])) . '">Invite</a>' : '—')], 'No customers.');
     echo '</div>';
     if (can('customers.manage')) {
         form_start('Add a customer');

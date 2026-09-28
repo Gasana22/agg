@@ -18,8 +18,20 @@ function my_farms(): array
         WHERE fu.user_id = ? AND fu.status = 'active' AND f.status IN ('pending','active') ORDER BY f.name", [$user['id']]);
 }
 
+/**
+ * Portal pages act inside one linked farm at a time: the supplier's or
+ * customer's link decides which farm, not a membership (see inc/portal.php).
+ */
+function act_in_farm(?array $farm): void
+{
+    $GLOBALS['sfmtp_acting_farm'] = $farm;
+}
+
 function current_farm(): ?array
 {
+    if (isset($GLOBALS['sfmtp_acting_farm'])) {
+        return $GLOBALS['sfmtp_acting_farm'];
+    }
     static $farm = false;
     if ($farm !== false) {
         return $farm;
@@ -53,7 +65,7 @@ function require_farm(?string $permission = null): array
     $user = require_login();
     $farm = current_farm();
     if (!$farm) {
-        redirect(is_platform_admin($user) ? 'admin.php' : 'farms.php');
+        redirect(is_platform_admin($user) ? 'admin.php' : ($user['user_type'] === 'party' ? 'portal.php' : 'farms.php'));
     }
     if ($permission !== null) {
         require_can($permission);
@@ -152,6 +164,18 @@ function notify(array $userIds, string $kind, string $title, ?string $body = nul
         insert('member_notifications', ['id' => uuid(), 'farm_id' => farm_id(), 'user_id' => $uid, 'kind' => $kind, 'title' => mb_substr($title, 0, 150),
             'body' => $body ? mb_substr($body, 0, 500) : null, 'link' => $link, 'created_at' => gmdate('Y-m-d H:i:s.u')]);
     }
+}
+
+/** Tell everyone on the farm who holds one of the permissions (and the owners). */
+function notify_holders(array $permissions, string $kind, string $title, ?string $body = null, ?string $link = null): void
+{
+    $in = implode(',', array_fill(0, count($permissions), '?'));
+    $ids = array_column(rows("SELECT DISTINCT fu.user_id FROM farm_users fu
+        LEFT JOIN farm_user_roles fur ON fur.farm_user_id = fu.id
+        LEFT JOIN farm_role_permissions frp ON frp.farm_role_id = fur.farm_role_id
+        LEFT JOIN permissions p ON p.id = frp.permission_id
+        WHERE fu.farm_id = ? AND fu.status = 'active' AND (fu.is_owner = 1 OR p.`key` IN ($in))", [farm_id(), ...$permissions]), 'user_id');
+    notify(array_values(array_diff($ids, [$_SESSION['uid'] ?? ''])), $kind, $title, $body, $link);
 }
 
 /** Create the chart of accounts the first time a farm uses finance. */

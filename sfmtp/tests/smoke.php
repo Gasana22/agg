@@ -126,7 +126,8 @@ $mixed = $farms['AGG Mixed Farm'] ?? '';
 $o->post('farms.php', ['farm_id' => $crop]);
 foreach (['dashboard.php', 'tasks.php', 'structure.php', 'structure.php?tab=locations', 'crops.php', 'crops.php?tab=observations', 'crops.php?tab=harvests', 'crops.php?tab=crops',
     'inventory.php', 'inventory.php?tab=items', 'inventory.php?tab=movements', 'workers.php', 'workers.php?tab=attendance', 'workers.php?tab=leave',
-    'finance.php', 'finance.php?tab=income', 'finance.php?tab=journal', 'finance.php?tab=pl', 'finance.php?tab=accounts', 'sales.php', 'sales.php?tab=customers', 'sales.php?tab=shipments',
+    'finance.php', 'finance.php?tab=income', 'finance.php?tab=journal', 'finance.php?tab=pl', 'finance.php?tab=accounts', 'sales.php', 'sales.php?tab=invoices', 'sales.php?tab=customers', 'sales.php?tab=shipments', 'sales.php?tab=products',
+    'purchasing.php', 'purchasing.php?tab=suppliers', 'purchasing.php?tab=invoices', 'portal-access.php',
     'trace.php', 'trace.php?tab=qr', 'trace.php?tab=integrity', 'members.php', 'members.php?tab=roles', 'audit-log.php', 'settings.php', 'profile.php', 'notifications.php', 'farms.php'] as $page) {
     $o->get($page);
     clean($o, "Crop farm: $page");
@@ -186,7 +187,7 @@ $o->get('finance.php');
 preg_match('/<select name="account_id" required>.*?<option value="([0-9a-f-]{36})">/s', $o->last, $acc);
 $o->post('finance.php', ['action' => 'expense', 'account_id' => $acc[1] ?? '', 'amount' => '45000', 'spent_on' => date('Y-m-d'), 'description' => 'Smoke fuel', 'payee' => 'Station']);
 check(str_contains($o->last, 'Expense recorded'), 'an expense is recorded');
-$o->get('sales.php');
+$o->get('sales.php?tab=invoices');
 preg_match('/<select name="customer_id" required>.*?<option value="([0-9a-f-]{36})">/s', $o->last, $cust);
 preg_match('/name="lines\[0\]\[account_id\]">.*?<option value="([0-9a-f-]{36})"/s', $o->last, $inc);
 $o->post('sales.php', ['action' => 'invoice', 'customer_id' => $cust[1] ?? '', 'invoice_date' => date('Y-m-d'), 'lines' => [['description' => 'Maize', 'quantity' => '10', 'unit' => 'bags', 'unit_price' => '95000', 'account_id' => $inc[1] ?? '']]]);
@@ -256,6 +257,122 @@ check(str_contains($w->last, 'not allowed') || $w->status === 403 || str_contain
 $mgr->get("task.php?id=$taskId");
 $mgr->post("task.php?id=$taskId", ['event' => 'verify', 'note' => 'Good']);
 check(str_contains($mgr->last, 'Verified'), 'the manager verifies it');
+
+// Supplier portal, with the farm's side of purchasing.
+echo "\nSupplier portal\n";
+$sup = new Browser($base);
+$sup->get('login.php');
+$sup->post('login.php', ['email' => 'supplier@aggfarms.test', 'password' => 'Password123!']);
+check(str_contains((string) $sup->location, 'portal.php') && str_contains($sup->last, 'AGG Mixed Farm'), 'the supplier signs in to the portal');
+foreach (['portal.php', 'supplier.php', 'supplier.php?tab=invoices', 'profile.php'] as $page) {
+    $sup->get($page);
+    clean($sup, "supplier: $page");
+}
+$sup->get('finance.php');
+check(str_contains((string) $sup->location, 'portal.php'), 'the supplier has no farm pages');
+$sup->get('shop.php');
+check($sup->status === 403, 'the supplier has no customer portal');
+$sup->get('supplier.php');
+preg_match('/supplier-order\.php\?id=([0-9a-f-]{36})"><b>PO-002/', $sup->last, $pm);
+$po = $pm[1] ?? '';
+check($po !== '' && !str_contains($sup->last, 'PO-003'), 'the supplier sees sent orders, not drafts');
+$sup->get("supplier-order.php?id=$po");
+preg_match_all('/name="qty\[([0-9a-f-]{36})\]" inputmode="decimal" value="([^"]*)"/', $sup->last, $qm, PREG_SET_ORDER);
+$sup->post("supplier-order.php?id=$po", ['action' => 'dispatch', 'reference' => 'DN-555', 'vehicle' => 'UBB 123X', 'qty' => array_column($qm, 2, 1)]);
+check(str_contains($sup->last, 'told what is on the way'), 'the supplier announces a dispatch');
+
+$o->post('farms.php', ['farm_id' => $mixed]);
+$o->get("po.php?id=$po");
+clean($o, 'purchase order page');
+preg_match('/<select name="dispatch_id">(?:(?!<\/select>).)*?<option value="([0-9a-f-]{36})"/s', $o->last, $dm);
+preg_match('/<select name="location_id" required>(?:(?!<\/select>).)*?<option value="([0-9a-f-]{36})"/s', $o->last, $lm);
+preg_match_all('/name="lines\[([0-9a-f-]{36})\]\[quantity\]" inputmode="decimal" value="([^"]*)"/', $o->last, $rm, PREG_SET_ORDER);
+$o->post("po.php?id=$po", ['action' => 'receive', 'location_id' => $lm[1] ?? '', 'dispatch_id' => $dm[1] ?? '', 'lines' => array_map(fn ($x) => ['quantity' => $x], array_column($rm, 2, 1))]);
+check(str_contains($o->last, 'Goods received into stock'), 'the farm receives the dispatch into stock');
+
+$sup->get("supplier-order.php?id=$po");
+preg_match_all('/name="inv_qty\[([0-9a-f-]{36})\]" inputmode="decimal" value="([^"]*)"/', $sup->last, $im, PREG_SET_ORDER);
+$sup->post("supplier-order.php?id=$po", ['action' => 'invoice', 'invoice_number' => 'KAV-9001', 'inv_qty' => array_column($im, 2, 1)]);
+check(str_contains($sup->last, 'Invoice sent'), 'the supplier sends an invoice for what was received');
+$sup->post("supplier-order.php?id=$po", ['action' => 'invoice', 'invoice_number' => 'KAV-9001', 'inv_qty' => array_column($im, 2, 1)]);
+check(str_contains($sup->last, 'already been sent'), 'the same invoice number is refused');
+$o->get("po.php?id=$po");
+preg_match('/name="submission_id" value="([0-9a-f-]{36})"/', $o->last, $sm);
+$o->post("po.php?id=$po", ['action' => 'record_sub', 'submission_id' => $sm[1] ?? '']);
+check(str_contains($o->last, 'KAV-9001 recorded'), 'the farm records the submitted invoice');
+preg_match('/<select name="invoice_id" required>(?:(?!<\/select>).)*?<option value="([0-9a-f-]{36})"/s', $o->last, $pim);
+preg_match('/<select name="account_id" required><option value="([0-9a-f-]{36})"/', $o->last, $pam);
+$o->post("po.php?id=$po", ['action' => 'pay', 'invoice_id' => $pim[1] ?? '', 'amount' => '50000', 'account_id' => $pam[1] ?? '', 'method' => 'mobile_money']);
+check(str_contains($o->last, 'Payment of'), 'the farm pays the supplier');
+$o->get('finance.php?tab=accounts');
+check(str_contains($o->last, 'The books balance'), 'the books balance after receiving, invoicing and paying');
+$sup->get('supplier.php?tab=invoices');
+check(str_contains($sup->last, 'KAV-9001') && str_contains($sup->last, '50,000'), 'the supplier sees the invoice and the payment');
+
+// Customer portal, with the farm's side of sales orders.
+echo "\nCustomer portal\n";
+$cus = new Browser($base);
+$cus->get('login.php');
+$cus->post('login.php', ['email' => 'customer@aggfarms.test', 'password' => 'Password123!']);
+check(str_contains((string) $cus->location, 'portal.php'), 'the customer signs in to the portal');
+foreach (['shop.php', 'customer.php', 'customer.php?tab=invoices', 'customer.php?tab=purchases'] as $page) {
+    $cus->get($page);
+    clean($cus, "customer: $page");
+}
+$cus->get("supplier-order.php?id=$po");
+check($cus->status === 403, 'the customer cannot open purchase orders');
+$cus->get('shop.php');
+preg_match_all('/name="qty\[([0-9a-f-]{36})\]"/', $cus->last, $pq);
+preg_match('/name="farm_id" value="([0-9a-f-]{36})"><input type="hidden" name="customer_id" value="([0-9a-f-]{36})"/', $cus->last, $fc);
+$cus->post('shop.php', ['farm_id' => $fc[1] ?? '', 'customer_id' => $mixed, 'qty' => [$pq[1][0] ?? '' => '100']]);
+check($cus->status === 404, 'ordering as a record that is not yours is a 404');
+$cus->get('shop.php');
+$cus->post('shop.php', ['farm_id' => $fc[1] ?? '', 'customer_id' => $fc[2] ?? '', 'qty' => [$pq[1][0] ?? '' => '100'], 'customer_note' => 'Call before delivery']);
+check(str_contains($cus->last, 'Order placed'), 'the customer orders at list price');
+preg_match('/id=([0-9a-f-]{36})/', (string) $cus->location, $om);
+$so = $om[1] ?? '';
+
+$o->post('farms.php', ['farm_id' => $crop]);
+$o->get("order.php?id=$so");
+clean($o, 'sales order page');
+$o->post("order.php?id=$so", ['action' => 'approve']);
+check(str_contains($o->last, 'approved'), 'the farm approves the order');
+preg_match_all('/name="picks\[([0-9a-f-]{36})\]\[batch_id\]">(?:(?!<\/select>).)*?<option value="([0-9a-f-]{36})"/s', $o->last, $bm, PREG_SET_ORDER);
+$o->post("order.php?id=$so", ['action' => 'dispatch', 'picks' => array_map(fn ($b) => ['batch_id' => $b, 'quantity' => '100'], array_column($bm, 2, 1))]);
+check(str_contains($o->last, 'Shipment dispatched'), 'the farm ships it from a batch');
+$o->post("order.php?id=$so", ['action' => 'invoice']);
+check(str_contains($o->last, 'Invoice issued'), 'the farm invoices the order');
+$cus->get("customer-order.php?id=$so");
+preg_match('/name="shipment_id" value="([0-9a-f-]{36})"/', $cus->last, $shm);
+$cus->post("customer-order.php?id=$so", ['action' => 'received', 'shipment_id' => $shm[1] ?? '']);
+check(str_contains($cus->last, 'goods arrived') && str_contains($cus->last, 'badge ok">Delivered'), 'the customer confirms delivery and the order is delivered');
+$cus->get('customer.php?tab=invoices');
+check(str_contains($cus->last, 'customer-invoice.php'), 'the customer sees the invoice');
+$cus->get('customer.php?tab=purchases');
+check(str_contains($cus->last, 'SFM-'), 'the customer sees the batches they bought');
+$o->get('trace.php?tab=integrity');
+check(str_contains($o->last, 'Intact'), 'the trace chain still verifies');
+
+// Invitation: a new customer gets access, uses it once, and loses it when stopped.
+$o->get('portal-access.php');
+preg_match_all('/<option value="(customer:[0-9a-f-]{36})"/', $o->last, $wm);
+$o->post('portal-access.php', ['action' => 'invite', 'who' => end($wm[1]), 'email' => 'buyer2@example.test']);
+preg_match('/invite\.php\?token=([0-9a-f]{48})/', $o->last, $tm);
+check(isset($tm[1]), 'the farm creates an invitation link');
+$nb = new Browser($base);
+$nb->get('invite.php?token=' . ($tm[1] ?? ''));
+$nb->post('invite.php?token=' . ($tm[1] ?? ''), ['token' => $tm[1] ?? '', 'name' => 'Buyer Two', 'password' => 'GoodPass123', 'confirm' => 'GoodPass123']);
+check(str_contains($nb->last, 'you are now connected'), 'a new person accepts it and gets an account');
+$nb->get('shop.php');
+check($nb->status === 200, 'the new customer can order');
+$again = new Browser($base);
+$again->get('invite.php?token=' . ($tm[1] ?? ''));
+check(str_contains($again->last, 'already been used'), 'an invitation works only once');
+$o->get('portal-access.php');
+preg_match('/buyer2@example\.test.*?name="link_id" value="([0-9a-f-]{36})"/s', $o->last, $lk);
+$o->post('portal-access.php', ['action' => 'unlink', 'link_id' => $lk[1] ?? '']);
+$nb->get('shop.php');
+check($nb->status === 403, 'stopping access closes the portal at once');
 
 // Platform admin.
 echo "\nPlatform admin\n";

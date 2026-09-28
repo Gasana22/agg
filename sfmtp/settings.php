@@ -13,6 +13,10 @@ if (is_post()) {
         $s = farm_settings();
         $threshold = input_num('expense_threshold');
         $s['approval_thresholds']['expense'] = $threshold !== null && $threshold > 0 ? $threshold : null;
+        foreach (['purchase_order', 'sales_order'] as $k) {
+            $v = input_num($k . '_threshold');
+            $s['approval_thresholds'][$k] = $v !== null && $v > 0 ? $v : null;
+        }
         $s['require_mfa_for_all'] = (bool) input('require_mfa_for_all');
         $s['allow_negative_stock'] = (bool) input('allow_negative_stock');
         $s['allow_intercropping'] = (bool) input('allow_intercropping');
@@ -39,6 +43,8 @@ page_start('Farm settings');
 <h2 style="margin-top:1rem">Rules</h2>
 <div class="fields">
 <?= field('Expenses above this need the owner\'s approval', '<input name="expense_threshold" inputmode="decimal" value="' . e($s['approval_thresholds']['expense'] ?? '') . '">', 'Empty: no approval needed.') ?>
+<?= field('Purchase orders above this need the owner', '<input name="purchase_order_threshold" inputmode="decimal" value="' . e($s['approval_thresholds']['purchase_order'] ?? '') . '">', 'Empty: anyone who may approve orders.') ?>
+<?= field('Sales orders above this need the owner', '<input name="sales_order_threshold" inputmode="decimal" value="' . e($s['approval_thresholds']['sales_order'] ?? '') . '">', 'Empty: no limit.') ?>
 </div>
 <div class="stack" style="margin-top:.75rem">
 <label class="row"><input type="checkbox" style="width:auto" name="require_mfa_for_all" value="1"<?= $check('require_mfa_for_all') ?>> Everyone on this farm must use two-step sign-in</label>

@@ -3,6 +3,9 @@
 require __DIR__ . '/inc/bootstrap.php';
 
 $user = require_login();
+if ($user['user_type'] === 'party') {
+    redirect('portal.php');
+}
 
 if (is_post()) {
     if (($target = input_id('farm_id')) !== null) {
