@@ -12,6 +12,7 @@ use App\Modules\Crops\Application\CropSetup;
 use App\Modules\Crops\Domain\Enums\CloseReason;
 use App\Modules\Crops\Domain\Enums\CycleStage;
 use App\Modules\Crops\Domain\Models\CropCycle;
+use App\Modules\FarmStructure\Application\Sensors;
 use App\Modules\FarmStructure\Application\StructureService;
 use App\Modules\FarmStructure\Domain\Models\Location;
 use App\Modules\FarmStructure\Domain\Models\Plot;
@@ -197,6 +198,7 @@ class DemoSeeder extends Seeder
         $this->seedShipments($crop, $context);
         $this->seedPortals($mixed, $crop, $user, $context);
         $this->seedActivityLocations($mixed, $crop, $context);
+        $this->seedSensors($mixed, $context);
 
         // Project every journey once, and check both chains so the integrity page starts green.
         app(JourneyProjector::class)->resume();
@@ -266,6 +268,28 @@ class DemoSeeder extends Seeder
             });
         }
         mt_srand();
+    }
+
+    /** Two sensors on the mixed farm with a day of readings (Phase 14 IoT extension point). */
+    private function seedSensors(Farm $farm, TenantContext $context): void
+    {
+        $owner = FarmUser::where('farm_id', $farm->id)->where('is_owner', true)->firstOrFail();
+        Auth::setUser($owner->user);
+        $context->run($farm, function () use ($farm) {
+            $sensors = app(Sensors::class);
+            [$tank] = $sensors->register(['name' => 'Water tank level', 'kind' => 'tank_level', 'location_id' => Location::where('code', 'TANK')->value('id')]);
+            [$probe] = $sensors->register(['name' => 'Paddock 2 soil probe', 'kind' => 'soil_probe', 'plot_id' => Plot::where('code', 'PAD-2')->value('id')]);
+            $rows = [];
+            for ($h = 24; $h >= 0; $h--) {
+                $at = now()->subHours($h)->format('Y-m-d H:i:s.u');
+                $rows[] = ['device_id' => $tank->id, 'metric' => 'level_pct', 'value' => round(92 - $h * 0.9 + ($h % 6 === 0 ? 3 : 0), 1), 'recorded_at' => $at];
+                $rows[] = ['device_id' => $probe->id, 'metric' => 'soil_moisture_pct', 'value' => round(34 - (24 - $h) * 0.15, 2), 'recorded_at' => $at];
+                $rows[] = ['device_id' => $probe->id, 'metric' => 'temperature_c', 'value' => round(19 + 6 * sin(($h % 24) / 24 * M_PI), 1), 'recorded_at' => $at];
+            }
+            DB::table('sensor_readings')->insert(array_map(fn ($r) => $r + ['id' => (string) Str::uuid7(), 'farm_id' => $farm->id, 'received_at' => $r['recorded_at']], $rows));
+            DB::table('iot_devices')->whereIn('id', [$tank->id, $probe->id])->update(['last_seen_at' => now()]);
+        });
+        Auth::forgetGuards();
     }
 
     private function seedShipments(Farm $farm, TenantContext $context): void

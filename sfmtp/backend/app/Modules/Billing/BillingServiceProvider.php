@@ -8,6 +8,7 @@ use App\Modules\Billing\Console\AdvanceSubscriptions;
 use App\Modules\Billing\Domain\Models\Plan;
 use App\Modules\Billing\Domain\Models\Subscription;
 use App\Modules\Billing\Listeners\StartTrial;
+use App\Modules\Billing\Payments\SubscriptionPurpose;
 use App\Modules\Tenancy\Contracts\SubscriptionGate;
 use App\Modules\Tenancy\Domain\Events\OrganizationCreated;
 use Illuminate\Support\Facades\Event;
@@ -20,6 +21,7 @@ class BillingServiceProvider extends ServiceProvider
     {
         $this->app->bind(SubscriptionGate::class, PlanLimitGate::class);
         $this->app->tag([BillingWorkspaces::class], 'sfmtp.workspace-contributors');
+        $this->app->tag([SubscriptionPurpose::class], 'sfmtp.payment-purposes');
     }
 
     public function boot(): void

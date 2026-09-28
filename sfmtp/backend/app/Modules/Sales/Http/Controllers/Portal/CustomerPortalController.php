@@ -98,14 +98,20 @@ class CustomerPortalController
     /** Invoices once issued (drafts stay with the farm), with what is paid and still due. */
     public function invoices(): JsonResponse
     {
-        $rows = array_merge(...$this->parties->eachFarm('customer', fn (PartyLink $link) => CustomerInvoice::with('lines')
+        $rows = array_merge(...$this->parties->eachFarm('customer', fn (PartyLink $link) => $this->farmInvoices($link, $this->portal->canPayOnline())) ?: [[]]);
+
+        return new JsonResponse(['data' => $rows]);
+    }
+
+    private function farmInvoices(PartyLink $link, bool $payOnline): array
+    {
+        return CustomerInvoice::with('lines')
             ->where('customer_id', $link->record_id)->where('status', '!=', 'draft')->orderByDesc('invoice_date')->limit(200)->get()
             ->map(fn ($i) => ['type' => 'portal_customer_invoice', 'farm' => ['id' => $link->farm->id, 'name' => $link->farm->name], 'currency' => $link->farm->currency]
                 + $this->portal->presentInvoice($i) + [
+                    'pay_online' => $i->status === 'issued' && $payOnline,
                     'lines' => $i->lines->map(fn ($l) => ['description' => $l->description, 'quantity' => (float) $l->quantity, 'unit' => $l->unit, 'unit_price' => (float) $l->unit_price, 'amount' => (float) $l->amount])->values()->all(),
-                ])->all()) ?: [[]]);
-
-        return new JsonResponse(['data' => $rows]);
+                ])->all();
     }
 
     public function deliveries(): JsonResponse
@@ -127,6 +133,11 @@ class CustomerPortalController
         $link = $this->parties->link();
 
         return new JsonResponse(['data' => $this->portal->presentShipment($this->portal->confirmDelivery($link, $shipmentId, $data), $link)]);
+    }
+
+    public function pay(string $party, string $farm, string $invoiceId): JsonResponse
+    {
+        return new JsonResponse(['data' => $this->portal->payInvoice($this->parties->link(), $invoiceId)->toApi()], 201);
     }
 
     /** Batches bought, with their approved public traceability. */

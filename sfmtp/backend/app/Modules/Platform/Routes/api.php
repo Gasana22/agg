@@ -39,6 +39,7 @@ Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api', 'platform.admin'
             Route::post('/', [AdminIntegrationController::class, 'store'])->name('store');
             Route::patch('{integration}', [AdminIntegrationController::class, 'update'])->name('update');
             Route::delete('{integration}', [AdminIntegrationController::class, 'destroy'])->name('destroy');
+            Route::post('{integration}/test', [AdminIntegrationController::class, 'test'])->name('test');
         });
 
         Route::middleware('platform.can:system.view')->prefix('system')->name('system.')->group(function () {

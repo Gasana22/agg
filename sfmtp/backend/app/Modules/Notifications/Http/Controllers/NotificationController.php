@@ -3,6 +3,7 @@
 namespace App\Modules\Notifications\Http\Controllers;
 
 use App\Modules\Identity\Domain\Models\UserDevice;
+use App\Modules\Notifications\Application\NoticeChannels;
 use App\Modules\Notifications\Domain\Models\MemberNotification;
 use App\Support\Http\ApiException;
 use Illuminate\Http\JsonResponse;
@@ -43,6 +44,26 @@ class NotificationController
     }
 
     /** The phone registers where to push (the device comes from the access token). */
+    /** Email and SMS copies of important notices (ADR-0018). */
+    public function preferences(Request $request): JsonResponse
+    {
+        if ($request->isMethod('put')) {
+            $data = $request->validate(['email' => ['sometimes', 'boolean'], 'sms' => ['sometimes', 'boolean']]);
+            $user = $request->user();
+            if (($data['sms'] ?? false) && ! $user->phone) {
+                throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', ['sms' => ['Add a phone number to your profile first.']]);
+            }
+            $user->forceFill(['notification_channels' => array_map('boolval', $data) + NoticeChannels::of($user)])->save();
+        }
+        $user = $request->user()->refresh();
+
+        return new JsonResponse(['data' => NoticeChannels::of($user) + [
+            'phone' => $user->phone,
+            'email_address' => $user->email,
+            'kinds' => array_map(fn ($channels) => $channels, NoticeChannels::COPIED),
+        ]]);
+    }
+
     public function pushToken(Request $request): JsonResponse
     {
         $data = $request->validate(['token' => ['present', 'nullable', 'string', 'max:4096'], 'platform' => ['required_with:token', 'nullable', 'in:fcm,apns']]);

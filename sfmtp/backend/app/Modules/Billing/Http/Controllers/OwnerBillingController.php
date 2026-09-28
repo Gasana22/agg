@@ -7,8 +7,10 @@ use App\Modules\Billing\Domain\Models\Plan;
 use App\Modules\Billing\Domain\Models\Subscription;
 use App\Modules\Billing\Http\Resources\PlanResource;
 use App\Modules\Billing\Http\Resources\SubscriptionResource;
+use App\Modules\Integrations\Payments\OnlinePayments;
 use App\Modules\Tenancy\Domain\Models\Organization;
 use App\Support\Http\ApiException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -53,6 +55,23 @@ class OwnerBillingController
     public function resume(Request $request): SubscriptionResource
     {
         return new SubscriptionResource($this->subscriptions->resume($this->subscription($request), $request->user())->load(['plan', 'organization']));
+    }
+
+    /** Pay the next period online (ADR-0018): returns the gateway's checkout page. */
+    public function pay(Request $request, OnlinePayments $payments): JsonResponse
+    {
+        $subscription = $this->subscription($request);
+        $plan = $subscription->plan;
+        if ((float) $plan->price <= 0) {
+            throw ApiException::conflict('nothing_to_pay', "The {$plan->name} plan is free.");
+        }
+        $user = $request->user();
+        $payment = $payments->start([
+            'purpose' => 'subscription', 'subject_id' => $subscription->id, 'subject_code' => $plan->code, 'farm_id' => null,
+            'amount' => $plan->price, 'currency' => $plan->currency, 'description' => "SFMTP {$plan->name} plan", 'return_path' => '/billing',
+        ], ['email' => $user->email, 'name' => $user->name, 'phone' => $user->phone]);
+
+        return new JsonResponse(['data' => $payment->toApi()], 201);
     }
 
     private function subscription(Request $request): Subscription

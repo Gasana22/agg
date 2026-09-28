@@ -29,13 +29,33 @@ class PaymentDesk
 
     public function record(array $data): Payment
     {
+        $this->access->assert($this->payables->get($data['payable_type'])->permission());
+
+        return $this->book($data, Auth::id());
+    }
+
+    /**
+     * A payment already confirmed by a payment gateway (ADR-0018). No member
+     * records it, so there is no permission to check; the gateway reference
+     * makes a repeat a no-op.
+     */
+    public function recordConfirmed(array $data): ?Payment
+    {
+        if (Payment::where('payable_type', $data['payable_type'])->where('payable_id', $data['payable_id'])->where('reference', $data['reference'])->exists()) {
+            return null;
+        }
+
+        return $this->book($data, null);
+    }
+
+    private function book(array $data, ?string $recordedBy): Payment
+    {
         $type = $this->payables->get($data['payable_type']);
-        $this->access->assert($type->permission());
         $account = $this->accounts->money($data['account_id'] ?? null, 'account_id');
         $cents = Money::cents($data['amount']);
         $paidOn = CarbonImmutable::parse($data['paid_on'] ?? now()->toDateString());
 
-        return DB::transaction(function () use ($data, $type, $account, $cents, $paidOn) {
+        return DB::transaction(function () use ($data, $type, $account, $cents, $paidOn, $recordedBy) {
             $document = $type->lock($data['payable_id']) ?? throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', ['payable_id' => ['The document does not exist in this farm.']]);
             $outstanding = $type->outstanding($document);
             if ($outstanding <= 0) {
@@ -52,7 +72,7 @@ class PaymentDesk
                 'amount' => Money::fromCents($cents), 'paid_on' => $paidOn->toDateString(),
                 'method' => $data['method'], 'account_id' => $account->id,
                 'reference' => $data['reference'] ?? null, 'note' => $data['note'] ?? null,
-                'recorded_by' => Auth::id(),
+                'recorded_by' => $recordedBy,
             ]);
             $in = $type->direction() === 'in';
             $memo = ($in ? 'Received from ' : 'Paid to ').($payment->party ?? 'unnamed')." for {$payment->payable_code} ({$payment->code})";

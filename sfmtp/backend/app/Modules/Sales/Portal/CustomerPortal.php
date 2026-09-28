@@ -3,6 +3,8 @@
 namespace App\Modules\Sales\Portal;
 
 use App\Modules\Finance\Application\Money;
+use App\Modules\Integrations\Domain\Models\OnlinePayment;
+use App\Modules\Integrations\Payments\OnlinePayments;
 use App\Modules\Parties\Application\PartyContext;
 use App\Modules\Parties\Domain\Models\PartyLink;
 use App\Modules\Sales\Application\SalesOrders;
@@ -12,6 +14,8 @@ use App\Modules\Sales\Domain\Models\Product;
 use App\Modules\Sales\Domain\Models\SalesOrder;
 use App\Modules\Sales\Domain\Models\Shipment;
 use App\Modules\Sales\Domain\Models\ShipmentLine;
+use App\Modules\Tenancy\Application\FarmSettings;
+use App\Modules\Tenancy\TenantContext;
 use App\Modules\Traceability\Application\PublicPayload;
 use App\Modules\Traceability\Application\Publishing;
 use App\Modules\Traceability\Domain\Enums\BatchStatus;
@@ -166,6 +170,36 @@ class CustomerPortal
             'paid_amount' => (float) $i->paid_amount,
             'outstanding' => $i->status === 'issued' ? (Money::cents($i->amount) - Money::cents($i->paid_amount)) / 100 : 0.0,
         ];
+    }
+
+    /** Whether customers of the current farm may pay its invoices online. */
+    public function canPayOnline(): bool
+    {
+        $settings = app(FarmSettings::class)->get(app(TenantContext::class)->farm())['online_payments'] ?? [];
+
+        return ($settings['enabled'] ?? false) && ($settings['subaccount_id'] ?? null) && app(OnlinePayments::class)->available();
+    }
+
+    /** Pay an issued invoice online (ADR-0018): the outstanding amount, into the farm's subaccount. */
+    public function payInvoice(PartyLink $link, string $invoiceId): OnlinePayment
+    {
+        $invoice = CustomerInvoice::where('customer_id', $link->record_id)->where('status', '!=', 'draft')->find($invoiceId) ?? throw ApiException::notFound();
+        $outstanding = Money::cents($invoice->amount) - Money::cents($invoice->paid_amount);
+        if ($invoice->status !== 'issued' || $outstanding <= 0) {
+            throw ApiException::conflict('nothing_to_pay', "{$invoice->code} has nothing to pay.");
+        }
+        if (! $this->canPayOnline()) {
+            throw ApiException::conflict('online_payment_unavailable', 'This farm does not take online payments yet. Pay by another method.');
+        }
+        $farm = app(TenantContext::class)->farm();
+        $user = Auth::user();
+
+        return app(OnlinePayments::class)->start([
+            'purpose' => 'customer_invoice', 'subject_id' => $invoice->id, 'subject_code' => $invoice->code, 'farm_id' => $farm->id,
+            'amount' => Money::fromCents($outstanding), 'currency' => $farm->currency, 'description' => "{$farm->name} invoice {$invoice->code}",
+            'return_path' => "/customer/{$link->party_id}/invoices",
+        ], ['email' => $user->email, 'name' => $user->name, 'phone' => $user->phone],
+            app(FarmSettings::class)->get($farm)['online_payments']['subaccount_id']);
     }
 
     /** @return array<string, mixed> */

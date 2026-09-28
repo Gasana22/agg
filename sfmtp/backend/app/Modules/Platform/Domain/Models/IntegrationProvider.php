@@ -9,7 +9,7 @@ class IntegrationProvider extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['kind', 'provider', 'name', 'config', 'is_enabled', 'is_default'];
+    protected $fillable = ['kind', 'provider', 'name', 'config', 'is_enabled', 'is_default', 'priority'];
 
     protected $hidden = ['config'];
 
@@ -19,6 +19,8 @@ class IntegrationProvider extends Model
             'config' => 'encrypted:array',
             'is_enabled' => 'boolean',
             'is_default' => 'boolean',
+            'last_success_at' => 'datetime',
+            'last_failure_at' => 'datetime',
         ];
     }
 }

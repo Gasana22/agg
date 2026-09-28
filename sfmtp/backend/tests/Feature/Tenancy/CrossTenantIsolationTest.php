@@ -11,6 +11,7 @@ use App\Modules\Crops\Application\CropObservations;
 use App\Modules\Crops\Application\CropOperations;
 use App\Modules\Crops\Application\CropPlans;
 use App\Modules\Crops\Application\CropSetup;
+use App\Modules\FarmStructure\Application\Sensors;
 use App\Modules\FarmStructure\Application\StructureService;
 use App\Modules\Finance\Application\Accounts;
 use App\Modules\Finance\Application\Budgets;
@@ -111,6 +112,7 @@ class CrossTenantIsolationTest extends TestCase
                 'role' => FarmRole::where('key', 'manager')->value('id'),
                 'dashboard' => 'owner',
                 'widget' => 'trace_activity',
+                'iotDevice' => app(Sensors::class)->register(['name' => 'Victim probe', 'kind' => 'soil_probe'])[0]->id,
                 'metric' => 'finance.revenue',
                 'report' => 'profit_and_loss',
                 'exportId' => ReportExport::create(['farm_id' => $this->victim->id, 'kind' => 'report', 'report' => 'harvests', 'title' => 'Harvests', 'params' => [],
@@ -337,7 +339,7 @@ class CrossTenantIsolationTest extends TestCase
             'stock_versions' => DB::table('inventory_items')->sum('version') + DB::table('stock_adjustments')->sum('version') + DB::table('inventory_requests')->sum('version')
                 + DB::table('suppliers')->sum('version') + DB::table('purchase_requests')->sum('version') + DB::table('purchase_orders')->sum('version'),
             'stock_quantity' => (string) DB::table('stock_balances')->sum('quantity'),
-            'portal_rows' => collect(['party_links', 'portal_invitations', 'supplier_invoice_submissions', 'supplier_dispatches', 'products', 'sales_orders', 'sales_order_lines', 'report_exports'])
+            'portal_rows' => collect(['party_links', 'portal_invitations', 'supplier_invoice_submissions', 'supplier_dispatches', 'products', 'sales_orders', 'sales_order_lines', 'report_exports', 'iot_devices', 'sensor_readings'])
                 ->mapWithKeys(fn ($t) => [$t => DB::table($t)->count()])->all(),
             'portal_state' => DB::table('party_links')->orderBy('id')->pluck('status')->merge(DB::table('portal_invitations')->orderBy('id')->pluck('revoked_at'))
                 ->merge(DB::table('supplier_invoice_submissions')->orderBy('id')->pluck('status'))->merge(DB::table('sales_orders')->orderBy('id')->pluck('status'))->all(),

@@ -37,6 +37,11 @@ return [
 
     'mailers' => [
 
+        // Through the email providers set in the admin portal, with failover (ADR-0018).
+        'providers' => [
+            'transport' => 'providers',
+        ],
+
         'smtp' => [
             'transport' => 'smtp',
             'scheme' => env('MAIL_SCHEME'),

@@ -355,6 +355,15 @@ class StandardReports
                 'columns' => [$col('section', 'Section'), $col('source', 'Source'), $col('amount', 'Amount', 'money')],
                 'rows' => fn (array $p) => $this->cashFlow($p),
             ],
+            'journal' => [
+                'title' => 'Journal (for accounting software)', 'group' => 'finance',
+                'description' => 'Every ledger line in the period, one row per line, ready to import as manual journals in QuickBooks or Xero (debits positive, credits negative in Amount).',
+                'permission' => [self::FINANCE, 'finance.values.view'], 'params' => ['from', 'to'],
+                'columns' => [$col('date', 'Date', 'date'), $col('number', 'Journal'), $col('narration', 'Narration'), $col('account_code', 'Account code'),
+                    $col('account', 'Account'), $col('description', 'Description'), $col('debit', 'Debit', 'money', ['total' => true]),
+                    $col('credit', 'Credit', 'money', ['total' => true]), $col('amount', 'Amount', 'money'), $col('cost_centre', 'Tracking')],
+                'rows' => fn (array $p) => $this->journal($p),
+            ],
             // Traceability
             'trace_batches' => [
                 'title' => 'Traceability batches', 'group' => 'traceability',
@@ -676,6 +685,22 @@ class StandardReports
             ['section' => 'Net', 'source' => 'Net change', 'amount' => $this->money($r['net'])],
             ['section' => 'Closing', 'source' => 'Closing balance', 'amount' => $this->money($r['closing'])],
         ];
+    }
+
+    private function journal(array $p): array
+    {
+        return $this->table('ledger_lines')
+            ->join('ledger_entries as e', 'e.id', '=', 'ledger_lines.entry_id')
+            ->join('ledger_accounts as a', 'a.id', '=', 'ledger_lines.account_id')
+            ->whereBetween('e.posted_on', [$p['from'], $p['to']])
+            ->orderBy('e.posted_on')->orderBy('e.number')->orderBy('ledger_lines.id')
+            ->limit(self::EXPORT_LIMIT + 1)
+            ->get(['e.posted_on', 'e.number', 'e.memo as entry_memo', 'a.code', 'a.name', 'ledger_lines.memo', 'ledger_lines.debit', 'ledger_lines.credit', 'ledger_lines.cost_center_type'])
+            ->map(fn ($r) => ['date' => substr((string) $r->posted_on, 0, 10), 'number' => (string) $r->number, 'narration' => $r->entry_memo,
+                'account_code' => $r->code, 'account' => $r->name, 'description' => $r->memo ?? $r->entry_memo,
+                'debit' => $this->money($r->debit), 'credit' => $this->money($r->credit), 'amount' => $this->money((float) $r->debit - (float) $r->credit),
+                'cost_centre' => $r->cost_center_type ? str_replace('_', ' ', $r->cost_center_type) : null])
+            ->all();
     }
 
     private function traceBatches(array $p): array

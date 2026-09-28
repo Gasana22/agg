@@ -28,6 +28,20 @@ class FcmPushSender implements PushSender
         return is_array($account) && isset($account['project_id'], $account['client_email'], $account['private_key']) ? new self($account) : null;
     }
 
+    /** A service account JSON pasted in the admin portal (`service_account`). */
+    public static function fromJson(?string $json): ?self
+    {
+        $account = json_decode((string) $json, true);
+
+        return is_array($account) && isset($account['project_id'], $account['client_email'], $account['private_key']) ? new self($account) : null;
+    }
+
+    /** Sign in to Google with the service account: proves the credentials work. */
+    public function check(): string
+    {
+        return $this->account['project_id'].' ('.substr($this->accessToken(), 0, 6).'…)';
+    }
+
     public function send(string $token, string $title, ?string $body, array $data): bool
     {
         $res = Http::withToken($this->accessToken())->timeout(10)

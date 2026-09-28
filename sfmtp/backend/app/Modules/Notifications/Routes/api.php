@@ -13,4 +13,6 @@ Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api', 'farm'])
         Route::post('{notification}/read', [NotificationController::class, 'read'])->whereUuid('notification')->name('read');
     });
 
+Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api'])->match(['get', 'put'], 'me/notification-preferences', [NotificationController::class, 'preferences'])->name('me.notification-preferences');
+
 Route::middleware(['auth:api', 'throttle:api'])->put('me/devices/current/push-token', [NotificationController::class, 'pushToken'])->name('me.devices.push-token');

@@ -4,6 +4,7 @@ namespace App\Modules\Notifications\Application;
 
 use App\Modules\Access\Application\FarmPermissions;
 use App\Modules\Notifications\Domain\Models\MemberNotification;
+use App\Modules\Notifications\Jobs\SendNoticeCopies;
 use App\Modules\Notifications\Jobs\SendPush;
 use App\Modules\Tenancy\Domain\Enums\MembershipStatus;
 use App\Modules\Tenancy\Domain\Models\FarmUser;
@@ -34,6 +35,9 @@ class Inbox
         }
         if ($ids) {
             SendPush::dispatch($this->context->farmId(), $ids)->afterCommit();
+            if (isset(NoticeChannels::COPIED[$kind])) {
+                SendNoticeCopies::dispatch($this->context->farmId(), $ids)->afterCommit();
+            }
         }
     }
 

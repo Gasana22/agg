@@ -44,6 +44,7 @@ class User extends Authenticatable implements CanResetPasswordContract
             'locked_until' => 'datetime',
             'last_login_at' => 'datetime',
             'failed_logins' => 'integer',
+            'notification_channels' => 'array',
         ];
     }
 

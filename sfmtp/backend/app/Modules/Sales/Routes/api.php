@@ -80,7 +80,7 @@ Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api', 'farm'])
 Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api', 'party:customer'])
     ->prefix('customer/{party}')
     ->name('customer.')
-    ->whereUuid(['party', 'farm', 'product', 'salesOrder', 'shipmentId'])
+    ->whereUuid(['party', 'farm', 'product', 'salesOrder', 'shipmentId', 'invoiceId'])
     ->group(function () {
         Route::get('dashboard', [CustomerPortalController::class, 'dashboard'])->name('dashboard');
         Route::get('products', [CustomerPortalController::class, 'products'])->name('products.index');
@@ -94,5 +94,6 @@ Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api', 'party:customer'
             Route::get('orders/{salesOrder}', [CustomerPortalController::class, 'show'])->name('orders.show');
             Route::post('orders/{salesOrder}/cancel', [CustomerPortalController::class, 'cancel'])->name('orders.cancel');
             Route::post('deliveries/{shipmentId}/confirm', [CustomerPortalController::class, 'confirmDelivery'])->name('deliveries.confirm');
+            Route::post('invoices/{invoiceId}/pay', [CustomerPortalController::class, 'pay'])->name('invoices.pay');
         });
     });

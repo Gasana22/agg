@@ -3,6 +3,8 @@
 namespace App\Modules\Platform;
 
 use App\Modules\Identity\Domain\Models\User;
+use App\Modules\Integrations\Contracts\ProviderDirectory;
+use App\Modules\Platform\Application\PlatformProviderDirectory;
 use App\Modules\Platform\Application\PlatformWorkspace;
 use App\Modules\Platform\Console\RecordBackup;
 use App\Modules\Platform\Domain\Models\IntegrationProvider;
@@ -14,6 +16,7 @@ class PlatformServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->tag([PlatformWorkspace::class], 'sfmtp.workspace-contributors');
+        $this->app->bind(ProviderDirectory::class, PlatformProviderDirectory::class);
     }
 
     public function boot(): void

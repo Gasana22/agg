@@ -10,6 +10,7 @@ use App\Modules\Tenancy\Domain\Models\Farm;
 use App\Modules\Tenancy\Http\Requests\StoreFarmRequest;
 use App\Modules\Tenancy\Http\Resources\FarmResource;
 use App\Modules\Tenancy\TenantContext;
+use App\Support\Http\ApiException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -74,7 +75,16 @@ class FarmController
             'allow_negative_stock' => ['sometimes', 'boolean'],
             'allow_intercropping' => ['sometimes', 'boolean'],
             'units' => ['sometimes', 'in:metric,imperial'],
+            'online_payments' => ['sometimes', 'array:enabled,subaccount_id'],
+            'online_payments.enabled' => ['sometimes', 'boolean'],
+            'online_payments.subaccount_id' => ['nullable', 'string', 'max:60', 'regex:/^[A-Za-z0-9_-]+$/'],
         ]);
+        if (array_key_exists('online_payments', $data)) {
+            $data['online_payments'] = ['enabled' => (bool) ($data['online_payments']['enabled'] ?? false), 'subaccount_id' => $data['online_payments']['subaccount_id'] ?? null];
+            if ($data['online_payments']['enabled'] && ! $data['online_payments']['subaccount_id']) {
+                throw ApiException::unprocessable('validation_failed', 'The given data was invalid.', ['online_payments.subaccount_id' => ["Online payments need the farm's Flutterwave subaccount."]]);
+            }
+        }
 
         foreach ($data['approval_thresholds'] ?? [] as $key => $value) {
             $data['approval_thresholds'][$key] = $value === null ? null : (float) $value;

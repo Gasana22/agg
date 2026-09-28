@@ -144,7 +144,7 @@ class AnalyticsTest extends TestCase
         $keys = collect($this->asUser($this->owner)->getJson($this->url('/standard-reports'))->assertOk()->json('data'))->pluck('key');
         $this->assertContains('aged_receivables', $keys);
         $this->assertContains('stock_valuation', $keys);
-        $this->assertCount(19, $keys);
+        $this->assertCount(20, $keys);
 
         $agronomist = collect($this->asUser($this->agronomist)->getJson($this->url('/standard-reports'))->json('data'))->pluck('key')->all();
         $this->assertContains('harvests', $agronomist);

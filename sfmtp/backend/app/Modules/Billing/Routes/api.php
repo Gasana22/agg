@@ -12,6 +12,7 @@ Route::middleware(['auth:api', 'mfa.compliant', 'throttle:api'])->prefix('billin
     Route::post('subscription/change-plan', [OwnerBillingController::class, 'changePlan'])->name('subscription.change-plan');
     Route::post('subscription/cancel', [OwnerBillingController::class, 'cancel'])->name('subscription.cancel');
     Route::post('subscription/resume', [OwnerBillingController::class, 'resume'])->name('subscription.resume');
+    Route::post('subscription/pay', [OwnerBillingController::class, 'pay'])->name('subscription.pay');
 });
 
 // Platform administration.

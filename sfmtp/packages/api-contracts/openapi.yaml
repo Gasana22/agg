@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: SFMTP API
-  version: 1.12.0-phase13
+  version: 1.13.0-phase14
   description: |
     Smart Farm Management & Traceability Platform REST API.
 
@@ -68,6 +68,8 @@ tags:
     description: Plans, subscriptions and the owner's billing page.
   - name: Catalog
     description: Global reference catalogues (crops, breeds, units, …).
+  - name: Integrations
+    description: Provider adapters with failover (ADR-0018), the base map, online payments and gateway webhooks.
   - name: Support
     description: Support tickets and owner-granted, read-only support access.
 
@@ -13861,6 +13863,541 @@ paths:
         '422':
           $ref: '#/components/responses/Problem'
 
+  /map-config:
+    get:
+      tags:
+      - Integrations
+      operationId: getMapConfig
+      summary: The base map to draw
+      description: Tiles from the default maps provider (Mapbox with a public token, or Google Map Tiles), or OpenStreetMap when none is set or it fails. Cached 10 minutes.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MapConfig'
+  /online-payments/{reference}:
+    parameters:
+    - name: reference
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^SFMTP-[A-Z0-9]{14}$
+    get:
+      tags:
+      - Integrations
+      operationId: getOnlinePayment
+      summary: One of your online payments
+      description: 'Only the person who started it. A pending payment is checked with the gateway (at most every 5 seconds) and recorded once confirmed: this is what the return page polls.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OnlinePayment'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /webhooks/payments/{provider}:
+    parameters:
+    - name: provider
+      in: path
+      required: true
+      schema:
+        type: string
+        enum:
+        - flutterwave
+    post:
+      tags:
+      - Integrations
+      operationId: paymentWebhook
+      summary: Payment gateway notification (public, signed)
+      security: []
+      description: Flutterwave sends `verif-hash` equal to the webhook hash set for the provider. The body only names the payment; it is re-checked with the gateway before anything is recorded. 401 invalid_signature.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      received:
+                        type: boolean
+        '401':
+          $ref: '#/components/responses/Problem'
+  /admin/integrations/{integration}/test:
+    parameters:
+    - name: integration
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Admin
+      operationId: adminTestIntegration
+      summary: Test a provider with one harmless real call
+      x-capability: integrations.manage
+      description: 'That provider alone, no failover: SMS to `phone` (or your own), email to you, weather for Kampala, a map session, payment keys by looking up an unknown reference, push by signing in to Firebase. The outcome shows in the provider health.'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type:
+                  - string
+                  - 'null'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      ok:
+                        type: boolean
+                      message:
+                        type: string
+                      provider:
+                        $ref: '#/components/schemas/Integration'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/weather:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Structure
+      operationId: getFarmWeather
+      summary: The forecast at the farm
+      description: 'At the middle of the mapped blocks, else plots, else locations. From the first weather provider that answers, cached 30 minutes, with advisories (heavy rain, heat, a dry window for spraying). `available: false` with `reason` no_location, not_configured or unavailable.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Weather'
+  /me/notification-preferences:
+    get:
+      tags:
+      - Notifications
+      operationId: getNotificationPreferences
+      summary: Email and SMS copies of important notices
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/NotificationPreferences'
+    put:
+      tags:
+      - Notifications
+      operationId: updateNotificationPreferences
+      summary: Turn email or SMS copies on or off
+      description: SMS needs a phone number on the profile (422).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: boolean
+                sms:
+                  type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/NotificationPreferences'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /billing/subscription/pay:
+    post:
+      tags:
+      - Billing
+      operationId: paySubscriptionOnline
+      summary: Pay the subscription online
+      description: Opens the gateway checkout for one period at the plan price. Pressing again within 30 minutes reuses it. 409 online_payment_unavailable, nothing_to_pay (free plan); 502 payment_gateway_error.
+      x-permission: organization owner
+      responses:
+        '201':
+          description: Checkout opened
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OnlinePayment'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '502':
+          $ref: '#/components/responses/Problem'
+  /customer/{party}/farms/{farm}/invoices/{invoiceId}/pay:
+    parameters:
+    - name: party
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: farm
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: invoiceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Customer portal
+      operationId: payInvoiceOnline
+      summary: Pay an invoice online
+      description: The outstanding amount, into the farm's Flutterwave subaccount; recorded as a mobile money receipt once confirmed. 409 nothing_to_pay, online_payment_unavailable (the farm has not turned online payments on).
+      x-permission: one of the party's people
+      responses:
+        '201':
+          description: Checkout opened
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OnlinePayment'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '502':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/iot-devices:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    get:
+      tags:
+      - Structure
+      operationId: listIotDevices
+      summary: Sensors
+      x-permission: structure.view
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IotDevice'
+        '403':
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Structure
+      operationId: createIotDevice
+      summary: Register a sensor
+      x-permission: structure.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                kind:
+                  $ref: '#/components/schemas/IotDeviceKind'
+                plot_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                location_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+              required:
+              - name
+              - kind
+      responses:
+        '201':
+          description: Registered; the token is shown once
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IotDevice'
+                  meta:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/iot-devices/{iotDevice}:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: iotDevice
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    patch:
+      tags:
+      - Structure
+      operationId: updateIotDevice
+      summary: Rename, move or deactivate a sensor
+      x-permission: structure.manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                kind:
+                  $ref: '#/components/schemas/IotDeviceKind'
+                plot_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                location_id:
+                  type:
+                  - string
+                  - 'null'
+                  format: uuid
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IotDevice'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/iot-devices/{iotDevice}/rotate-token:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: iotDevice
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Structure
+      operationId: rotateIotDeviceToken
+      summary: New token (the old one stops working)
+      x-permission: structure.manage
+      responses:
+        '200':
+          description: New token, shown once
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IotDevice'
+                  meta:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+  /farms/{farm}/iot-devices/{iotDevice}/readings:
+    parameters:
+    - $ref: '#/components/parameters/Farm'
+    - name: iotDevice
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Structure
+      operationId: getIotReadings
+      summary: A sensor's latest readings and series
+      description: 'Latest per metric, and up to 2,000 readings in the range (default: the last 7 days).'
+      x-permission: structure.view
+      parameters:
+      - name: metric
+        in: query
+        schema:
+          type: string
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    allOf:
+                    - $ref: '#/components/schemas/IotDevice'
+                    - type: object
+                      properties:
+                        latest:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/SensorReading'
+                        series:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/SensorReading'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+  /iot/readings:
+    post:
+      tags:
+      - Structure
+      operationId: postSensorReadings
+      summary: A sensor posts readings (device token)
+      security:
+      - bearer: []
+      description: '`Authorization: Bearer sfmtpd_…` (the device token, not a user token). Up to 100 readings; metrics are lower-case names like soil_moisture_pct; readings from the last 7 days. 401 invalid_device_token.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                readings:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      metric:
+                        type: string
+                        pattern: ^[a-z][a-z0-9_]{1,39}$
+                      value:
+                        type: number
+                      recorded_at:
+                        type: string
+                        format: date-time
+                    required:
+                    - metric
+                    - value
+                  minItems: 1
+                  maxItems: 100
+              required:
+              - readings
+      responses:
+        '201':
+          description: Stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      stored:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          $ref: '#/components/responses/Problem'
+
 components:
   securitySchemes:
     bearer:
@@ -14335,7 +14872,7 @@ components:
       required: [key, type, inline]
       properties:
         key: { type: string }
-        type: { type: string, enum: [action_list, checklist, chart, map, timeline, health_map] }
+        type: { type: string, enum: [action_list, checklist, chart, map, timeline, health_map, weather] }
         inline: { type: boolean }
         data:
           description: 'Present when inline; a health_map widget carries HealthMapWidget fields'
@@ -14567,6 +15104,15 @@ components:
           description: Keys containing key/secret/token/password/credential are masked as ••••last4
         is_enabled: { type: boolean }
         is_default: { type: boolean }
+        priority: { type: integer, description: 'Failover order after the default (lower first)' }
+        health:
+          type: object
+          properties:
+            status: { type: string, enum: [ok, degraded, down, unknown] }
+            last_success_at: { type: [string, 'null'], format: date-time }
+            last_failure_at: { type: [string, 'null'], format: date-time }
+            last_error: { type: [string, 'null'] }
+            consecutive_failures: { type: integer }
         updated_at: { type: string, format: date-time }
 
     BackupRun:
@@ -15002,6 +15548,12 @@ components:
         allow_negative_stock: { type: boolean }
         allow_intercropping: { type: boolean, description: 'More than one open crop cycle per plot' }
         units: { type: string, enum: [metric, imperial] }
+        online_payments:
+          type: object
+          description: Customers pay invoices online into the farm's Flutterwave subaccount (ADR-0018)
+          properties:
+            enabled: { type: boolean }
+            subaccount_id: { type: [string, 'null'] }
 
     FarmSettingsInput:
       type: object
@@ -15018,6 +15570,12 @@ components:
         allow_negative_stock: { type: boolean }
         allow_intercropping: { type: boolean, description: 'More than one open crop cycle per plot' }
         units: { type: string, enum: [metric, imperial] }
+        online_payments:
+          type: object
+          additionalProperties: false
+          properties:
+            enabled: { type: boolean, description: 'Needs subaccount_id (422)' }
+            subaccount_id: { type: [string, 'null'], pattern: '^[A-Za-z0-9_-]+$' }
 
     FarmOverview:
       type: object
@@ -21291,6 +21849,9 @@ components:
           type:
             type: string
             const: portal_customer_invoice
+          pay_online:
+            type: boolean
+            description: The farm takes online payment for this issued invoice
           farm:
             type: object
             properties:
@@ -22208,3 +22769,248 @@ components:
                 - poor
               href:
                 type: string
+    MapConfig:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum:
+          - osm
+          - mapbox
+          - google
+        tile_url:
+          type: string
+          description: Leaflet URL template
+        attribution:
+          type: string
+        max_zoom:
+          type: integer
+    OnlinePayment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        reference:
+          type: string
+        provider:
+          type: string
+        purpose:
+          type: string
+          enum:
+          - subscription
+          - customer_invoice
+        subject_id:
+          type: string
+          format: uuid
+        subject_code:
+          type:
+          - string
+          - 'null'
+        farm_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        amount:
+          type: number
+        currency:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+          - pending
+          - succeeded
+          - failed
+          - cancelled
+        checkout_url:
+          type:
+          - string
+          - 'null'
+          description: While pending
+        paid_amount:
+          type:
+          - number
+          - 'null'
+        failure_reason:
+          type:
+          - string
+          - 'null'
+        return_path:
+          type: string
+          description: Where the web app goes after the return page
+        created_at:
+          type: string
+          format: date-time
+        fulfilled_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    WeatherCondition:
+      type: string
+      enum:
+      - clear
+      - partly_cloudy
+      - cloudy
+      - fog
+      - drizzle
+      - rain
+      - storm
+      - snow
+    Weather:
+      type: object
+      properties:
+        available:
+          type: boolean
+        reason:
+          type: string
+          enum:
+          - no_location
+          - not_configured
+          - unavailable
+        provider:
+          type: string
+        location:
+          type: object
+          properties:
+            lat:
+              type: number
+            lng:
+              type: number
+        current:
+          type: object
+          properties:
+            temp_c:
+              type: number
+            humidity_pct:
+              type: integer
+            wind_kmh:
+              type: number
+            condition:
+              $ref: '#/components/schemas/WeatherCondition'
+            description:
+              type: string
+        daily:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              min_c:
+                type: number
+              max_c:
+                type: number
+              rain_mm:
+                type: number
+              rain_chance_pct:
+                type: integer
+              condition:
+                $ref: '#/components/schemas/WeatherCondition'
+        advisories:
+          type: array
+          items:
+            type: object
+            properties:
+              kind:
+                type: string
+                enum:
+                - heavy_rain
+                - heat
+                - spray_window
+              severity:
+                type: string
+                enum:
+                - info
+                - warning
+              message:
+                type: string
+              date:
+                type: string
+                format: date
+        fetched_at:
+          type: string
+          format: date-time
+      required:
+      - available
+    NotificationPreferences:
+      type: object
+      properties:
+        email:
+          type: boolean
+        sms:
+          type: boolean
+        phone:
+          type:
+          - string
+          - 'null'
+        email_address:
+          type:
+          - string
+          - 'null'
+        kinds:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+              enum:
+              - email
+              - sms
+          description: Notice kinds copied, and to which channels
+    IotDeviceKind:
+      type: string
+      enum:
+      - weather_station
+      - soil_probe
+      - water_meter
+      - tank_level
+      - cold_room
+      - other
+    IotDevice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/IotDeviceKind'
+        plot_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        location_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        token_hint:
+          type: string
+        is_active:
+          type: boolean
+        last_seen_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        version:
+          type: integer
+    SensorReading:
+      type: object
+      properties:
+        metric:
+          type: string
+        value:
+          type: number
+        recorded_at:
+          type: string
+          format: date-time

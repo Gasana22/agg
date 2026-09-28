@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * External provider configuration (docs/01 §2, requirements §36). Secrets are
  * encrypted at rest and never returned: responses show a masked value.
- * Adapters that actually call providers arrive in Phase 14.
+ * The adapters in the Integrations module read these rows (ADR-0018).
  */
 class Integrations
 {

@@ -38,6 +38,7 @@ return [
         'Tenancy',
         'Access',
         'Audit',
+        'Integrations',
         'Notifications',
         'Billing',
         'Platform',

@@ -123,6 +123,8 @@ class FarmService
             'allow_negative_stock' => false,
             'allow_intercropping' => false,
             'units' => 'metric',
+            // Customers pay invoices online into the farm's Flutterwave subaccount (ADR-0018).
+            'online_payments' => ['enabled' => false, 'subaccount_id' => null],
         ];
     }
 

@@ -6570,6 +6570,282 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/map-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The base map to draw
+         * @description Tiles from the default maps provider (Mapbox with a public token, or Google Map Tiles), or OpenStreetMap when none is set or it fails. Cached 10 minutes.
+         */
+        get: operations["getMapConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/online-payments/{reference}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reference: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * One of your online payments
+         * @description Only the person who started it. A pending payment is checked with the gateway (at most every 5 seconds) and recorded once confirmed: this is what the return page polls.
+         */
+        get: operations["getOnlinePayment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhooks/payments/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: "flutterwave";
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Payment gateway notification (public, signed)
+         * @description Flutterwave sends `verif-hash` equal to the webhook hash set for the provider. The body only names the payment; it is re-checked with the gateway before anything is recorded. 401 invalid_signature.
+         */
+        post: operations["paymentWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integrations/{integration}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                integration: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test a provider with one harmless real call
+         * @description That provider alone, no failover: SMS to `phone` (or your own), email to you, weather for Kampala, a map session, payment keys by looking up an unknown reference, push by signing in to Firebase. The outcome shows in the provider health.
+         */
+        post: operations["adminTestIntegration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/weather": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The forecast at the farm
+         * @description At the middle of the mapped blocks, else plots, else locations. From the first weather provider that answers, cached 30 minutes, with advisories (heavy rain, heat, a dry window for spraying). `available: false` with `reason` no_location, not_configured or unavailable.
+         */
+        get: operations["getFarmWeather"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Email and SMS copies of important notices */
+        get: operations["getNotificationPreferences"];
+        /**
+         * Turn email or SMS copies on or off
+         * @description SMS needs a phone number on the profile (422).
+         */
+        put: operations["updateNotificationPreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription/pay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pay the subscription online
+         * @description Opens the gateway checkout for one period at the plan price. Pressing again within 30 minutes reuses it. 409 online_payment_unavailable, nothing_to_pay (free plan); 502 payment_gateway_error.
+         */
+        post: operations["paySubscriptionOnline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/{party}/farms/{farm}/invoices/{invoiceId}/pay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                invoiceId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pay an invoice online
+         * @description The outstanding amount, into the farm's Flutterwave subaccount; recorded as a mobile money receipt once confirmed. 409 nothing_to_pay, online_payment_unavailable (the farm has not turned online payments on).
+         */
+        post: operations["payInvoiceOnline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/iot-devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        /** Sensors */
+        get: operations["listIotDevices"];
+        put?: never;
+        /** Register a sensor */
+        post: operations["createIotDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/iot-devices/{iotDevice}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                iotDevice: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Rename, move or deactivate a sensor */
+        patch: operations["updateIotDevice"];
+        trace?: never;
+    };
+    "/farms/{farm}/iot-devices/{iotDevice}/rotate-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                iotDevice: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** New token (the old one stops working) */
+        post: operations["rotateIotDeviceToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/farms/{farm}/iot-devices/{iotDevice}/readings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                iotDevice: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * A sensor's latest readings and series
+         * @description Latest per metric, and up to 2,000 readings in the range (default: the last 7 days).
+         */
+        get: operations["getIotReadings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/iot/readings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A sensor posts readings (device token)
+         * @description `Authorization: Bearer sfmtpd_…` (the device token, not a user token). Up to 100 readings; metrics are lower-case names like soil_moisture_pct; readings from the last 7 days. 401 invalid_device_token.
+         */
+        post: operations["postSensorReadings"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6840,7 +7116,7 @@ export interface components {
         WidgetRef: {
             key: string;
             /** @enum {string} */
-            type: "action_list" | "checklist" | "chart" | "map" | "timeline" | "health_map";
+            type: "action_list" | "checklist" | "chart" | "map" | "timeline" | "health_map" | "weather";
             inline: boolean;
             /** @description Present when inline; a health_map widget carries HealthMapWidget fields */
             data?: {
@@ -7051,6 +7327,18 @@ export interface components {
             };
             is_enabled?: boolean;
             is_default?: boolean;
+            /** @description Failover order after the default (lower first) */
+            priority?: number;
+            health?: {
+                /** @enum {string} */
+                status?: "ok" | "degraded" | "down" | "unknown";
+                /** Format: date-time */
+                last_success_at?: string | null;
+                /** Format: date-time */
+                last_failure_at?: string | null;
+                last_error?: string | null;
+                consecutive_failures?: number;
+            };
             /** Format: date-time */
             updated_at?: string;
         };
@@ -7465,6 +7753,11 @@ export interface components {
             allow_intercropping?: boolean;
             /** @enum {string} */
             units?: "metric" | "imperial";
+            /** @description Customers pay invoices online into the farm's Flutterwave subaccount (ADR-0018) */
+            online_payments?: {
+                enabled?: boolean;
+                subaccount_id?: string | null;
+            };
         };
         FarmSettingsInput: {
             require_mfa_for_all?: boolean;
@@ -7479,6 +7772,11 @@ export interface components {
             allow_intercropping?: boolean;
             /** @enum {string} */
             units?: "metric" | "imperial";
+            online_payments?: {
+                /** @description Needs subaccount_id (422) */
+                enabled?: boolean;
+                subaccount_id?: string | null;
+            };
         };
         FarmOverview: {
             /** Format: uuid */
@@ -10823,6 +11121,8 @@ export interface components {
         PortalCustomerInvoice: {
             /** @constant */
             type?: "portal_customer_invoice";
+            /** @description The farm takes online payment for this issued invoice */
+            pay_online?: boolean;
             farm?: {
                 /** Format: uuid */
                 id?: string;
@@ -11234,6 +11534,115 @@ export interface components {
                 band?: "good" | "watch" | "poor";
                 href?: string;
             }[];
+        };
+        MapConfig: {
+            /** @enum {string} */
+            provider?: "osm" | "mapbox" | "google";
+            /** @description Leaflet URL template */
+            tile_url?: string;
+            attribution?: string;
+            max_zoom?: number;
+        };
+        OnlinePayment: {
+            /** Format: uuid */
+            id?: string;
+            reference?: string;
+            provider?: string;
+            /** @enum {string} */
+            purpose?: "subscription" | "customer_invoice";
+            /** Format: uuid */
+            subject_id?: string;
+            subject_code?: string | null;
+            /** Format: uuid */
+            farm_id?: string | null;
+            amount?: number;
+            currency?: string;
+            description?: string;
+            /** @enum {string} */
+            status?: "pending" | "succeeded" | "failed" | "cancelled";
+            /** @description While pending */
+            checkout_url?: string | null;
+            paid_amount?: number | null;
+            failure_reason?: string | null;
+            /** @description Where the web app goes after the return page */
+            return_path?: string;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            fulfilled_at?: string | null;
+        };
+        /** @enum {string} */
+        WeatherCondition: "clear" | "partly_cloudy" | "cloudy" | "fog" | "drizzle" | "rain" | "storm" | "snow";
+        Weather: {
+            available: boolean;
+            /** @enum {string} */
+            reason?: "no_location" | "not_configured" | "unavailable";
+            provider?: string;
+            location?: {
+                lat?: number;
+                lng?: number;
+            };
+            current?: {
+                temp_c?: number;
+                humidity_pct?: number;
+                wind_kmh?: number;
+                condition?: components["schemas"]["WeatherCondition"];
+                description?: string;
+            };
+            daily?: {
+                /** Format: date */
+                date?: string;
+                min_c?: number;
+                max_c?: number;
+                rain_mm?: number;
+                rain_chance_pct?: number;
+                condition?: components["schemas"]["WeatherCondition"];
+            }[];
+            advisories?: {
+                /** @enum {string} */
+                kind?: "heavy_rain" | "heat" | "spray_window";
+                /** @enum {string} */
+                severity?: "info" | "warning";
+                message?: string;
+                /** Format: date */
+                date?: string;
+            }[];
+            /** Format: date-time */
+            fetched_at?: string;
+        };
+        NotificationPreferences: {
+            email?: boolean;
+            sms?: boolean;
+            phone?: string | null;
+            email_address?: string | null;
+            /** @description Notice kinds copied, and to which channels */
+            kinds?: {
+                [key: string]: ("email" | "sms")[];
+            };
+        };
+        /** @enum {string} */
+        IotDeviceKind: "weather_station" | "soil_probe" | "water_meter" | "tank_level" | "cold_room" | "other";
+        IotDevice: {
+            /** Format: uuid */
+            id?: string;
+            code?: string;
+            name?: string;
+            kind?: components["schemas"]["IotDeviceKind"];
+            /** Format: uuid */
+            plot_id?: string | null;
+            /** Format: uuid */
+            location_id?: string | null;
+            token_hint?: string;
+            is_active?: boolean;
+            /** Format: date-time */
+            last_seen_at?: string | null;
+            version?: number;
+        };
+        SensorReading: {
+            metric?: string;
+            value?: number;
+            /** Format: date-time */
+            recorded_at?: string;
         };
     };
     responses: {
@@ -23740,6 +24149,461 @@ export interface operations {
                     };
                 };
             };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getMapConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["MapConfig"];
+                    };
+                };
+            };
+        };
+    };
+    getOnlinePayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reference: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["OnlinePayment"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    paymentWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: "flutterwave";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            received?: boolean;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+        };
+    };
+    adminTestIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                integration: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    phone?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            ok?: boolean;
+                            message?: string;
+                            provider?: components["schemas"]["Integration"];
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    getFarmWeather: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Weather"];
+                    };
+                };
+            };
+        };
+    };
+    getNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["NotificationPreferences"];
+                    };
+                };
+            };
+        };
+    };
+    updateNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    email?: boolean;
+                    sms?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["NotificationPreferences"];
+                    };
+                };
+            };
+            422: components["responses"]["Problem"];
+        };
+    };
+    paySubscriptionOnline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Checkout opened */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["OnlinePayment"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    payInvoiceOnline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                party: string;
+                farm: string;
+                invoiceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Checkout opened */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["OnlinePayment"];
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    listIotDevices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["IotDevice"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    createIotDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    kind: components["schemas"]["IotDeviceKind"];
+                    /** Format: uuid */
+                    plot_id?: string | null;
+                    /** Format: uuid */
+                    location_id?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Registered; the token is shown once */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["IotDevice"];
+                        meta?: {
+                            token?: string;
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    updateIotDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                iotDevice: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    kind?: components["schemas"]["IotDeviceKind"];
+                    /** Format: uuid */
+                    plot_id?: string | null;
+                    /** Format: uuid */
+                    location_id?: string | null;
+                    is_active?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["IotDevice"];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    rotateIotDeviceToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                iotDevice: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description New token, shown once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["IotDevice"];
+                        meta?: {
+                            token?: string;
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    getIotReadings: {
+        parameters: {
+            query?: {
+                metric?: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path: {
+                farm: components["parameters"]["Farm"];
+                iotDevice: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["IotDevice"] & {
+                            latest?: components["schemas"]["SensorReading"][];
+                            series?: components["schemas"]["SensorReading"][];
+                        };
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    postSensorReadings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    readings: {
+                        metric: string;
+                        value: number;
+                        /** Format: date-time */
+                        recorded_at?: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Stored */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: {
+                            stored?: number;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };

@@ -3,6 +3,7 @@
 namespace App\Modules\Reporting\Application;
 
 use App\Modules\Access\Application\FarmPermissions;
+use App\Modules\FarmStructure\Application\FarmWeather;
 use App\Modules\Finance\Application\Money;
 use App\Modules\Tenancy\TenantContext;
 use App\Modules\Traceability\Application\TraceAlerts;
@@ -38,20 +39,20 @@ class DashboardRegistry
         $trace = ['trace.open_batches', 'trace.events', 'trace.qr_scans'];
 
         return match ($dashboard) {
-            'owner' => ['kpis' => ['farm.area', 'finance.revenue', 'finance.expenses', 'finance.net_profit', 'approvals.pending', 'finance.receivables', 'finance.payables', 'inventory.value', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'crop.health_score', 'livestock.head_count', 'livestock.milk', 'livestock.health_score', 'workers.present', 'tasks.pending', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'expenses_to_approve', 'payroll_pending', 'orders_to_approve', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'trace_alerts', 'recent_trace_events', 'crop_health', 'animal_health', 'income_vs_expenses', 'trace_activity'], 'quick_actions' => ['view_pnl', 'invite_member', 'view_map', 'new_batch', 'view_audit_log']],
+            'owner' => ['kpis' => ['farm.area', 'finance.revenue', 'finance.expenses', 'finance.net_profit', 'approvals.pending', 'finance.receivables', 'finance.payables', 'inventory.value', 'structure.mapped_area', 'crop.active_cycles', 'crop.actual_yield', 'crop.health_score', 'livestock.head_count', 'livestock.milk', 'livestock.health_score', 'workers.present', 'tasks.pending', 'farm.members', ...$trace], 'widgets' => ['setup_checklist', 'expenses_to_approve', 'payroll_pending', 'orders_to_approve', 'livestock_sale_requests', 'pest_disease_alerts', 'upcoming_harvests', 'withdrawal_alerts', 'trace_alerts', 'recent_trace_events', 'crop_health', 'animal_health', 'weather', 'income_vs_expenses', 'trace_activity'], 'quick_actions' => ['view_pnl', 'invite_member', 'view_map', 'new_batch', 'view_audit_log']],
             'manager' => [
                 'kpis' => ['tasks.today', 'tasks.completed', 'tasks.pending', 'tasks.overdue', 'workers.present', 'workers.absent', 'activities.active', 'crop.active_cycles', 'livestock.head_count', 'inventory.requests_pending', 'inventory.low'],
-                'widgets' => ['verification_queue', 'schedule', 'overdue_tasks', 'leave_requests', 'pending_requests', 'purchase_requests_to_approve', 'worker_activity', 'operations_to_verify', 'pest_disease_alerts', 'vaccinations_due', 'trace_alerts', 'recent_trace_events'],
+                'widgets' => ['weather', 'verification_queue', 'schedule', 'overdue_tasks', 'leave_requests', 'pending_requests', 'purchase_requests_to_approve', 'worker_activity', 'operations_to_verify', 'pest_disease_alerts', 'vaccinations_due', 'trace_alerts', 'recent_trace_events'],
                 'quick_actions' => ['new_task', 'view_workers', 'request_expense', 'invite_member', 'start_cycle', 'register_animal', 'view_map'],
             ],
             'agronomist' => [
                 'kpis' => ['crop.active_cycles', 'crop.planted_area', 'crop.near_harvest', 'crop.expected_yield', 'crop.actual_yield', 'crop.yield_per_ha', 'crop.health_score', 'crop.incidents_open', 'crop.treatments_active', 'crop.cost_per_ha'],
-                'widgets' => ['crop_health', 'pest_disease_alerts', 'operations_to_verify', 'verification_queue', 'upcoming_harvests', 'expected_vs_actual_yield', 'recent_trace_events'],
+                'widgets' => ['weather', 'crop_health', 'pest_disease_alerts', 'operations_to_verify', 'verification_queue', 'upcoming_harvests', 'expected_vs_actual_yield', 'recent_trace_events'],
                 'quick_actions' => ['start_cycle', 'record_operation', 'report_observation', 'record_harvest', 'new_task', 'new_crop_plan', 'view_map'],
             ],
             'livestock' => [
                 'kpis' => ['livestock.head_count', 'livestock.new_animals', 'livestock.pregnant', 'livestock.vaccinations_due', 'livestock.under_withdrawal', 'livestock.mortality_rate', 'livestock.milk', 'livestock.daily_gain', 'livestock.sold', 'livestock.health_score'],
-                'widgets' => ['animal_health', 'vaccinations_due', 'withdrawal_alerts', 'verification_queue', 'expected_births', 'weight_loss_alerts', 'milk_production', 'recent_trace_events'],
+                'widgets' => ['weather', 'animal_health', 'vaccinations_due', 'withdrawal_alerts', 'verification_queue', 'expected_births', 'weight_loss_alerts', 'milk_production', 'recent_trace_events'],
                 'quick_actions' => ['register_animal', 'record_health', 'record_weight', 'record_production', 'new_task', 'request_sale', 'view_map'],
             ],
             'store' => [
@@ -294,6 +295,8 @@ class DashboardRegistry
                         'href' => "/farms/{$farm->id}/livestock/animals/{$a['id']}",
                     ], array_slice(array_filter($this->health->animals(), fn ($a) => $a['score'] < 100), 0, 8))),
                 ]],
+            'weather' => ['type' => 'weather', 'permission' => null, 'inline' => false,
+                'data' => fn () => app(FarmWeather::class)->forecast()],
             'upcoming_harvests' => ['type' => 'action_list', 'permission' => 'crops.plans.view', 'inline' => true,
                 'data' => fn () => ['items' => $this->crops->upcomingHarvests()]],
             'expected_vs_actual_yield' => ['type' => 'chart', 'permission' => 'crops.harvest.view', 'inline' => false,
