@@ -4,8 +4,13 @@
 # managed PostgreSQL service; this dump is the portable, restorable copy.
 #
 # Usage (cron, inside the api image or any host with pg_dump + php):
-#   BACKUP_DIR=/backups PGHOST=... PGUSER=... PGPASSWORD=... PGDATABASE=sfmtp \
+#   BACKUP_DIR=/backups PGHOST=... PGUSER=sfmtp_backup PGPASSWORD=... PGDATABASE=sfmtp \
 #     APP_DIR=/app infra/deploy/backup.sh
+#
+# PGUSER must be the read-only backup role with BYPASSRLS (created by
+# infra/docker/postgres/10-app-role.sh). The application role cannot dump
+# the database: every farm table forces row-level security, so pg_dump
+# stops at the first one (docs/12-operations.md §4).
 set -eu
 
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
