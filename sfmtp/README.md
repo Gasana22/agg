@@ -26,7 +26,7 @@ REST API.
 | 12 — Supplier & customer portals | ✅ Done: party accounts linked to farm suppliers and customers by invitation, one sign-in across farms; the supplier portal (answer orders, announce dispatches, send invoices, payment status); products with list prices and sales orders with approval; the customer portal (shop, order tracking, delivery confirmation, invoices, bought batches with their public traceability); portal dashboards |
 | 13 — Analytics & reporting | ✅ Done: metric catalogue with definitions and trends; crop and animal health scores with a crop health map; 19 standard reports; CSV, Excel and PDF exports built in the background (24 h, requester only); bulk QR label runs on three A4 templates; activity heat map on the farm map; dashboard performance bench within budget |
 | 14 — Integrations | ✅ Done: providers per kind with ordered failover, a circuit breaker and health in admin, plus a test button; SMS (Africa's Talking, Twilio), email (SMTP, SendGrid), weather (OpenWeather, Tomorrow.io) with a dashboard widget, map tiles (Mapbox, Google, OpenStreetMap), FCM push; Flutterwave online payments for subscriptions and customer invoices, verified with the gateway; email and SMS copies of notices by member choice; a ledger journal export for accounting packages and IoT sensor ingestion |
-| 15 — Security & production | Next |
+| 15 — Security & production | ✅ Done: row-level security on every farm table; security headers, CSP and CORS; dependency audits in CI; security tests; a load test (24× a peak hour of 10,000 activities a day within budget); backup role, restore and point-in-time drills; security, operations, deployment, user and API guides; the [launch checklist](docs/16-launch-checklist.md) |
 
 ## Repository layout
 
@@ -85,6 +85,12 @@ CI (`.github/workflows/sfmtp-ci.yml`) runs on every change under `sfmtp/`:
 | 08 | [Offline Sync Design](docs/08-offline-sync.md) | Mobile outbox, pull/push protocol, conflict resolution |
 | 09 | [Module Dependency Map](docs/09-module-dependency-map.md) | Which modules depend on which, and the build order that follows |
 | 10 | [Development Roadmap](docs/10-roadmap.md) | Phases, exit criteria and test gates |
+| 11 | [Security](docs/11-security.md) | Accounts, API surface, isolation, data protection, dependency and security testing |
+| 12 | [Operations & DR Runbook](docs/12-operations.md) | Monitoring, capacity, backups, restore, drills, incident scenarios |
+| 13 | [Deployment](docs/13-deployment.md) | Production shape, configuration, first and rolling deployments |
+| 14 | [User Guide](docs/14-user-guide.md) | What each role does in the app |
+| 15 | [API Guide](docs/15-api-guide.md) | Signing in, safe writes, sync, webhooks, devices, exports, limits |
+| 16 | [Launch Checklist](docs/16-launch-checklist.md) | What is done and what remains before real farms go live |
 | — | [Architecture Decision Records](docs/adr/README.md) | Decisions taken to fill gaps in the requirements, with open questions |
 
 ## Source of truth

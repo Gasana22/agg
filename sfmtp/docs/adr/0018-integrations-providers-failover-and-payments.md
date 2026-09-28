@@ -106,9 +106,9 @@ Five questions came up:
      gets a bearer token (`sfmtpd_…`), shown once and stored only as a
      hash.
    - Devices post up to 100 readings per call to `POST /iot/readings`.
-     The public route is rate limited. A metric is a snake_case name with
-     a value and optional unit, and each reading's time must fall in the
-     last 7 days. Readings are append-only.
+     The public route is rate limited. Each reading is a snake_case metric
+     name, a value and an optional time, which must fall in the last
+     7 days. Readings are append-only.
 
 ## Consequences
 - A second provider of a kind is only configuration. The first one that

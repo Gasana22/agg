@@ -312,6 +312,68 @@ Everything in the Phase 8 row below, with these notes
   new route and request body. The accountant's, manager's and owner's
   journeys were checked in a browser.
 
+### Phase 15 — delivered
+
+Everything in the Phase 15 row below, with these notes
+([ADR-0019](adr/0019-row-level-security-everywhere-and-production-readiness.md)):
+
+- **Row-level security on every farm table.**
+  - The last 12 tables with a `farm_id` force RLS, with narrow conditions:
+    - the signed-in user's own memberships and their farms' roles and
+      settings;
+    - platform administration for platform-facing tables only;
+    - a party's own links;
+    - the payer's own payments;
+    - audit entries appended from anywhere but read in scope.
+  - Security decisions about one user (MFA, plan limits, support grants)
+    and the signed payment webhook read with explicit bypasses, so they
+    never fail open.
+  - A test fails the build if any farm table lacks forced RLS.
+- **Security review.**
+  - API security headers (nosniff, no framing, no-referrer, CSP on JSON,
+    HSTS, no-store when signed in) and CORS locked to the web app.
+  - A Content-Security-Policy and HSTS on the web app.
+  - A security test suite: forged, expired and revoked tokens, CORS,
+    hostile input.
+  - An OWASP API Top 10 review ([11](11-security.md)).
+- **Dependency audit.**
+  - Composer found no advisories and npm reported 0 vulnerabilities.
+  - CI now fails on known vulnerabilities.
+  - Dependabot runs weekly for Composer, npm, pub, Docker and Actions.
+- **Load test.**
+  - `sync:loadtest-prepare` builds a load-test farm, and
+    `infra/load/sync-load.mjs` drives the real sync API with dashboards
+    open.
+  - 60 phones on one 4-core box: 19.7 activities/s, 24 times a peak hour
+    of a 10,000-activity day, push p95 271 ms, no errors.
+  - Saturation starts between 60 and 100 phones, degrading without
+    failures ([infra/load](../infra/load/README.md)).
+- **Backups and recovery.**
+  - Found: the application role cannot dump a database whose farm tables
+    force RLS. Backups now use a read-only `BYPASSRLS` role.
+  - `restore.sh` restores into a new database with ownership and policies
+    intact.
+  - Restore drill passed in 6.8 s: every row count, policies, triggers,
+    RLS on the copy, trace chains.
+  - Point-in-time drill passed: recovery to the second from archived WAL
+    (WAL shipped at least every minute, RPO 15 min).
+- **Documentation.**
+  - [11 Security](11-security.md) and
+    [12 Operations and DR runbook](12-operations.md).
+  - [13 Deployment](13-deployment.md), [14 User guide](14-user-guide.md)
+    and [15 API guide](15-api-guide.md).
+  - [16 Launch checklist](16-launch-checklist.md).
+- **Also added:** `platform:create-admin`, for the first administrator of a
+  new installation (production never seeds demo accounts).
+- **Left for launch** (in the checklist): an external penetration test,
+  production accounts and secrets, and the drills and load test repeated on
+  production-sized infrastructure.
+- **Test gate met.**
+  - All role-boundary tests of 04 §6 and the cross-tenant sweep are green.
+  - The restore drill meets RPO and RTO.
+  - 270 API tests on PostgreSQL (263 on MySQL, plus 7 that need
+    PostgreSQL features) and 72 web unit tests.
+
 ### Phase 14 — delivered
 
 Everything in the Phase 14 row below, with these notes

@@ -23,6 +23,7 @@ consequences.
 | [0016](0016-supplier-and-customer-portals.md) | Supplier and customer portals: party links by invitation, portal reads per linked farm without bypassing isolation, supplier answers, dispatches and invoice submissions, products and sales orders | Accepted |
 | [0017](0017-analytics-reports-and-exports.md) | Analytics: one metric definition with a catalogue and series, explainable health scores, standard reports with typed columns, queued personal exports (CSV, XLSX, PDF) and label runs, activity heat maps of counts, the dashboard performance budget | Accepted |
 | [0018](0018-integrations-providers-failover-and-payments.md) | Integrations: a provider directory with ordered failover, a circuit breaker and health; SMS, email, weather, maps, push and payment adapters; online payments verified with the gateway and fulfilled once through registered purposes; notice copies by email and SMS; accounting export and IoT ingestion as extension points | Accepted |
+| [0019](0019-row-level-security-everywhere-and-production-readiness.md) | Row-level security on every farm table with narrow per-table conditions (own user, farm members, platform) set by the tenant context; security decisions read with explicit bypasses; a separate backup role; production readiness as scripts and tests | Accepted |
 
 ## Product-owner decisions (2026-09-23)
 

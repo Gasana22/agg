@@ -49,11 +49,17 @@ flowchart TB
 | 3 | **Authorization** | Laravel policies check `module.resource.action` permissions from the member's farm role(s), and record-level scope (`own`, `assigned`) ([04](04-roles-and-permissions.md)) | Role overreach within a farm |
 | 4 | **ORM global scope** | The `BelongsToFarm` trait on every farm-owned model adds `where farm_id = ?` from `TenantContext` and sets `farm_id` on create. Reads with no context **throw**; they don't silently return everything | A developer forgetting a `where` clause |
 | 5 | **Composite foreign keys** | Child tables reference parents by `(farm_id, id)`. The database therefore rejects a crop cycle in Farm A pointing to a plot in Farm B | Cross-tenant references from IDs supplied in the request |
-| 6 | **PostgreSQL Row-Level Security** | RLS policies `USING (farm_id = current_setting('app.farm_id')::uuid)` on farm tables. The app sets `SET LOCAL app.farm_id` inside each request transaction. The application DB role is not the table owner, so it cannot bypass RLS | Raw SQL or reporting queries that skip the ORM |
+| 6 | **PostgreSQL Row-Level Security** | RLS policies `USING (farm_id = current_setting('app.farm_id'))` on every farm table, plus narrow per-table conditions (ADR-0019). `TenantContext` sets `app.farm_id` whenever a farm is entered. The application role is not a superuser and the tables *force* RLS, so even their owner cannot skip it; only an explicit, reviewed bypass (`app.rls_bypass`) or the backup role (`BYPASSRLS`) can | Raw SQL or reporting queries that skip the ORM |
 | 7 | **Tests** | An auto-generated **cross-tenant test suite** that visits every farm route as a member of another farm, plus the role-boundary tests listed in the requirements | Regressions |
 
-Layers 1–5 are needed from Phase 1. Layer 6 (RLS) is enabled in Phase 1 for
-the pilot tables and extended to all farm tables before production (Phase 15).
+Layers 1–5 are needed from Phase 1. Layer 6 (RLS) was enabled in Phase 1 for
+the pilot tables and covers **every table with a `farm_id`** since Phase 15
+([ADR-0019](adr/0019-row-level-security-everywhere-and-production-readiness.md)),
+with a test that fails the build otherwise. Besides `app.farm_id`, the
+session carries `app.user_id` (the signed-in user may read their own
+memberships and their farms' roles and settings before choosing a farm) and
+`app.platform` (platform administration may read platform-facing tables such
+as tickets, grants and farm status, and no operational data).
 RLS is PostgreSQL-only; the [MySQL compatibility notes](#6-mysql-compatibility)
 explain what replaces it there.
 
